@@ -1,0 +1,28 @@
+# Data mentah DIBaS tidak di-commit. Unduh ulang lewat:
+#   python -m bacteriacv.datasets.download
+#   python -m bacteriacv.datasets.extract
+data/raw/zips/
+data/raw/images/
+
+# index.csv dan zips_manifest.csv ikut di-commit sebagai bukti provenance.
+# Ukurannya kecil dan berguna untuk auditor.
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+.venv/
+.pytest_tmp/
+*.egg-info/
+
+# Model
+checkpoints/
+*.pt
+*.pth
+
+# Editor dan sistem
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
