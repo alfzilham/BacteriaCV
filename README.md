@@ -4,8 +4,9 @@ BacteriaCV adalah proyek computer vision untuk klasifikasi bentuk sel bakteri da
 
 ## Status proyek
 
-- 692 citra dari 33 label spesies.
-- Pembagian aktual: 483 train, 142 validation, dan 67 test.
+- Ekstraksi penuh menghasilkan 692 citra dari 33 label spesies.
+- `Candida albicans` dikecualikan dari pelatihan karena jamur, bukan bakteri, sehingga tersisa 32 spesies yang dapat dilatih.
+- `data/index.csv` memuat 672 citra: 469 train, 138 validation, dan 65 test.
 - Lima lipatan hanya dibuat dari data train.
 - Nama spesies dipetakan melalui `bacteriacv/datasets/species_map.py`, bukan ditebak dari nama berkas.
 - Modul pelatihan dan antarmuka web belum menjadi bagian dari tahap dataset ini.
@@ -15,6 +16,8 @@ BacteriaCV adalah proyek computer vision untuk klasifikasi bentuk sel bakteri da
 ```text
 BacteriaCV/
 ├── bacteriacv/
+│   ├── config.py
+│   ├── label_map.py
 │   ├── paths.py
 │   └── datasets/
 │       ├── species_map.py
