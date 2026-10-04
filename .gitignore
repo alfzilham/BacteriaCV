@@ -17,7 +17,6 @@ __pycache__/
 *.py[cod]
 .pytest_cache/
 .venv/
-.venv/
 .pytest_tmp/
 *.egg-info/
 
@@ -31,7 +30,13 @@ checkpoints/
 .idea/
 .DS_Store
 Thumbs.db
+desktop.ini
+*.swp
+*~
 
 # Notes
 notes/
+
+# Agent
 graphify-out/
+.agent/
