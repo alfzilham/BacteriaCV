@@ -24,6 +24,8 @@ import json
 from dataclasses import asdict, dataclass
 from pathlib import Path
 
+import cv2
+import cv2.utils.logging
 import numpy as np
 import torch
 from torch import nn
@@ -49,7 +51,7 @@ from .config import (
 from .label_map import class_weights, to_targets
 from .model import BacteriaNet, build_model, save_checkpoint
 from .paths import INDEX_PATH, PROJECT_ROOT
-from .preprocess import augment_train_variants, load_image, preprocess
+from .preprocess import augment_train_variants, load_image, preprocess_tensor
 
 # Bump nilai ini bila pipeline pra-pemrosesan berubah, supaya cache lama tidak
 # dipakai untuk citra yang sudah diproses dengan aturan berbeda.
@@ -61,6 +63,7 @@ REPORT_NAME = "training_report.json"
 CHECKPOINT_NAME = "heads.pt"
 
 EXTRACT_BATCH_SIZE = 16
+PROGRESS_EVERY = 50
 
 TRAIN_SPLIT = "train"
 VAL_SPLIT = "val"
@@ -193,6 +196,7 @@ def extract_features_for_rows(
     rows: list[dict],
     augment: bool = False,
     batch_size: int = EXTRACT_BATCH_SIZE,
+    verbose: bool = False,
 ) -> FeatureStore:
     """Ekstraksi vektor fitur untuk setiap baris index.
 
@@ -200,12 +204,17 @@ def extract_features_for_rows(
     Jumlah baris latih menjadi AUGMENT_VARIANTS kali lebih banyak: satu citra
     asli dan AUGMENT_VARIANTS - 1 varian augmentasi.
 
+    Ekstraksi memakai preprocess_tensor, bukan preprocess, sehingga segmentasi
+    tidak dijalankan. Segmentasi hanya untuk panel visualisasi dan tidak
+    memengaruhi metrik model.
+
     Args:
         model: Model BacteriaNet. Backbonenya dibekukan oleh model itu sendiri.
         images_dir: Folder dasar untuk path relatif pada baris index.
         rows: Baris index dengan kunci path, species_id, dan split.
         augment: Bila True, baris train diberi varian augmentasi.
         batch_size: Jumlah citra per inferensi backbone.
+        verbose: Bila True, cetak kemajuan setiap PROGRESS_EVERY citra.
 
     Returns:
         FeatureStore berisi matriks fitur dan labelnya.
@@ -236,10 +245,17 @@ def extract_features_for_rows(
 
         for offset, variant in enumerate(variants):
             label = relative if offset == 0 else f"{relative}#aug{offset}"
-            tensors.append(preprocess(variant).tensor)
+            tensors.append(preprocess_tensor(variant))
             species_ids.append(str(row["species_id"]))
             splits.append(split)
             paths.append(label)
+
+        if verbose and (position + 1) % PROGRESS_EVERY == 0:
+            print(
+                f"Ekstraksi {position + 1}/{len(rows)} citra, "
+                f"{len(tensors)} baris fitur",
+                flush=True,
+            )
 
     matrix = np.zeros((len(tensors), FEATURE_DIM), dtype=np.float32)
     for start in range(0, len(tensors), batch_size):
@@ -256,6 +272,7 @@ def build_or_load_features(
     rows: list[dict],
     augment: bool = False,
     cache_root: Path | str | None = None,
+    verbose: bool = False,
 ) -> tuple[FeatureStore, Path, bool]:
     """Ambil fitur dari cache bila tersedia, ekstrak ulang bila tidak.
 
@@ -265,6 +282,7 @@ def build_or_load_features(
         rows: Baris index.
         augment: Bila True, baris train diberi varian augmentasi.
         cache_root: Folder akar cache. Default-nya FEATURES_DIR dari config.
+        verbose: Bila True, cetak kemajuan saat ekstraksi.
 
     Returns:
         Tiga elemen (store, folder_cache, dipakai_cache).
@@ -275,7 +293,9 @@ def build_or_load_features(
     if (directory / MATRIX_NAME).is_file():
         return load_feature_store(directory), directory, True
 
-    store = extract_features_for_rows(model, images_dir, rows, augment=augment)
+    store = extract_features_for_rows(
+        model, images_dir, rows, augment=augment, verbose=verbose
+    )
     save_feature_store(store, directory)
     return store, directory, False
 
@@ -715,6 +735,10 @@ def main(argv: list[str] | None = None) -> int:
     )
     args = parser.parse_args(argv)
 
+    # TIFF DIBaS memakai tag 33560 yang tidak dikenal OpenCV. Peringatan ini
+    # muncul sekali per citra dan tidak memengaruhi hasil baca.
+    cv2.utils.logging.setLogLevel(cv2.utils.logging.LOG_LEVEL_ERROR)
+
     rows = read_index_rows(args.index)
     model = build_model(pretrained=True)
     store, directory, reused = build_or_load_features(
@@ -723,6 +747,7 @@ def main(argv: list[str] | None = None) -> int:
         rows,
         augment=not args.no_augment,
         cache_root=args.features_dir,
+        verbose=True,
     )
 
     print(f"Baris index       : {len(rows)}")

@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>BacteriaCV</title>
+<style>
+  :root {
+    --bg: #10141a;
+    --panel: #171d26;
+    --line: #263041;
+    --text: #e6ebf2;
+    --muted: #93a1b5;
+    --accent: #4c9aff;
+    --warn: #ffb454;
+    --bad: #ff6b6b;
+    --good: #4ecb8d;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font: 15px/1.5 "Segoe UI", system-ui, sans-serif;
+  }
+  header {
+    padding: 20px 24px;
+    border-bottom: 1px solid var(--line);
+  }
+  h1 { margin: 0; font-size: 20px; letter-spacing: .3px; }
+  header p { margin: 4px 0 0; color: var(--muted); font-size: 13px; }
+  main {
+    max-width: 1080px;
+    margin: 0 auto;
+    padding: 24px;
+    display: grid;
+    gap: 20px;
+    grid-template-columns: 320px 1fr;
+    align-items: start;
+  }
+  @media (max-width: 860px) { main { grid-template-columns: 1fr; } }
+  .card {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 16px;
+  }
+  .card h2 { margin: 0 0 10px; font-size: 14px; text-transform: uppercase; color: var(--muted); letter-spacing: .8px; }
+  label.file {
+    display: block;
+    border: 1px dashed var(--line);
+    border-radius: 8px;
+    padding: 18px 12px;
+    text-align: center;
+    cursor: pointer;
+    color: var(--muted);
+  }
+  label.file:hover { border-color: var(--accent); color: var(--text); }
+  /* Input disembunyikan secara visual, bukan display:none, supaya tetap
+     bisa difokuskan lewat keyboard dan tetap punya nama aksesibel. */
+  input[type=file] {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+    border: 0;
+  }
+  label.file:has(input:focus-visible) { outline: 2px solid var(--accent); outline-offset: 2px; }
+  button {
+    margin-top: 12px;
+    width: 100%;
+    padding: 10px;
+    border: 0;
+    border-radius: 8px;
+    background: var(--accent);
+    color: #08111f;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  button:disabled { opacity: .5; cursor: not-allowed; }
+  .stage-tabs { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
+  .stage-tabs button {
+    margin: 0;
+    width: auto;
+    flex: 1 1 auto;
+    padding: 7px 10px;
+    font-size: 13px;
+    font-weight: 500;
+    background: #1f2836;
+    color: var(--muted);
+    border: 1px solid var(--line);
+  }
+  .stage-tabs button[aria-pressed=true] {
+    background: var(--accent);
+    color: #08111f;
+    border-color: var(--accent);
+    font-weight: 600;
+  }
+  .stage-tabs button.failed { border-color: var(--bad); color: var(--bad); }
+  .stage-tabs button.failed[aria-pressed=true] { color: #08111f; }
+  #panel { width: 100%; height: auto; image-rendering: pixelated; border-radius: 8px; background: #0b0e13; display: block; }
+  .stage-title { margin: 10px 0 0; font-size: 13px; color: var(--muted); }
+  .result { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 16px; }
+  @media (max-width: 520px) { .result { grid-template-columns: 1fr; } }
+  .verdict { border: 1px solid var(--line); border-radius: 8px; padding: 12px; }
+  .verdict .name { font-size: 22px; font-weight: 700; }
+  .verdict .meta { font-size: 12px; color: var(--muted); margin-top: 2px; }
+  .level-tinggi { color: var(--good); }
+  .level-sedang { color: var(--warn); }
+  .level-rendah { color: var(--bad); }
+  .notes { margin: 16px 0 0; padding: 12px 12px 12px 28px; background: #1b222d; border-left: 3px solid var(--warn); border-radius: 0 8px 8px 0; font-size: 13px; color: var(--muted); }
+  .notes li { margin-bottom: 6px; }
+  .error { margin-top: 12px; padding: 10px; border-radius: 8px; background: #3a1d22; border: 1px solid var(--bad); color: #ffc9c9; font-size: 13px; }
+  .muted { color: var(--muted); font-size: 13px; }
+  code { background: #0b0e13; padding: 1px 5px; border-radius: 4px; font-size: 12px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>BacteriaCV</h1>
+  <p>Klasifikasi bentuk sel dan status Gram dari citra mikroskopis. Alat bantu, bukan diagnosis.</p>
+</header>
+
+<main>
+  <section class="card">
+    <h2>Unggah citra</h2>
+    <label class="file" for="file">
+      <input type="file" id="file" accept=".png,.jpg,.jpeg,.tif,.tiff">
+      <span id="file-name">Pilih atau jatuhkan citra di sini</span>
+    </label>
+    <button id="submit" disabled>Analisis</button>
+    <p class="muted" style="margin-top:12px">
+      Batas <span id="limit">20</span> MB. Format PNG, JPG, atau TIFF.
+    </p>
+    <div class="error" id="error" hidden></div>
+  </section>
+
+  <section class="card">
+    <h2>Hasil</h2>
+    <div class="stage-tabs" id="tabs"></div>
+    <img id="panel" alt="Panel citra belum tersedia">
+    <p class="stage-title" id="stage-title">Belum ada citra yang dianalisis.</p>
+
+    <div class="result" id="result" hidden>
+      <div class="verdict">
+        <div class="muted">Bentuk sel</div>
+        <div class="name" id="shape">-</div>
+        <div class="meta" id="shape-meta">-</div>
+      </div>
+      <div class="verdict">
+        <div class="muted">Status Gram</div>
+        <div class="name" id="gram">-</div>
+        <div class="meta" id="gram-meta">-</div>
+      </div>
+    </div>
+
+    <ul class="notes" id="notes"></ul>
+  </section>
+</main>
+
+<script>
+const tabsEl = document.getElementById("tabs");
+const panelEl = document.getElementById("panel");
+const stageTitleEl = document.getElementById("stage-title");
+const fileEl = document.getElementById("file");
+const fileNameEl = document.getElementById("file-name");
+const submitEl = document.getElementById("submit");
+const errorEl = document.getElementById("error");
+const resultEl = document.getElementById("result");
+const notesEl = document.getElementById("notes");
+
+let state = { panels: [], titles: [], names: [], stage: 0, prediction: null };
+fetch("/api/health")
+  .then(r => r.json())
+  .then(d => {
+    if (d.max_upload_bytes) {
+      document.getElementById("limit").textContent =
+        Math.round(d.max_upload_bytes / (1024 * 1024));
+    }
+  })
+  .catch(() => {});
+
+fileEl.addEventListener("change", () => {
+  const file = fileEl.files[0];
+  fileNameEl.textContent = file ? file.name : "Pilih atau jatuhkan citra di sini";
+  submitEl.disabled = !file;
+  showError("");
+});
+
+document.querySelector("label.file").addEventListener("dragover", e => e.preventDefault());
+document.querySelector("label.file").addEventListener("drop", e => {
+  e.preventDefault();
+  if (e.dataTransfer.files.length) {
+    fileEl.files = e.dataTransfer.files;
+    fileEl.dispatchEvent(new Event("change"));
+  }
+});
+
+submitEl.addEventListener("click", async () => {
+  const file = fileEl.files[0];
+  if (!file) return;
+  showError("");
+  submitEl.disabled = true;
+  submitEl.textContent = "Menganalisis...";
+  try {
+    const body = new FormData();
+    body.append("file", file);
+    const response = await fetch(`/api/predict?stage=${state.stage}`, {
+      method: "POST",
+      body,
+    });
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.detail || "Permintaan gagal");
+    render(data);
+  } catch (error) {
+    showError(error.message);
+  } finally {
+    submitEl.disabled = false;
+    submitEl.textContent = "Analisis";
+  }
+});
+
+function render(data) {
+  state.panels = data.panels;
+  state.names = data.stage_names;
+  state.titles = data.stage_titles;
+  state.prediction = data.prediction;
+  state.stage = data.stage_index;
+
+  buildTabs(state.names, data.failed_stages);
+  showStage(state.stage);
+
+  const p = data.prediction;
+  document.getElementById("shape").textContent = p.shape_label;
+  document.getElementById("gram").textContent = p.gram_label;
+  document.getElementById("shape-meta").innerHTML =
+    `<span class="level-${p.shape_level}">${percent(p.shape_confidence)} (${p.shape_level})</span>`;
+  document.getElementById("gram-meta").innerHTML =
+    `<span class="level-${p.gram_level}">${percent(p.gram_confidence)} (${p.gram_level})</span>`;
+  resultEl.hidden = false;
+
+  notesEl.innerHTML = "";
+  const notes = [...data.notes];
+  // Disclaimer sudah ikut di notes dari server. Menambahnya lagi akan
+  // menampilkan kalimat yang sama dua kali.
+  if (!notes.includes(data.disclaimer)) notes.push(data.disclaimer);
+  notes.forEach(note => {
+    const li = document.createElement("li");
+    li.textContent = note;
+    notesEl.appendChild(li);
+  });
+}
+
+function percent(value) {
+  return `${(value * 100).toFixed(1)}%`;
+}
+
+function buildTabs(names, failed) {
+  tabsEl.innerHTML = "";
+  names.forEach((name, index) => {
+    const button = document.createElement("button");
+    button.textContent = name;
+    button.setAttribute("aria-pressed", String(index === state.stage));
+    if (failed.includes(name)) button.classList.add("failed");
+    button.addEventListener("click", () => showStage(index));
+    tabsEl.appendChild(button);
+  });
+}
+
+function showStage(index) {
+  state.stage = index;
+  const title = state.titles[index] || state.names[index];
+  panelEl.src = `data:image/png;base64,${state.panels[index]}`;
+  panelEl.alt = `Panel ${title}`;
+  stageTitleEl.textContent = title;
+  Array.from(tabsEl.children).forEach((button, i) =>
+    button.setAttribute("aria-pressed", String(i === index)));
+}
+
+function showError(message) {
+  if (!message) {
+    errorEl.hidden = true;
+    errorEl.textContent = "";
+    return;
+  }
+  errorEl.hidden = false;
+  errorEl.textContent = message;
+}
+</script>
+</body>
+</html>

@@ -29,7 +29,6 @@ import torch
 from scipy import ndimage as ndi
 from skimage import morphology
 from skimage.feature import peak_local_max
-from skimage.measure import regionprops
 from skimage.segmentation import watershed
 
 from .config import (
@@ -180,10 +179,18 @@ def segment_cells(image: np.ndarray) -> tuple[np.ndarray, bool]:
     markers[tuple(peaks.T)] = np.arange(1, len(peaks) + 1)
     labels = watershed(-distance, markers, mask=opened)
 
-    keep = np.zeros(labels.shape, dtype=bool)
-    for region in regionprops(labels):
-        if region.area >= SEGMENT_MIN_OBJECT_AREA:
-            keep[labels == region.label] = True
+    # Filter luas tanpa loop regionprops. Versi loop membandingkan seluruh
+    # citra berlabel dengan satu label untuk tiap region, sehingga biayanya
+    # O(jumlah_region x ukuran_citra). Pada citra DIBaS 2048 x 1532 dengan
+    # ratusan region, itu beberapa detik per citra. Penghitungan lewat
+    # np.unique dan np.bincount menghasilkan mask yang sama persis.
+    flat = labels.ravel()
+    unique_labels, inverse = np.unique(flat, return_inverse=True)
+    sizes = np.bincount(inverse, minlength=unique_labels.size)
+    sizes[unique_labels == 0] = 0
+
+    kept = unique_labels[sizes >= SEGMENT_MIN_OBJECT_AREA]
+    keep = np.isin(labels, kept)
     return keep, bool(keep.any())
 
 
@@ -304,6 +311,33 @@ def preprocess(image: np.ndarray | Path | str) -> PreprocessResult:
         object_count=count,
         message=SEGMENTATION_FAILURE_MESSAGE if not segmented else None,
     )
+
+
+def preprocess_tensor(image: np.ndarray | Path | str) -> torch.Tensor:
+    """Bangun tensor model saja, tanpa segmentasi dan tanpa panel.
+
+    Jalur ini dipakai ekstraksi fitur untuk pelatihan. Segmentasi dilewati
+    karena ARCHITECTURE bagian 3 menyatakan segmentasi tidak dibutuhkan inferensi:
+    klasifikasi bentuk dan status Gram berasal dari citra, bukan dari mask.
+    Segmentasi tetap ada di preprocess untuk kebutuhan panel visualisasi.
+
+    Pada citra DIBaS 2048 x 1532, segmentasi memakan sekitar 2,5 detik.
+    Menjalankannya sekali per citra_augmented membuat ekstraksi fitur untuk
+    2070 baris memakan lebih dari satu jam, tanpa memperbaiki metrik model
+    sedikit pun.
+
+    Args:
+        image: Array citra RGB, atau path berkas citra.
+
+    Returns:
+        Tensor 3 x 224 x 224 siap masuk backbone.
+
+    Raises:
+        FileNotFoundError: Bila path diberikan tapi berkasnya tidak ada.
+        ValueError: Bila bentuk citra tidak didukung.
+    """
+    source = load_image(image) if isinstance(image, (str, Path)) else _as_rgb(image)
+    return _to_tensor(normalize(resize_image(source)))
 
 
 def _denormalized_panel(normalized: np.ndarray) -> np.ndarray:

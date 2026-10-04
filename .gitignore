@@ -7,6 +7,11 @@ data/raw/images/
 # index.csv, zips_manifest.csv, dan unreadable.csv ikut di-commit sebagai bukti
 # keputusan data. Ukurannya kecil dan berguna untuk auditor.
 
+# Feature cache adalah artefak turunan. Bisa dibangun ulang dengan
+#   python -m bacteriacv.train
+# Matriksnya sekitar 16 MB dan tidak ada gunanya direvisi.
+data/features/
+
 # Python
 __pycache__/
 *.py[cod]
