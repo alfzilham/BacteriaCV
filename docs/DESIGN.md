@@ -10,9 +10,9 @@ Dokumen ini mengatur tampilan antarmuka web sederhana (C7 pada ARCHITECTURE.md).
 | Primary | `#050505` | Teks utama, border solid 2px, judul bagian, aksen struktural |
 | Secondary | `#333333` | Teks sekunder, label metadata |
 | Surface | `#FFFFFF` | Latar kartu hasil, panel konten utama |
-| Sub-surface | `#EAE8E3` | Latar kontrol tombol alih, pratinjau data |
+| Sub-surface | `#EAE8E3` | Latar kontrol tombol alih, pratinjau data, track scrollbar |
 | Background | `#F4F4F0` | Latar halaman utama (matte unbleached paper) |
-| Accent | `#D31515` | Tombol proses utama, aksen peringatan, fokus aktif |
+| Accent | `#D31515` | Tombol proses utama, aksen peringatan, fokus aktif, thumb scrollbar saat hover |
 | Level Tinggi | `#005A36` | Teks level confidence Tinggi, 7,57:1 pada latar paper |
 | Level Sedang | `#8A5000` | Teks level confidence Sedang, 5,90:1 pada latar paper |
 | Level Rendah | `#B30000` | Teks level confidence Rendah, 6,53:1 pada latar paper |
@@ -26,6 +26,8 @@ Teks utama menggunakan warna gelap (#050505). Warna teks pada latar `#D31515` wa
 - Teks di atas `#D31515` harus putih (`#ffffff`).
 - Informasi status tidak boleh bergantung pada warna saja. Setiap level confidence wajib disertai teks (Tinggi, Sedang, Rendah).
 - Kontras teks terhadap latar wajib memenuhi WCAG 2.1 AA (rasio minimal 4,5:1). Rasio diuji pada tahap implementasi.
+- Scrollbar adalah komponen UI, bukan teks. Yang berlaku adalah WCAG 1.4.11 Non-text Contrast dengan ambang 3:1, bukan WCAG 1.4.3 yang 4,5:1 dan hanya berlaku untuk teks. Thumb default `#050505` di atas track `#EAE8E3` mencapai 16,65:1 dan thumb hover `#D31515` mencapai 4,41:1. Keduanya lolos ambang 3:1. Rasio hover 4,41:1 itu SAH dan bukan kegagalan: tidak perlu diperbaiki, dan tidak diwajibkan untuk dinaikkan sampai 4,5:1.
+- Track scrollbar tidak bisa diubah ke `#F4F4F0` karena itu warna latar halaman, sehingga track akan jadi tidak terlihat. Track tetap `#EAE8E3`.
 
 ## 3. Tipografi
 - Font struktural: sans-serif sistem (-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif).
@@ -65,6 +67,8 @@ Layout mengikuti skeleton yang disepakati, yaitu satu halaman dengan tiga area u
 - Logo atau nama sistem di kiri.
 - Menu navigasi di tengah: Unggah, Riwayat, Tentang.
 - Tombol sekunder dan tombol utama di kanan.
+- Logo diambil dari `app/static/logo.svg`, favicon dari `app/static/favicon.svg`. Keduanya memakai palet bagian 2 dan tidak memakai warna dari gambar referensi. Favicon tanpa bingkai karena pada 16 piksel bingkai hitam berubah menjadi gumpalan.
+- Logo di header bersifat dekoratif dan memakai `alt` kosong, karena nama sistem sudah tertulis sebagai teks di sebelahnya. Jika tidak, pembaca layar akan membacanya dua kali.
 
 ### 4.2 Baris Atas
 - Kiri: kartu unggah citra dengan area drag-and-drop dan tombol pilih berkas.
