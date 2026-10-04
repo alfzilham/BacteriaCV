@@ -303,7 +303,7 @@ def evaluate_checkpoint(
         "gram_calibration_note": (
             "Head B dilatih sebagai klasifier biner satu logit dengan "
             "BCEWithLogitsLoss pada kolom keluaran kedua. sigmoid(logit) adalah "
-            "probabilistic kelas positif, sehingga ambang 0,5 berlaku langsung "
+            "probabilitas kelas positif, sehingga ambang 0,5 berlaku langsung "
             "dan confidence adalah probabilitas kelas yang dipilih. Kolom "
             "keluaran pertama tidak pernah masuk loss dan tidak membawa "
             "informasi yang dipelajari, jadi tidak boleh dipakai: softmax atas "
