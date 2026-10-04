@@ -71,7 +71,7 @@ Pada tahap pelatihan, label target diambil dari lookup table [L] sebelum masuk k
 
 ### C6. Modul Keluaran
 - Menghasilkan label dan confidence score per head.
-- Menghasilkan visualisasi segmentasi (kontur sel di atas citra asli).
+- Menghasilkan visualisasi segmentasi sebagai kontur area bakteri di atas citra asli, bukan kontur sel individual. Alasannya di SPEC bagian 8 butir 5: segmentasi memisahkan kelompok bakteri, bukan sel, dan elongasi objek tercampur susunan sel.
 
 ### C7. Antarmuka Web
 - Unggah citra, jalankan inferensi, tampilkan hasil dan visualisasi.
@@ -84,9 +84,12 @@ Pada tahap pelatihan, label target diambil dari lookup table [L] sebelum masuk k
 2. Terapkan lookup table [L] untuk memperoleh label bentuk dan Gram.
 3. Buang citra yang tidak terpetakan.
 4. Pra-pemrosesan dengan augmentasi.
-5. Forward pass backbone, lalu kedua head.
-6. Hitung loss berbobot, perbarui parameter head saja.
+5. Forward pass backbone sekali per citra, simpan vektor fitur ke cache.
+6. Latih kedua head pada fitur beku. Hitung loss berbobot, perbarui parameter head saja.
 7. Evaluasi pada data validasi, simpan checkpoint terbaik.
+8. Evaluasi data uji sekali di akhir, setelah bobot terbaik dipulihkan.
+
+Langkah 5 dan 6 dipisah karena backbone dibekukan. Forward pass pada 224 x 224 memakan sekitar 76 ms per citra; menjalankannya di dalam setiap epoch membuat 200 epoch memakanpuluhan menit tanpa mengubah vektor fitur. Cache kunci invalidated oleh nama berkas, ukuran, dan waktu modifikasi setiap citra, sehingga mengubah satu citra sumber sudah cukup untuk membangun ulang cache.
 
 ### 3.2 Inferensi
 1. Terima citra dari antarmuka.
@@ -120,8 +123,10 @@ BacteriaCV/
 │   │   ├── zips/                     # arsip ZIP asli
 │   │   ├── images/                   # citra TIFF per spesies
 │   │   └── zips_manifest.csv         # SHA-256 tiap arsip
-│   └── index.csv                     # path, spesies, split, fold
-├── checkpoints/
+│   ├── unreadable.csv                # citra rusak, sudah rusak di arsip asal
+│   ├── index.csv                     # path, spesies, split, fold
+│   └── features/                     # cache fitur backbone, artefak turunan
+├── checkpoints/                      # heads.pt, training_report.json, evaluation.json
 ├── docs/                             # SPEC, ARCHITECTURE, DESIGN, PRD, CONTEXT
 ├── scripts/                          # setup_env.ps1, check_env.ps1
 ├── tests/

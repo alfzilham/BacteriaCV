@@ -40,7 +40,7 @@ Sistem Computer Vision yang memprediksi bentuk sel (cocci, bacilli, spiral) dan 
 | F2 | Melakukan pra-pemrosesan sesuai spesifikasi | Wajib |
 | F3 | Menghasilkan prediksi bentuk sel dengan confidence score | Wajib |
 | F4 | Menghasilkan prediksi status Gram dengan confidence score | Wajib |
-| F5 | Menampilkan visualisasi hasil segmentasi | Wajib |
+| F5 | Menampilkan visualisasi hasil segmentasi sebagai kontur area bakteri, bukan sel individual | Wajib |
 | F6 | Melatih model dengan class weighting dari data latih | Wajib |
 | F7 | Menghitung F1-score makro dan akurasi per head | Wajib |
 | F8 | Antarmuka web untuk unggah dan tampilan hasil | Wajib |
@@ -65,6 +65,8 @@ Sistem Computer Vision yang memprediksi bentuk sel (cocci, bacilli, spiral) dan 
 2. Pembagian acak tidak mengukur generalisasi ke galur baru.
 3. Performa bergantung pada kualitas citra dan konsistensi protokol pewarnaan Gram.
 4. Sistem adalah alat bantu diagnostik awal, bukan pengganti kultur dan uji biokimia.
+5. Segmentasi morfologis berhasil memisahkan kelompok bakteri tetapi bukan sel individual, karena sel bersentuhan pada citra Gram 100x. Elongasi median objek untuk spesies kokus adalah 1,30 sampai 1,43 dan untuk spesies batang 1,64 sampai 1,76 di bawah metrik major/minor axis, namun rentang intraspesies 1,03 sampai 4,19 melampaui selisih antargrup 0,068, sehingga klasifikasi bentuk tidak dapat divalidasi dari objek hasil segmentasi. Metrik berbasis luas (extent) tidak menunjukkan pemisahan sama sekali. Bukti ini terkonstrain dua arah: elongasi objek mencampur bentuk sel dengan susunan sel berupa klaster, rantai, dan tetrad, yang tidak dapat dipisahkan oleh metode ini. Karena itu F5 menampilkan kontur area bakteri, bukan sel individual, dan panel visualisasi selalu menuliskan keterbatasan ini.
+6. Data uji berisi 66 citra dari 32 spesies, sekitar dua citra per spesies. F1 makro 1,000 pada data uji berarti tidak ada satu pun kesalahan pada 66 citra, bukan berarti model sempurna. Kepercayaan rata-rata 0,6439 menunjukkan margin antar citra kecil. Angka ini harus dibaca bersama ukuran data uji.
 
 ## 9. Kriteria Penerimaan
 
