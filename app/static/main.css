@@ -27,22 +27,24 @@
   /* SCROLLBAR: kotak siku, kontras tinggi, tanpa radius */
   html {
     scrollbar-width: thin;
-    scrollbar-color: #050505 #EAE8E3;
+    scrollbar-color: var(--ink-carbon) var(--surface-sub);
   }
 
   ::-webkit-scrollbar { width: 14px; height: 14px; }
 
   ::-webkit-scrollbar-track {
-    background: #EAE8E3;
-    border-left: 2px solid #050505;
+    background: var(--surface-sub);
+    border-left: var(--border-thick);
   }
 
   ::-webkit-scrollbar-thumb {
-    background: #050505;
-    border: 2px solid #EAE8E3;
+    background: var(--ink-carbon);
+    border: 2px solid var(--surface-sub);
   }
 
-  ::-webkit-scrollbar-thumb:hover { background: #D31515; }
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--accent-hazard);
+  }
 
   body {
     margin: 0;
@@ -640,7 +642,7 @@
     max-height: 90dvh;
     overflow-y: auto;
     scrollbar-width: thin;
-    scrollbar-color: #050505 #EAE8E3;
+    scrollbar-color: var(--ink-carbon) var(--surface-sub);
   }
 
   /* RESPONSIVE: PONSEL (<640) dan TABLET (641-1024) */

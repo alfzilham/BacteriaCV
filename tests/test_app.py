@@ -358,13 +358,50 @@ def _contrast_ratio(first: str, second: str) -> float:
     return (lighter + 0.05) / (darker + 0.05)
 
 
-def _declared_background(css: str, selector: str) -> str:
-    """Nilai background dari satu blok CSS, dibaca apa adanya."""
+def _design_tokens(css: str) -> dict[str, str]:
+    """Kumpulkan setiap definisi --nama: nilai dari blok :root."""
+    root = re.search(r":root\s*\{([^}]*)\}", css)
+    assert root, "blok :root tidak ditemukan di main.css"
+    tokens = dict(re.findall(r"(--[a-z0-9-]+)\s*:\s*([^;]+);", root.group(1)))
+    assert tokens, "blok :root tidak mendefinisikan custom property"
+    return tokens
+
+
+def _resolve(value: str, tokens: dict[str, str], limit: int = 10) -> str:
+    """Ganti setiap var(--nama) dengan nilainya, berulang sampai tidak ada var().
+
+    limit membatasi iterasi supaya token yang saling menunjuk tidak looping.
+    """
+    for _ in range(limit):
+        if "var(" not in value:
+            break
+        value = re.sub(
+            r"var\(\s*(--[a-z0-9-]+)\s*\)",
+            lambda m: tokens.get(m.group(1), m.group(0)),
+            value,
+        )
+    return value.strip()
+
+
+def _declared_value(css: str, selector: str, prop: str) -> str:
+    """Baca satu properti dari satu blok CSS, lalu resolve tokennya.
+
+    Lookbehind mencegah properti_background cocok dengan background-color.
+    """
     match = re.search(re.escape(selector) + r"\s*\{([^}]*)\}", css)
     assert match, f"blok {selector} tidak ditemukan di main.css"
-    colour = re.search(r"background\s*:\s*(#[0-9A-Fa-f]{6})", match.group(1))
-    assert colour, f"{selector} tidak mendeklarasikan background warna hex"
-    return colour.group(1)
+    decl = re.search(rf"(?<![-\w]){re.escape(prop)}\s*:\s*([^;]+);", match.group(1))
+    assert decl, f"{selector} tidak mendeklarasikan properti {prop}"
+    return _resolve(decl.group(1), _design_tokens(css))
+
+
+def _declared_background(css: str, selector: str) -> str:
+    """Nilai background dari satu blok CSS, setelah token var(--) di-resolve."""
+    value = _declared_value(css, selector, "background")
+    assert re.fullmatch(r"#[0-9A-Fa-f]{6}", value), (
+        f"{selector} tidak menghasilkan warna hex, dapat {value!r}"
+    )
+    return value
 
 
 def test_webkit_scrollbar_contrast_is_enforced() -> None:
@@ -375,7 +412,9 @@ def test_webkit_scrollbar_contrast_is_enforced() -> None:
     main.css supaya revisi UI berikutnya tidak bisa menurunkannya tanpa
     ketahuan.
 
-    Nilai yang harus terbaca sekarang:
+    Warna scrollbar ditulis sebagai var(--token), jadi nilainya dibaca lewat
+    resolver token, bukan hex mentah. Nilai yang harus terbaca setelah
+    di-resolve:
       scrollbar-color #050505 #EAE8E3, track #EAE8E3, thumb #050505,
       hover #D31515.
     """
@@ -384,12 +423,16 @@ def test_webkit_scrollbar_contrast_is_enforced() -> None:
     # 1. properti scrollbar-color pada blok html
     html_block = re.search(r"\bhtml\s*\{([^}]*)\}", css)
     assert html_block, "blok html tidak ditemukan di main.css"
-    shorthand = re.search(
-        r"scrollbar-color\s*:\s*(#[0-9A-Fa-f]{6})\s+(#[0-9A-Fa-f]{6})",
-        html_block.group(1),
-    )
+    tokens = _design_tokens(css)
+    shorthand = re.search(r"scrollbar-color\s*:\s*([^;]+);", html_block.group(1))
     assert shorthand, "properti scrollbar-color tidak ditemukan pada blok html"
-    shorthand_thumb, shorthand_track = shorthand.group(1), shorthand.group(2)
+    resolved = _resolve(shorthand.group(1), tokens).split()
+    assert len(resolved) == 2, f"scrollbar-color harus punya dua warna, dapat {resolved}"
+    shorthand_thumb, shorthand_track = resolved
+    for colour in (shorthand_thumb, shorthand_track):
+        assert re.fullmatch(r"#[0-9A-Fa-f]{6}", colour), (
+            f"scrollbar-color tidak menghasilkan warna hex, dapat {colour!r}"
+        )
 
     # 2. background track, thumb, dan hover
     track = _declared_background(css, "::-webkit-scrollbar-track")
