@@ -326,6 +326,109 @@ def test_static_css_and_js_are_external_files() -> None:
     assert "</script>" in page and "main.js" in page
 
 
+# Ambang kontras untuk komponen UI non-teks, bukan teks. Lihat DESIGN.md
+# bagian 2.1: scrollbar adalah komponen UI, jadi yang berlaku adalah
+# WCAG 1.4.11 Non-text Contrast dengan ambang 3:1, bukan WCAG 1.4.3 yang
+# 4,5:1 dan hanya berlaku untuk teks.
+SCROLLBAR_MIN_CONTRAST = 3.0
+
+
+def _srgb_to_linear(channel: int) -> float:
+    """Linearisasi satu kanal sRGB 0-255, rumus WCAG 2.1."""
+    c = channel / 255
+    if c <= 0.03928:
+        return c / 12.92
+    return ((c + 0.055) / 1.055) ** 2.4
+
+
+def _relative_luminance(hex_colour: str) -> float:
+    """Luminositas relatif WCAG dari warna hexRRGGBB."""
+    value = hex_colour.lstrip("#")
+    r, g, b = (int(value[i:i + 2], 16) for i in (0, 2, 4))
+    return (0.2126 * _srgb_to_linear(r)
+            + 0.7152 * _srgb_to_linear(g)
+            + 0.0722 * _srgb_to_linear(b))
+
+
+def _contrast_ratio(first: str, second: str) -> float:
+    """Rasio kontras WCAG (hi + 0.05) / (lo + 0.05)."""
+    a = _relative_luminance(first)
+    b = _relative_luminance(second)
+    lighter, darker = max(a, b), min(a, b)
+    return (lighter + 0.05) / (darker + 0.05)
+
+
+def _declared_background(css: str, selector: str) -> str:
+    """Nilai background dari satu blok CSS, dibaca apa adanya."""
+    match = re.search(re.escape(selector) + r"\s*\{([^}]*)\}", css)
+    assert match, f"blok {selector} tidak ditemukan di main.css"
+    colour = re.search(r"background\s*:\s*(#[0-9A-Fa-f]{6})", match.group(1))
+    assert colour, f"{selector} tidak mendeklarasikan background warna hex"
+    return colour.group(1)
+
+
+def test_webkit_scrollbar_contrast_is_enforced() -> None:
+    """Kontras scrollbar harus tetap di atas ambang 3:1.
+
+    DESIGN.md bagian 2.1 menetapkan ambang 3:1 karena scrollbar adalah
+    komponen UI, bukan teks. Tes ini menghitung ulang rasionya dari
+    main.css supaya revisi UI berikutnya tidak bisa menurunkannya tanpa
+    ketahuan.
+
+    Nilai yang harus terbaca sekarang:
+      scrollbar-color #050505 #EAE8E3, track #EAE8E3, thumb #050505,
+      hover #D31515.
+    """
+    css = (REPO_ROOT / "app" / "static" / "main.css").read_text(encoding="utf-8")
+
+    # 1. properti scrollbar-color pada blok html
+    html_block = re.search(r"\bhtml\s*\{([^}]*)\}", css)
+    assert html_block, "blok html tidak ditemukan di main.css"
+    shorthand = re.search(
+        r"scrollbar-color\s*:\s*(#[0-9A-Fa-f]{6})\s+(#[0-9A-Fa-f]{6})",
+        html_block.group(1),
+    )
+    assert shorthand, "properti scrollbar-color tidak ditemukan pada blok html"
+    shorthand_thumb, shorthand_track = shorthand.group(1), shorthand.group(2)
+
+    # 2. background track, thumb, dan hover
+    track = _declared_background(css, "::-webkit-scrollbar-track")
+    thumb = _declared_background(css, "::-webkit-scrollbar-thumb")
+    hover = _declared_background(css, "::-webkit-scrollbar-thumb:hover")
+
+    # 3. hitung rasio tiap pasangan
+    thumb_vs_track = _contrast_ratio(thumb, track)
+    hover_vs_track = _contrast_ratio(hover, track)
+    shorthand_vs_track = _contrast_ratio(shorthand_thumb, shorthand_track)
+
+    # 4. tegakkan ambang 3:1
+    for label, ratio in (
+        (f"thumb {thumb} di track {track}", thumb_vs_track),
+        (f"hover {hover} di track {track}", hover_vs_track),
+        (f"scrollbar-color {shorthand_thumb} di {shorthand_track}", shorthand_vs_track),
+    ):
+        assert ratio >= SCROLLBAR_MIN_CONTRAST, (
+            f"kontras {label} cuma {ratio:.2f}:1, di bawah ambang "
+            f"{SCROLLBAR_MIN_CONTRAST}:1"
+        )
+
+    # Firefox dan WebKit harus memakai pasangan warna yang sama, kalau tidak
+    # scrollbar akan berubah tampilan antarperamban.
+    assert shorthand_thumb.lower() == thumb.lower(), (
+        f"scrollbar-color {shorthand_thumb} tidak sama dengan thumb WebKit {thumb}"
+    )
+    assert shorthand_track.lower() == track.lower(), (
+        f"scrollbar-color {shorthand_track} tidak sama dengan track WebKit {track}"
+    )
+
+    print(
+        f"kontras scrollbar: thumb {thumb_vs_track:.2f}:1, "
+        f"hover {hover_vs_track:.2f}:1, "
+        f"shorthand {shorthand_vs_track:.2f}:1, "
+        f"ambang {SCROLLBAR_MIN_CONTRAST}:1"
+    )
+
+
 def test_hidden_attribute_beats_dialog_backdrop_display() -> None:
     """Atribut hidden harus menang atas display yang ditulis .dialog-backdrop.
 
