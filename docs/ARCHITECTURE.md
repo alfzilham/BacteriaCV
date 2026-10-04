@@ -130,7 +130,10 @@ BacteriaCV/
 │       └── build_index.py            # index.csv + pemeriksaan kebocoran
 ├── app/
 │   ├── main.py                       # C7 backend
-│   └── static/index.html             # C7 frontend
+│   └── static/
+│       ├── index.html                # C7 frontend, markup saja
+│       ├── main.css                  # gaya, industrial brutalist
+│       └── main.js                   # interaksi dan pemanggilan API
 ├── data/
 │   ├── raw/
 │   │   ├── zips/                     # arsip ZIP asli

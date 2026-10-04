@@ -1,0 +1,608 @@
+
+  :root {
+    --bg-paper: #F4F4F0;
+    --surface-pure: #FFFFFF;
+    --surface-sub: #EAE8E3;
+    --ink-carbon: #050505;
+    --ink-secondary: #333333;
+    --ink-muted: #555555;
+    --accent-hazard: #D31515;
+    --text-on-accent: #FFFFFF;
+    --level-high: #005A36;
+    --level-med: #8A5000;
+    --level-low: #B30000;
+    --border-thick: 2px solid var(--ink-carbon);
+    --border-thin: 1px solid var(--ink-carbon);
+    --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    --font-mono: ui-monospace, "SF Mono", "Cascadia Code", "Source Code Pro", Consolas, "Courier New", monospace;
+  }
+
+  *, *::before, *::after {
+    box-sizing: border-box;
+    border-radius: 0 !important; /* Radius border NOL mutlak di seluruh dokumen */
+  }
+
+  body {
+    margin: 0;
+    padding: 0;
+    background-color: var(--bg-paper);
+    color: var(--ink-carbon);
+    font-family: var(--font-sans);
+    font-size: 16px;
+    line-height: 1.5;
+    font-weight: 400;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* Scanline CRT halus sebagai tekstur (kontras tetap > 4.5:1) */
+  body::before {
+    content: "";
+    position: fixed;
+    top: 0; left: 0; width: 100%; height: 100%;
+    pointer-events: none;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(5, 5, 5, 0.015) 2px,
+      rgba(5, 5, 5, 0.015) 4px
+    );
+    z-index: 9999;
+  }
+
+  /* Aksesibilitas keyboard fokus tegas */
+  :focus-visible {
+    outline: 2px solid var(--accent-hazard) !important;
+    outline-offset: 2px !important;
+  }
+
+  /* Input file disembunyikan secara visual (tetap aksesibel keyboard) */
+  .visually-hidden {
+    position: absolute !important;
+    width: 1px !important;
+    height: 1px !important;
+    padding: 0 !important;
+    margin: -1px !important;
+    overflow: hidden !important;
+    clip: rect(0, 0, 0, 0) !important;
+    white-space: nowrap !important;
+    border: 0 !important;
+  }
+
+  /* CONTAINER STRUKTURAL */
+  .layout-wrapper {
+    max-width: 1240px;
+    margin: 0 auto;
+    border-left: var(--border-thick);
+    border-right: var(--border-thick);
+    background-color: var(--bg-paper);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* HEADER */
+  header.site-header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 24px;
+    border-bottom: var(--border-thick);
+    background-color: var(--surface-pure);
+    gap: 16px;
+  }
+
+  .header-brand {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+  }
+
+  .brand-title {
+    margin: 0;
+    font-size: 28px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: -0.03em;
+    line-height: 1.05;
+  }
+
+  .brand-badge {
+    font-family: var(--font-mono);
+    font-size: 13px;
+    font-weight: 700;
+    background-color: var(--ink-carbon);
+    color: var(--surface-pure);
+    padding: 2px 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .header-nav {
+    display: flex;
+    gap: 12px;
+  }
+
+  .nav-link {
+    font-family: var(--font-mono);
+    font-size: 13px;
+    font-weight: 700;
+    text-transform: uppercase;
+    color: var(--ink-carbon);
+    text-decoration: none;
+    padding: 6px 12px;
+    border: var(--border-thick);
+    background-color: var(--surface-sub);
+    letter-spacing: 0.05em;
+  }
+
+  .nav-link:hover {
+    background-color: var(--ink-carbon);
+    color: var(--surface-pure);
+  }
+
+  .header-actions {
+    display: flex;
+    gap: 8px;
+  }
+
+  /* BARIS ATAS: Kartu Unggah & Kartu Ringkasan Hasil */
+  .top-row-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    border-bottom: var(--border-thick);
+    background-color: var(--ink-carbon);
+    gap: 2px;
+  }
+
+  @media (max-width: 860px) {
+    .top-row-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  .card {
+    background-color: var(--surface-pure);
+    padding: 20px 24px;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 14px;
+    border-bottom: var(--border-thick);
+    padding-bottom: 8px;
+  }
+
+  .card-title {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    line-height: 1.15;
+  }
+
+  .card-id-tag {
+    font-family: var(--font-mono);
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--ink-secondary);
+    text-transform: uppercase;
+  }
+
+  /* AREA UNGGAH */
+  label.upload-dropzone {
+    display: block;
+    border: 2px dashed var(--ink-carbon);
+    background-color: var(--surface-sub);
+    padding: 28px 16px;
+    text-align: center;
+    cursor: pointer;
+    color: var(--ink-carbon);
+    transition: none; /* Tanpa animasi mulus */
+  }
+
+  label.upload-dropzone:hover,
+  label.upload-dropzone.dragover {
+    background-color: var(--ink-carbon);
+    color: var(--surface-pure);
+  }
+
+  label.upload-dropzone:hover .dropzone-sub,
+  label.upload-dropzone.dragover .dropzone-sub {
+    color: var(--surface-sub);
+  }
+
+  .dropzone-label {
+    display: block;
+    font-size: 16px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+    margin-bottom: 4px;
+  }
+
+  .dropzone-sub {
+    display: block;
+    font-family: var(--font-mono);
+    font-size: 13px;
+    color: var(--ink-secondary);
+    text-transform: uppercase;
+  }
+
+  .file-name-display {
+    margin-top: 10px;
+    font-family: var(--font-mono);
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--ink-carbon);
+    background-color: var(--surface-sub);
+    padding: 6px 10px;
+    border: var(--border-thin);
+    word-break: break-all;
+  }
+
+  /* KARTU RINGKASAN HASIL */
+  .summary-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-top: auto;
+  }
+
+  @media (max-width: 520px) {
+    .summary-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  .summary-cell {
+    border: var(--border-thick);
+    background-color: var(--surface-sub);
+    padding: 12px;
+  }
+
+  .summary-cell-title {
+    font-family: var(--font-mono);
+    font-size: 13px;
+    font-weight: 700;
+    text-transform: uppercase;
+    color: var(--ink-secondary);
+    letter-spacing: 0.05em;
+    margin-bottom: 4px;
+  }
+
+  .summary-cell-value {
+    font-size: 22px;
+    font-weight: 800;
+    text-transform: uppercase;
+    line-height: 1.1;
+    margin-bottom: 4px;
+  }
+
+  .summary-cell-meta {
+    font-family: var(--font-mono);
+    font-size: 13px;
+    font-weight: 600;
+  }
+
+  /* AREA UTAMA */
+  .main-content-grid {
+    display: grid;
+    grid-template-columns: 420px 1fr;
+    background-color: var(--ink-carbon);
+    gap: 2px;
+    flex: 1 0 auto;
+  }
+
+  @media (max-width: 960px) {
+    .main-content-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  .main-left-pane {
+    background-color: var(--surface-pure);
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .pane-header h2 {
+    margin: 0 0 8px 0;
+    font-size: 18px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    line-height: 1.15;
+  }
+
+  .pane-desc {
+    margin: 0;
+    font-size: 16px;
+    line-height: 1.5;
+    color: var(--ink-secondary);
+  }
+
+  /* TOMBOL PROSES */
+  button.btn-process {
+    display: block;
+    width: 100%;
+    padding: 14px 20px;
+    font-family: var(--font-sans);
+    font-size: 16px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    background-color: var(--accent-hazard);
+    color: var(--text-on-accent);
+    border: var(--border-thick);
+    cursor: pointer;
+    text-align: center;
+  }
+
+  button.btn-process:hover:not(:disabled) {
+    background-color: var(--ink-carbon);
+    color: var(--surface-pure);
+  }
+
+  button.btn-process:active:not(:disabled) {
+    background-color: #A00F0F;
+    color: var(--text-on-accent);
+  }
+
+  button.btn-process:disabled {
+    background-color: var(--surface-sub);
+    color: var(--ink-muted);
+    border-color: #888888;
+    cursor: not-allowed;
+  }
+
+  /* PERINGATAN DAN PESAN KESALAHAN */
+  .alert-box {
+    border: var(--border-thick);
+    padding: 12px;
+    font-family: var(--font-mono);
+    font-size: 13px;
+    font-weight: 600;
+    line-height: 1.4;
+  }
+
+  .alert-error {
+    background-color: #FFF0F0;
+    border-color: var(--accent-hazard);
+    color: var(--accent-hazard);
+  }
+
+  .alert-warning {
+    background-color: #FFF9E6;
+    border-color: var(--level-med);
+    color: var(--level-med);
+  }
+
+  /* CATATAN RINGKASAN HASIL */
+  .notes-card {
+    border: var(--border-thick);
+    background-color: var(--surface-sub);
+    padding: 14px;
+  }
+
+  .notes-header {
+    font-family: var(--font-mono);
+    font-size: 13px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 8px;
+    border-bottom: var(--border-thin);
+    padding-bottom: 4px;
+  }
+
+  ul.notes-list {
+    margin: 0;
+    padding-left: 20px;
+    font-size: 14px;
+    color: var(--ink-secondary);
+  }
+
+  ul.notes-list li {
+    margin-bottom: 6px;
+  }
+
+  /* PANE KANAN: Visualisasi & Panel Kontrol */
+  .main-right-pane {
+    background-color: var(--surface-pure);
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .visual-viewport {
+    border: var(--border-thick);
+    background-color: #0A0A0A;
+    min-height: 360px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    overflow: hidden;
+  }
+
+  #panel {
+    max-width: 100%;
+    height: auto;
+    display: block;
+    image-rendering: pixelated;
+  }
+
+  .viewport-placeholder {
+    font-family: var(--font-mono);
+    font-size: 13px;
+    font-weight: 600;
+    color: #888888;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    text-align: center;
+    padding: 24px;
+  }
+
+  /* PANEL KONTROL TOGGLE / TOMBOL ALIH */
+  .control-strip {
+    border: var(--border-thick);
+    background-color: var(--surface-sub);
+    padding: 12px;
+  }
+
+  .control-strip-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 10px;
+  }
+
+  .control-strip-label {
+    font-family: var(--font-mono);
+    font-size: 13px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  #stage-title {
+    font-family: var(--font-mono);
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--ink-secondary);
+    margin: 0;
+  }
+
+  /* Wadah tombol alih (id="tabs" wajib sesuai uji test_app.py) */
+  #tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  #tabs button {
+    font-family: var(--font-mono);
+    font-size: 13px;
+    font-weight: 600;
+    text-transform: uppercase;
+    padding: 8px 12px;
+    background-color: var(--surface-pure);
+    color: var(--ink-carbon);
+    border: var(--border-thick);
+    cursor: pointer;
+    flex: 1 1 auto;
+    letter-spacing: 0.03em;
+  }
+
+  #tabs button:hover {
+    background-color: var(--ink-carbon);
+    color: var(--surface-pure);
+  }
+
+  #tabs button[aria-pressed="true"] {
+    background-color: var(--ink-carbon);
+    color: var(--surface-pure);
+    border-color: var(--ink-carbon);
+    font-weight: 700;
+  }
+
+  #tabs button.failed {
+    border-color: var(--accent-hazard);
+    color: var(--accent-hazard);
+  }
+
+  /* TEKS KETERBATASAN SEGMENTASI (WAJIB TAMPIL PERSIS SPEC BAGIAN 8 BUTIR 5) */
+  .segmentation-limitation-box {
+    border: var(--border-thick);
+    background-color: var(--bg-paper);
+    padding: 12px 14px;
+    font-size: 13px;
+    line-height: 1.45;
+    color: var(--ink-secondary);
+  }
+
+  .segmentation-limitation-box strong {
+    color: var(--ink-carbon);
+    font-family: var(--font-mono);
+    text-transform: uppercase;
+    font-size: 12px;
+    display: block;
+    margin-bottom: 4px;
+  }
+
+  /* LEVEL CONFIDENCE ACCESSIBILITY */
+  .level-tinggi {
+    color: var(--level-high);
+    font-weight: 700;
+  }
+
+  .level-sedang {
+    color: var(--level-med);
+    font-weight: 700;
+  }
+
+  .level-rendah {
+    color: var(--level-low);
+    font-weight: 700;
+  }
+
+  /* FOOTER & CHIP INFORMASI */
+  footer.site-footer {
+    border-top: var(--border-thick);
+    background-color: var(--surface-pure);
+    padding: 16px 24px;
+  }
+
+  .chip-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .info-chip {
+    font-family: var(--font-mono);
+    font-size: 13px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    padding: 6px 10px;
+    border: var(--border-thin);
+    background-color: var(--surface-sub);
+    color: var(--ink-carbon);
+  }
+
+  .info-chip strong {
+    color: var(--ink-secondary);
+  }
+
+  /* MODAL / OVERLAY LAPORAN */
+  .dialog-backdrop {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(5, 5, 5, 0.75);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+    z-index: 10000;
+  }
+
+  .dialog-panel {
+    background: var(--surface-pure);
+    border: var(--border-thick);
+    max-width: 680px;
+    width: 100%;
+    padding: 24px;
+    max-height: 90vh;
+    overflow-y: auto;
+  }

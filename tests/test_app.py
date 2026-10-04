@@ -283,6 +283,39 @@ def test_index_html_has_one_panel_with_toggle() -> None:
     assert 'id="panel"' in page
 
 
+def test_static_css_and_js_are_external_files() -> None:
+    """CSS dan JavaScript harus berada di berkas statis sendiri.
+
+    Berkas main.css dan main.js wajib ada dan tidak kosong, index.html harus
+    merujuk keduanya lewat path absolut /static, dan tidak boleh ada blok
+    <style> atau <script> inline yang tertinggal.
+
+    Path absolut itu wajib: FastAPI memasang static di /static, sehingga
+    rujukan relatif seperti href="main.css" akan menghasilkan 404. Halaman
+    lalu tampil tanpa gaya dan tanpa interaksi, dan tidak ada tes lama yang
+    akan gagal karena itu.
+    """
+    static_dir = REPO_ROOT / "app" / "static"
+    css = static_dir / "main.css"
+    js = static_dir / "main.js"
+
+    assert css.is_file(), "app/static/main.css tidak ada"
+    assert js.is_file(), "app/static/main.js tidak ada"
+    assert css.stat().st_size > 0, "app/static/main.css kosong"
+    assert js.stat().st_size > 0, "app/static/main.js kosong"
+
+    page = (static_dir / "index.html").read_text(encoding="utf-8")
+
+    assert '<link rel="stylesheet" href="/static/main.css">' in page
+    assert '<script src="/static/main.js" defer></script>' in page
+
+    # Tidak ada blok inline. Satu-satunya tag script adalah rujukan eksternal,
+    # sehingga blok <script>...</script> yang berisi kode mustahil ada.
+    assert "<style" not in page
+    assert page.count("<script") == 1
+    assert "</script>" in page and "main.js" in page
+
+
 def test_index_html_has_no_hardcoded_metric_claims() -> None:
     """Halaman tidak boleh menjanjikan angka sebelum evaluasi.
 
