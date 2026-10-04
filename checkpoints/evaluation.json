@@ -1,0 +1,444 @@
+{
+  "checkpoint": "D:\\2026\\Workspace\\PersonalApps\\BacteriaCV\\checkpoints\\heads.pt",
+  "split": "test",
+  "n_images": 66,
+  "n_species": 32,
+  "shape": {
+    "head": "shape",
+    "labels": [
+      "cocci",
+      "bacilli"
+    ],
+    "f1_macro": 1.0,
+    "accuracy": 1.0,
+    "per_class": [
+      {
+        "label": "cocci",
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "support": 19.0
+      },
+      {
+        "label": "bacilli",
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "support": 47.0
+      }
+    ],
+    "confusion": [
+      [
+        19,
+        0
+      ],
+      [
+        0,
+        47
+      ]
+    ],
+    "support": [
+      19,
+      47
+    ],
+    "positive_support": 47
+  },
+  "gram": {
+    "head": "gram",
+    "labels": [
+      "positif",
+      "negatif"
+    ],
+    "f1_macro": 1.0,
+    "accuracy": 1.0,
+    "per_class": [
+      {
+        "label": "positif",
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "support": 47.0
+      },
+      {
+        "label": "negatif",
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "support": 19.0
+      }
+    ],
+    "confusion": [
+      [
+        47,
+        0
+      ],
+      [
+        0,
+        19
+      ]
+    ],
+    "support": [
+      47,
+      19
+    ],
+    "positive_support": 19
+  },
+  "mean_confidence_shape": 0.9812411665916443,
+  "mean_confidence_gram": 0.9671362638473511,
+  "per_species": [
+    {
+      "species_id": "acinetobacter_baumannii",
+      "display_name": "Acinetobacter baumannii",
+      "expected_shape": "bacilli",
+      "expected_gram": "negatif",
+      "n": 2,
+      "shape_accuracy": 1.0,
+      "predicted_shapes": [
+        "bacilli"
+      ]
+    },
+    {
+      "species_id": "actinomyces_israelii",
+      "display_name": "Actinomyces israelii",
+      "expected_shape": "bacilli",
+      "expected_gram": "positif",
+      "n": 2,
+      "shape_accuracy": 1.0,
+      "predicted_shapes": [
+        "bacilli"
+      ]
+    },
+    {
+      "species_id": "bacteroides_fragilis",
+      "display_name": "Bacteroides fragilis",
+      "expected_shape": "bacilli",
+      "expected_gram": "negatif",
+      "n": 2,
+      "shape_accuracy": 1.0,
+      "predicted_shapes": [
+        "bacilli"
+      ]
+    },
+    {
+      "species_id": "bifidobacterium_spp",
+      "display_name": "Bifidobacterium spp.",
+      "expected_shape": "bacilli",
+      "expected_gram": "positif",
+      "n": 2,
+      "shape_accuracy": 1.0,
+      "predicted_shapes": [
+        "bacilli"
+      ]
+    },
+    {
+      "species_id": "clostridium_perfringens",
+      "display_name": "Clostridium perfringens",
+      "expected_shape": "bacilli",
+      "expected_gram": "positif",
+      "n": 2,
+      "shape_accuracy": 1.0,
+      "predicted_shapes": [
+        "bacilli"
+      ]
+    },
+    {
+      "species_id": "enterococcus_faecalis",
+      "display_name": "Enterococcus faecalis",
+      "expected_shape": "cocci",
+      "expected_gram": "positif",
+      "n": 2,
+      "shape_accuracy": 1.0,
+      "predicted_shapes": [
+        "cocci"
+      ]
+    },
+    {
+      "species_id": "enterococcus_faecium",
+      "display_name": "Enterococcus faecium",
+      "expected_shape": "cocci",
+      "expected_gram": "positif",
+      "n": 2,
+      "shape_accuracy": 1.0,
+      "predicted_shapes": [
+        "cocci"
+      ]
+    },
+    {
+      "species_id": "escherichia_coli",
+      "display_name": "Escherichia coli",
+      "expected_shape": "bacilli",
+      "expected_gram": "negatif",
+      "n": 2,
+      "shape_accuracy": 1.0,
+      "predicted_shapes": [
+        "bacilli"
+      ]
+    },
+    {
+      "species_id": "fusobacterium_spp",
+      "display_name": "Fusobacterium spp.",
+      "expected_shape": "bacilli",
+      "expected_gram": "negatif",
+      "n": 2,
+      "shape_accuracy": 1.0,
+      "predicted_shapes": [
+        "bacilli"
+      ]
+    },
+    {
+      "species_id": "lactobacillus_casei",
+      "display_name": "Lactobacillus casei",
+      "expected_shape": "bacilli",
+      "expected_gram": "positif",
+      "n": 2,
+      "shape_accuracy": 1.0,
+      "predicted_shapes": [
+        "bacilli"
+      ]
+    },
+    {
+      "species_id": "lactobacillus_crispatus",
+      "display_name": "Lactobacillus crispatus",
+      "expected_shape": "bacilli",
+      "expected_gram": "positif",
+      "n": 2,
+      "shape_accuracy": 1.0,
+      "predicted_shapes": [
+        "bacilli"
+      ]
+    },
+    {
+      "species_id": "lactobacillus_delbrueckii",
+      "display_name": "Lactobacillus delbrueckii",
+      "expected_shape": "bacilli",
+      "expected_gram": "positif",
+      "n": 2,
+      "shape_accuracy": 1.0,
+      "predicted_shapes": [
+        "bacilli"
+      ]
+    },
+    {
+      "species_id": "lactobacillus_gasseri",
+      "display_name": "Lactobacillus gasseri",
+      "expected_shape": "bacilli",
+      "expected_gram": "positif",
+      "n": 2,
+      "shape_accuracy": 1.0,
+      "predicted_shapes": [
+        "bacilli"
+      ]
+    },
+    {
+      "species_id": "lactobacillus_johnsonii_a",
+      "display_name": "Lactobacillus johnsonii (A)",
+      "expected_shape": "bacilli",
+      "expected_gram": "positif",
+      "n": 2,
+      "shape_accuracy": 1.0,
+      "predicted_shapes": [
+        "bacilli"
+      ]
+    },
+    {
+      "species_id": "lactobacillus_johnsonii_b",
+      "display_name": "Lactobacillus johnsonii (B)",
+      "expected_shape": "bacilli",
+      "expected_gram": "positif",
+      "n": 2,
+      "shape_accuracy": 1.0,
+      "predicted_shapes": [
+        "bacilli"
+      ]
+    },
+    {
+      "species_id": "lactobacillus_paracasei",
+      "display_name": "Lactobacillus paracasei",
+      "expected_shape": "bacilli",
+      "expected_gram": "positif",
+      "n": 2,
+      "shape_accuracy": 1.0,
+      "predicted_shapes": [
+        "bacilli"
+      ]
+    },
+    {
+      "species_id": "lactobacillus_plantarum",
+      "display_name": "Lactobacillus plantarum",
+      "expected_shape": "bacilli",
+      "expected_gram": "positif",
+      "n": 2,
+      "shape_accuracy": 1.0,
+      "predicted_shapes": [
+        "bacilli"
+      ]
+    },
+    {
+      "species_id": "lactobacillus_reuteri",
+      "display_name": "Lactobacillus reuteri",
+      "expected_shape": "bacilli",
+      "expected_gram": "positif",
+      "n": 2,
+      "shape_accuracy": 1.0,
+      "predicted_shapes": [
+        "bacilli"
+      ]
+    },
+    {
+      "species_id": "lactobacillus_rhamnosus",
+      "display_name": "Lactobacillus rhamnosus",
+      "expected_shape": "bacilli",
+      "expected_gram": "positif",
+      "n": 2,
+      "shape_accuracy": 1.0,
+      "predicted_shapes": [
+        "bacilli"
+      ]
+    },
+    {
+      "species_id": "lactobacillus_salivarius",
+      "display_name": "Lactobacillus salivarius",
+      "expected_shape": "bacilli",
+      "expected_gram": "positif",
+      "n": 2,
+      "shape_accuracy": 1.0,
+      "predicted_shapes": [
+        "bacilli"
+      ]
+    },
+    {
+      "species_id": "listeria_monocytogenes",
+      "display_name": "Listeria monocytogenes",
+      "expected_shape": "bacilli",
+      "expected_gram": "positif",
+      "n": 3,
+      "shape_accuracy": 1.0,
+      "predicted_shapes": [
+        "bacilli"
+      ]
+    },
+    {
+      "species_id": "micrococcus_spp",
+      "display_name": "Micrococcus spp.",
+      "expected_shape": "cocci",
+      "expected_gram": "positif",
+      "n": 2,
+      "shape_accuracy": 1.0,
+      "predicted_shapes": [
+        "cocci"
+      ]
+    },
+    {
+      "species_id": "neisseria_gonorrhoeae",
+      "display_name": "Neisseria gonorrhoeae",
+      "expected_shape": "cocci",
+      "expected_gram": "negatif",
+      "n": 2,
+      "shape_accuracy": 1.0,
+      "predicted_shapes": [
+        "cocci"
+      ]
+    },
+    {
+      "species_id": "porphyromonas_gingivalis",
+      "display_name": "Porphyromonas gingivalis",
+      "expected_shape": "bacilli",
+      "expected_gram": "negatif",
+      "n": 2,
+      "shape_accuracy": 1.0,
+      "predicted_shapes": [
+        "bacilli"
+      ]
+    },
+    {
+      "species_id": "propionibacterium_acnes",
+      "display_name": "Propionibacterium acnes",
+      "expected_shape": "bacilli",
+      "expected_gram": "positif",
+      "n": 2,
+      "shape_accuracy": 1.0,
+      "predicted_shapes": [
+        "bacilli"
+      ]
+    },
+    {
+      "species_id": "proteus_spp",
+      "display_name": "Proteus spp.",
+      "expected_shape": "bacilli",
+      "expected_gram": "negatif",
+      "n": 2,
+      "shape_accuracy": 1.0,
+      "predicted_shapes": [
+        "bacilli"
+      ]
+    },
+    {
+      "species_id": "pseudomonas_aeruginosa",
+      "display_name": "Pseudomonas aeruginosa",
+      "expected_shape": "bacilli",
+      "expected_gram": "negatif",
+      "n": 2,
+      "shape_accuracy": 1.0,
+      "predicted_shapes": [
+        "bacilli"
+      ]
+    },
+    {
+      "species_id": "staphylococcus_aureus",
+      "display_name": "Staphylococcus aureus",
+      "expected_shape": "cocci",
+      "expected_gram": "positif",
+      "n": 2,
+      "shape_accuracy": 1.0,
+      "predicted_shapes": [
+        "cocci"
+      ]
+    },
+    {
+      "species_id": "staphylococcus_epidermidis",
+      "display_name": "Staphylococcus epidermidis",
+      "expected_shape": "cocci",
+      "expected_gram": "positif",
+      "n": 2,
+      "shape_accuracy": 1.0,
+      "predicted_shapes": [
+        "cocci"
+      ]
+    },
+    {
+      "species_id": "staphylococcus_saprophyticus",
+      "display_name": "Staphylococcus saprophyticus",
+      "expected_shape": "cocci",
+      "expected_gram": "positif",
+      "n": 2,
+      "shape_accuracy": 1.0,
+      "predicted_shapes": [
+        "cocci"
+      ]
+    },
+    {
+      "species_id": "streptococcus_agalactiae",
+      "display_name": "Streptococcus agalactiae",
+      "expected_shape": "cocci",
+      "expected_gram": "positif",
+      "n": 2,
+      "shape_accuracy": 1.0,
+      "predicted_shapes": [
+        "cocci"
+      ]
+    },
+    {
+      "species_id": "veillonella_spp",
+      "display_name": "Veillonella spp.",
+      "expected_shape": "cocci",
+      "expected_gram": "negatif",
+      "n": 3,
+      "shape_accuracy": 1.0,
+      "predicted_shapes": [
+        "cocci"
+      ]
+    }
+  ],
+  "scope_note": "Head A dilatih pada dua kelas karena DIBaS tidak memuat spesies berbentuk spiral. Kelas spiral pada ['spiral'] tidak terisi dan tidak masuk metrik.",
+  "gram_calibration_note": "Head B dilatih sebagai klasifier biner satu logit dengan BCEWithLogitsLoss pada kolom keluaran kedua. sigmoid(logit) adalah probabilistic kelas positif, sehingga ambang 0,5 berlaku langsung dan confidence adalah probabilitas kelas yang dipilih. Kolom keluaran pertama tidak pernah masuk loss dan tidak membawa informasi yang dipelajari, jadi tidak boleh dipakai: softmax atas dua kolom akan mencampur logit yang dilatih dengan logit yang hanya mengalami weight decay."
+}

@@ -21,9 +21,13 @@ __pycache__/
 *.egg-info/
 
 # Model
-checkpoints/
 *.pt
 *.pth
+
+# Berkas yang wajib ikut ter-deploy ke server
+!checkpoints/heads.pt
+!checkpoints/evaluation.json
+!checkpoints/training_report.json
 
 # Editor dan sistem
 .vscode/
