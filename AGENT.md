@@ -5,8 +5,11 @@
 |------|------|-------|------------|
 | opencode | opencode | Penulis kode | Menulis dan mengubah kode sesuai SPEC, ARCHITECTURE, DESIGN |
 | Codex CLI | OpenAI Codex CLI | Auditor | Mengaudit; memperbaiki berkas tes yang disetujui pemilik; menyusun laporan final |
+| Antigravity CLI | Antigravity IDE 1.107.0, mode chat --mode agent | Penulis antarmuka | Menulis dan mengubah app/static/index.html dan docs/DESIGN.md sesuai DESIGN.md dan setelah persetujuan pemilik |
 
 Auditor dan penulis tidak boleh sama untuk satu tugas yang sama.
+
+Redesign antarmuka industrial brutalist dilaksanakan oleh Antigravity CLI versi 1.107.0, bukan oleh opencode.
 
 ## 2. Sumber Kebenaran
 Urutan prioritas bila terjadi konflik:
