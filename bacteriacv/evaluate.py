@@ -258,8 +258,8 @@ def evaluate_checkpoint(
     with torch.no_grad():
         shape_probabilities = model.head_a(features).softmax(dim=-1)
         shape_prediction = shape_probabilities.argmax(dim=-1).numpy()
-        shape_confidence = shape_probabilities.max(dim=-1).values.numpy()
         gram_probability = model.head_b(features)[:, 1].sigmoid().numpy()
+    shape_confidence = shape_probabilities.max(dim=-1).values.numpy()
     gram_prediction = (gram_probability > 0.5).astype(np.int64)
 
     from .label_map import to_targets
@@ -276,7 +276,11 @@ def evaluate_checkpoint(
         "gram", gram_truth, gram_prediction, list(GRAM_LABELS), N_GRAM_CLASSES
     )
 
-    confidence = shape_confidence + gram_probability
+    # Confidence dilaporkan terpisah per head. Menjumlahkan confidence bentuk
+    # dengan confidence Gram lalu membagi dua menghasilkan angka yang tidak
+    # bermakna: kedua head memakai skala dan basiskalibrasi yang berbeda, dan
+    # tidak ada kelas yang menyatukan keduanya. Angka gabungan semacam ini
+    # pernah menyesatkan, jadi tidak ada lagi di laporan ini.
     return {
         "checkpoint": str(checkpoint_path),
         "split": split,
@@ -284,7 +288,10 @@ def evaluate_checkpoint(
         "n_species": len(set(species_ids)),
         "shape": shape_metrics.to_dict(),
         "gram": gram_metrics.to_dict(),
-        "mean_confidence": float(np.mean(confidence) / 2.0),
+        "mean_confidence_shape": float(np.mean(shape_confidence)),
+        "mean_confidence_gram": float(
+            np.mean(np.where(gram_prediction == 1, gram_probability, 1.0 - gram_probability))
+        ),
         "per_species": species_breakdown(
             species_ids, shape_prediction == shape_truth, shape_prediction
         ),
@@ -292,6 +299,16 @@ def evaluate_checkpoint(
             "Head A dilatih pada dua kelas karena DIBaS tidak memuat spesies "
             f"berbentuk {SHAPE_UNPOPULATED}. Kelas {SHAPE_UNPOPULATED} pada "
             f"{list(SHAPE_LABELS_FULL)[2:]} tidak terisi dan tidak masuk metrik."
+        ),
+        "gram_calibration_note": (
+            "Head B dilatih sebagai klasifier biner satu logit dengan "
+            "BCEWithLogitsLoss pada kolom keluaran kedua. sigmoid(logit) adalah "
+            "probabilistic kelas positif, sehingga ambang 0,5 berlaku langsung "
+            "dan confidence adalah probabilitas kelas yang dipilih. Kolom "
+            "keluaran pertama tidak pernah masuk loss dan tidak membawa "
+            "informasi yang dipelajari, jadi tidak boleh dipakai: softmax atas "
+            "dua kolom akan mencampur logit yang dilatih dengan logit yang "
+            "hanya mengalami weight decay."
         ),
     }
 
@@ -333,10 +350,11 @@ def main(argv: list[str] | None = None) -> int:
 
     shape = report["shape"]
     gram = report["gram"]
-    print(f"Split               : {report['split']} ({report['n_images']} citra)")
-    print(f"Head A bentuk F1    : {shape['f1_macro']:.4f} akurasi {shape['accuracy']:.4f}")
-    print(f"Head B Gram F1      : {gram['f1_macro']:.4f} akurasi {gram['accuracy']:.4f}")
-    print(f"Kepercayaan rata    : {report['mean_confidence']:.4f}")
+    print(f"Split                  : {report['split']} ({report['n_images']} citra)")
+    print(f"Head A bentuk F1       : {shape['f1_macro']:.4f} akurasi {shape['accuracy']:.4f}")
+    print(f"Head A confidence rata : {report['mean_confidence_shape']:.4f}")
+    print(f"Head B Gram F1         : {gram['f1_macro']:.4f} akurasi {gram['accuracy']:.4f}")
+    print(f"Head B confidence rata : {report['mean_confidence_gram']:.4f}")
     print(f"Laporan             : {args.out}")
     return 0
 

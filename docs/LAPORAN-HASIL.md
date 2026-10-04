@@ -55,15 +55,27 @@ Tanggal eksekusi: 4 Oktober 2026.
 | Presisi uji per kelas | 1,0000 kedua kelas | 1,0000 kedua kelas |
 | Recall uji per kelas | 1,0000 kedua kelas | 1,0000 kedua kelas |
 | Support uji | `cocci` 19, `bacilli` 47 | `positif` 47, `negatif` 19 |
+| Confidence rata-rata uji | 0,9812 | 0,9671 |
 
 Checkpoint: `checkpoints/heads.pt`. Epoch yang dijalankan 35, epoch terbaik 15,
 epoch 1 F1 bentuk 0,9554 dan F1 Gram 0,8921.
 
 Data uji berisi 66 citra dari 32 spesies, sekitar dua citra per spesies. F1
 makro 1,0000 berarti tidak ada satu pun kesalahan pada 66 citra. Itu bukan
-berarti model sempurna pada data lain. Kepercayaan rata-rata pada data uji
-hanya 0,6439, jadi margin antar citra kecil dan kesalahan pada citra di luar
-data uji sangat mungkin terjadi.
+berarti model sempurna pada data lain. Margin antar citra memang sempit:
+confidence bentuk 0,9812 dan confidence Gram 0,9671, keduanya di atas 0,8.
+Kesalahan pada citra di luar data uji tetap sangat mungkin terjadi.
+
+Confidence Gram dihitung dari `sigmoid(logit)` pada kolom keluaran kedua.
+Head B dilatih sebagai klasifier biner satu logit dengan `BCEWithLogitsLoss`,
+sehingga `sigmoid(logit)` memang probabilitas kelas positif dan ambang 0,5
+berlaku langsung. Kolom keluaran pertama tidak pernah masuk loss. Bukti:
+mengubah kolom itu menjadi 99.999 tidak mengubah nilai loss sama sekali
+sehingga kolom itu hanya mengalami weight decay dan tidak membawa informasi.
+Karena itu softmax atas dua kolom keluaran tidak boleh dipakai untuk Head B.
+Pengukuran pada 136 citra validasi justru menunjukkan softmax menurunkan
+akurasi dari 1,0000 menjadi 0,9926 dan menambah citra berbanding rendah dari
+satu menjadi dua.
 
 ## 5. Keterbatasan Segmentasi
 

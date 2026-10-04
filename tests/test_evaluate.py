@@ -50,6 +50,84 @@ def _checkpoint(path: Path) -> Path:
     return save_checkpoint(model, path)
 
 
+# --- Confidence per head ---
+
+
+def test_confidence_is_reported_per_head(tmp_path: Path) -> None:
+    """Confidence harus dilaporkan terpisah untuk setiap head.
+
+    Confidence bentuk dan confidence Gram tidak bisa dijumlahkan. Keduanya
+    memakai skala dan basiskalibrasi yang berbeda, dan tidak ada kelas yang
+    menyatukan keduanya. Angka gabungan pernah menyesatkan sehingga tidak
+    lagi ada di laporan.
+    """
+    store = _store_with_split(
+        ["train", "test", "test", "test"], [BACILLI, COCci, BACILLI, BACILLI]
+    )
+    checkpoint = _checkpoint(tmp_path / "heads.pt")
+
+    report = evaluate_checkpoint(store, checkpoint, "test")
+
+    assert "mean_confidence_shape" in report
+    assert "mean_confidence_gram" in report
+    assert "mean_confidence" not in report
+
+
+def test_gram_confidence_is_probability_of_chosen_class(tmp_path: Path) -> None:
+    """Confidence Gram harus sesuai probabilitas kelas yang dipilih.
+
+    Untuk kelas negatif confidence harus 1 dikurangi probabilitas positif.
+    kalau confidence diambil dari probabilitas mentah tanpa membalik,
+    citra Gram negatif akan tampil sangat yakin secara salah.
+    """
+    store = _store_with_split(["test", "test"], [COCci, BACILLI])
+    checkpoint = _checkpoint(tmp_path / "heads.pt")
+
+    report = evaluate_checkpoint(store, checkpoint, "test")
+
+    gram_probability = float(report["gram"]["per_class"][1]["support"]) / 2.0
+    assert 0.0 <= report["mean_confidence_gram"] <= 1.0
+    assert report["mean_confidence_gram"] > 0.9
+    assert gram_probability > 0.0
+
+
+def test_gram_uses_sigmoid_not_softmax_over_both_columns(tmp_path: Path) -> None:
+    """Head B adalah klasifier satu logit, bukan dua kelas softmax.
+
+    Kolom keluaran pertama tidak pernah masuk loss BCEWithLogitsLoss, jadi
+    tidak membawa informasi yang dipelajari. Softmax atas dua kolom akan
+    mencampur logit yang dilatih dengan logit yang hanya mengalami weight
+    decay. Tes ini mengunci pilihan sigmoid pada kolom kedua.
+    """
+    store = _store_with_split(["test", "test"], [COCci, BACILLI])
+    checkpoint = _checkpoint(tmp_path / "heads.pt")
+
+    report = evaluate_checkpoint(store, checkpoint, "test")
+
+    note = report["gram_calibration_note"]
+    assert "sigmoid(logit)" in note
+    assert "tidak pernah masuk loss" in note
+    assert "tidak boleh dipakai" in note
+
+
+def test_confidence_does_not_change_accuracy(tmp_path: Path) -> None:
+    """Perubahan cara menghitung confidence tidak boleh mengubah label.
+
+    Confidence dan akurasi dihitung dari logit yang sama, jadi akurasi harus
+    tetap sama persis setelah confidence dipisah per head.
+    """
+    store = _store_with_split(
+        ["train", "test", "test", "test"], [BACILLI, COCci, BACILLI, BACILLI]
+    )
+    checkpoint = _checkpoint(tmp_path / "heads.pt")
+
+    report = evaluate_checkpoint(store, checkpoint, "test")
+
+    assert report["gram"]["accuracy"] == 1.0
+    assert report["shape"]["accuracy"] == 1.0
+    assert report["mean_confidence_shape"] >= report["mean_confidence_gram"]
+
+
 # --- Metrik dasar ---
 
 
