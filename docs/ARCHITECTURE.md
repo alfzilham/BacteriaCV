@@ -17,7 +17,7 @@ Pipeline linear lima tahap. Tahap pelatihan dan tahap inferensi berbagi modul pr
       |          \
       v           v
 [4a. Head A]   [4b. Head B]
- softmax, 3     sigmoid, 2
+ softmax, 2     sigmoid, 2
  bentuk sel     status Gram
       |          |
       v          v
@@ -40,16 +40,19 @@ Pada tahap pelatihan, label target diambil dari lookup table [L] sebelum masuk k
 - Output: vektor 2048 dimensi setelah global average pooling.
 
 ### C3. Classification Head
-- Head A: Linear(2048, 3), aktivasi softmax, loss cross-entropy berbobot.
+- Head A: Linear(2048, 2), aktivasi softmax, loss cross-entropy berbobot.
+  Dua kelas: cocci dan bacilli. Bentuk spiral ada pada enum bentuk sebagai
+  penanda kelas yang tidak terisi, karena DIBaS tidak memuat spesies spiral.
 - Head B: Linear(2048, 2), aktivasi sigmoid, loss binary cross-entropy berbobot.
 - Bobot kelas dihitung dari frekuensi pada data latih.
 
 ### C4. Lookup Table [L]
-- Memetakan 33 label spesies DIBaS ke pasangan (bentuk, status Gram).
+- Memetakan 32 label spesies DIBaS ke pasangan (bentuk, status Gram).
+  Candida albicans tidak dimasukkan karena dikeluarkan dari pelatihan.
 - Digunakan hanya pada tahap pelatihan.
 - Citra yang label spesiesnya tidak ada di tabel dibuang.
 - Pemetaan nama spesies disimpan di `species_map.py`, bukan ditebak dari nama berkas.
-  Lima nama arsip DIBaS mengandung salah ketik, dan dua arsip berbeda
+  Enam nama arsip DIBaS mengandung salah ketik, dan dua arsip berbeda
   (`Lactobacillus.jehnsenii` dan `Lactobacillus.johnsonii`) menunjuk spesies taksonom
   yang sama, sehingga keduanya dibedakan lewat ID internal.
 
@@ -132,7 +135,7 @@ Struktur memakai paket `bacteriacv` dengan titik awal `bacteriacv.`. Alasan mema
 | A5 | PyTorch | Modifikasi head dan loss ganda lebih eksplisit |
 | A6 | Class weighting, bukan oversampling | Tidak menduplikasi citra; mencegah hasil validasi semu |
 | A7 | Lipatan hanya di dalam data latih | Data validasi harus bebas dari data latihan agar early stopping tidak bias |
-| A8 | Nama spesies disimpan di satu tabel | Lima nama arsip DIBaS salah ketik, dua arsip menunjuk spesies taksonom sama |
+| A8 | Nama spesies disimpan di satu tabel | Enam nama arsip DIBaS salah ketik, dua arsip menunjuk spesies taksonom sama |
 | A9 | SHA-256 tiap arsip dicatat | Server asal memakai sertifikat TLS kedaluwarsa, jadi integritas dibuktikan lewat hash |
 
 ## 6. Titik Ekstensi
@@ -156,9 +159,14 @@ Unduhan hanya dapat dilakukan tanpa verifikasi sertifikat. Untuk menutup celah t
 arsip di-hash SHA-256 dan hasilnya dicatat di `data/raw/zips_manifest.csv`. Hash tersebut yang
 dipakai sebagai bukti provenance di laporan, bukan sertifikat server.
 
-Jumlah citra diverifikasi langsung terhadap arsip, hasilnya 692 citra. Angka 660 pada paper
+Jumlah berkas diverifikasi langsung terhadap arsip, hasilnya 692 berkas. Angka 660 pada paper
 asli adalah perkiraan yang tidak sesuai isi arsip.
 
-Candida albicans dikeluarkan dari pelatihan sehingga data efektif 672 citra dari 32 spesies.
-Alasannya dua hal: jamur bukan bakteri, dan ukuran sel jamur membuat kelas tersebut mudah
-dipisahkan sehingga F1-score tidak mewakili kemampuan yang diukur.
+Candida albicans dikeluarkan dari pelatihan. Tiga berkas rusak juga dibuang, sehingga data
+efektif 669 citra terbaca dari 32 spesies. Alasan dikeluarkan dua hal: jamur bukan bakteri,
+dan ukuran sel jamur membuat kelas tersebut mudah dipisahkan sehingga F1-score tidak
+mewakili kemampuan yang diukur.
+
+Tiga berkas yang dibuang sudah rusak di dalam arsip DIBaS. SHA-256 berkas di disk identik
+dengan entri arsip, jadi kerusakan berasal dari sumber, bukan dari proses ekstraksi. Daftar
+lengkap beserta alasannya tercatat di `data/raw/unreadable.csv`.

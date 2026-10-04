@@ -7,7 +7,7 @@ Sistem Computer Vision yang memprediksi bentuk sel (cocci, bacilli, spiral) dan 
 ### Termasuk versi awal
 - Pra-pemrosesan citra: resize, normalisasi, segmentasi morfologis, transformasi watershed, augmentasi.
 - Pelatihan dua head dengan backbone dibekukan.
-- Lookup table pemetaan 33 spesies ke pasangan (bentuk, status Gram) untuk label pelatihan.
+- Lookup table pemetaan 32 spesies ke pasangan (bentuk, status Gram) untuk label pelatihan. Candida albicans dikeluarkan dari pelatihan.
 - Evaluasi F1-score makro (utama) dan akurasi (pelengkap) per head.
 - Antarmuka web sederhana untuk unggah citra dan melihat hasil.
 
@@ -18,17 +18,19 @@ Sistem Computer Vision yang memprediksi bentuk sel (cocci, bacilli, spiral) dan 
 - Integrasi ke sistem laboratorium klinis.
 
 ## 3. Data
-- Dataset: DIBaS (Digital Images of Bacterial Species), 692 citra, 33 spesies, resolusi asli 2048 × 1532 piksel.
-- Jumlah citra 692 hasil verifikasi langsung terhadap arsip. Angka 660 yang disebut paper asli dan makalah lain tidak sesuai isi arsip: jumlah citra per spesies tidak seragam, 21 spesies punya 20 citra, 11 spesies punya 23, dan Veillonella punya 22.
+- Dataset: DIBaS (Digital Images of Bacterial Species), 692 berkas citra, 33 spesies, resolusi asli 2048 × 1532 piksel.
+- Jumlah berkas 692 hasil verifikasi langsung terhadap arsip. Angka 660 yang disebut paper asli dan makalah lain tidak sesuai isi arsip: jumlah citra per spesies tidak seragam, 21 spesies punya 20 berkas, 10 spesies punya 23, dan Veillonella punya 22.
+- Tiga berkas tidak dapat dibaca oleh pustaka citra dan sudah rusak di dalam arsip DIBaS: Listeria monocytogenes 0023 berukuran 0 byte, serta Micrococcus spp 0021 dan 0023 dengan struktur TIFF rusak. SHA-256 berkas di disk identik dengan entri arsip, jadi kerusakan berasal dari sumber. Daftar lengkap beserta alasannya ada di `data/raw/unreadable.csv`.
 - Spesies yang dilatih: 32 dari 33. Candida albicans dikeluarkan karena merupakan jamur, bukan bakteri, dan karena sel jamur berukuran 5 sampai 10 mikron sehingga kelas ini akan terpisah mudah oleh backbone dan menaikkan F1-score tanpa menunjukkan kemampuan klasifikasi morfologi bakteri. Pengecualian dicatat pada `bacteriacv/datasets/species_map.py`.
-- Data efektif untuk pelatihan: 672 citra, 32 spesies.
+- Data efektif untuk pelatihan: 669 citra terbaca dari 32 spesies.
 - Pembagian: acak per citra, 70% latih, 20% validasi, 10% uji, dengan validasi silang lima lipatan.
-- Hasil pembagian nyata: 469 latih, 138 validasi, 65 uji.
+- Hasil pembagian nyata: 467 latih, 136 validasi, 66 uji.
 - Bentuk sel: hanya dua kelas terisi, yaitu cocci dan bacilli. DIBaS tidak memuat spesies berbentuk spiral, sehingga kelas spiral dicatat sebagai tidak terisi.
 - Lima lipatan hanya dibagikan di dalam data latih. Data validasi dipakai untuk early stopping, data uji hanya dipakai sekali di akhir.
 - Pembagian acak tidak mengukur generalisasi ke galur baru. Hasil uji hanya merepresentasikan performa pada galur yang mirip dengan data latih.
 - Label pelatihan diturunkan dari label spesies melalui lookup table.
 - Citra dengan label yang tidak konsisten terhadap lookup table dibuang dari pelatihan.
+- Citra yang tidak dapat dibaca oleh pustaka citra dibuang dari index dan dicatat di `data/raw/unreadable.csv` beserta alasannya.
 
 ## 4. Fungsi Sistem
 | ID | Kebutuhan | Prioritas |
@@ -79,4 +81,4 @@ Sistem Computer Vision yang memprediksi bentuk sel (cocci, bacilli, spiral) dan 
 - Tidak ada klaim generalisasi ke galur baru.
 
 ### 9.3 Catatan
-Pipeline penuh pada 672 citra menjadi target pengembangan, bukan syarat demo.
+Pipeline penuh pada 669 citra menjadi target pengembangan, bukan syarat demo.

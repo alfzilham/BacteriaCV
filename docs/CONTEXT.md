@@ -35,7 +35,7 @@ Prioritas bila terjadi konflik: kualitas laporan dan rubrik didahulukan; prototi
 | Spiral | sel berbentuk heliks atau melengkung |
 | Gram-positif | dinding sel tebal dengan peptidoglikan, tampak ungu |
 | Gram-negatif | dinding sel tipis dengan membran luar, tampak merah muda |
-| DIBaS | dataset publik 692 citra dari 33 spesies; 672 citra dari 32 spesies dipakai setelah Candida albicans dikeluarkan |
+| DIBaS | dataset publik 692 berkas dari 33 spesies; 669 citra terbaca dari 32 spesies dipakai setelah Candida albicans dikeluarkan dan tiga berkas rusak dibuang |
 | Lookup table | pemetaan label spesies ke pasangan (bentuk, Gram) |
 | Multi-head | satu backbone dengan beberapa classification head |
 
