@@ -7,24 +7,29 @@ Dokumen ini mengatur tampilan antarmuka web sederhana (C7 pada ARCHITECTURE.md).
 
 | Peran | Nilai | Keterangan |
 |-------|-------|------------|
-| Primary | `#588157` | Tombol utama, judul bagian, tautan |
-| Secondary | `#A3B18A` | Latar panel sekunder, tombol sekunder, indikator confidence sedang |
-| Surface | `#DAD7CD` | Latar kartu hasil, panel samping |
-| Background | `#ffffff` | Latar halaman utama |
+| Primary | `#050505` | Teks utama, border solid 2px, judul bagian, aksen struktural |
+| Secondary | `#333333` | Teks sekunder, label metadata |
+| Surface | `#FFFFFF` | Latar kartu hasil, panel konten utama |
+| Sub-surface | `#EAE8E3` | Latar kontrol tombol alih, pratinjau data |
+| Background | `#F4F4F0` | Latar halaman utama (matte unbleached paper) |
+| Accent | `#D31515` | Tombol proses utama, aksen peringatan, fokus aktif |
 
-Teks utama menggunakan warna gelap dari palet di atas. Warna teks pada latar `#588157` wajib putih (`#ffffff`).
+Teks utama menggunakan warna gelap (#050505). Warna teks pada latar `#D31515` wajib putih (`#ffffff`).
 
 ### 2.1 Aksesibilitas Warna
-- Teks di atas `#588157` harus putih (`#ffffff`).
+- Teks di atas `#D31515` harus putih (`#ffffff`).
 - Informasi status tidak boleh bergantung pada warna saja. Setiap level confidence wajib disertai teks (Tinggi, Sedang, Rendah).
 - Kontras teks terhadap latar wajib memenuhi WCAG 2.1 AA (rasio minimal 4,5:1). Rasio diuji pada tahap implementasi.
 
 ## 3. Tipografi
-- Font: sans-serif sistem (Arial sebagai cadangan).
-- Judul halaman: 24 px, tebal.
-- Judul bagian: 18 px, tebal.
-- Teks isi: 16 px.
-- Teks keterangan: 13 px.
+- Font struktural: sans-serif sistem (-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif).
+- Font telemeteri/kode: monospaced (ui-monospace, Consolas, "Courier New", monospace).
+- Judul halaman: 28 px, tebal (weight 800), sans, uppercase.
+- Judul bagian: 18 px, tebal (weight 800), sans, uppercase.
+- Subjudul / kategori: 14 px, tebal (weight 700), mono, uppercase.
+- Teks isi: 16 px, normal (weight 400), sans, line-height 1.5.
+- Teks keterangan: 13 px, medium (weight 500), mono, uppercase.
+- Kode & metrik angka: 13 px, semibold (weight 600), mono, tabular-nums.
 
 ## 4. Layout
 
