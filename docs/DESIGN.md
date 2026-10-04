@@ -13,6 +13,12 @@ Dokumen ini mengatur tampilan antarmuka web sederhana (C7 pada ARCHITECTURE.md).
 | Sub-surface | `#EAE8E3` | Latar kontrol tombol alih, pratinjau data |
 | Background | `#F4F4F0` | Latar halaman utama (matte unbleached paper) |
 | Accent | `#D31515` | Tombol proses utama, aksen peringatan, fokus aktif |
+| Level Tinggi | `#005A36` | Teks level confidence Tinggi, 7,57:1 pada latar paper |
+| Level Sedang | `#8A5000` | Teks level confidence Sedang, 5,90:1 pada latar paper |
+| Level Rendah | `#B30000` | Teks level confidence Rendah, 6,53:1 pada latar paper |
+| Muted | `#555555` | Teks sekunder redup, 6,76:1 pada latar paper |
+| Latar Peringatan | `#FFF9E6` | Latar kotak peringatan confidence rendah |
+| Latar Galat | `#FFF0F0` | Latar kotak pesan galat |
 
 Teks utama menggunakan warna gelap (#050505). Warna teks pada latar `#D31515` wajib putih (`#ffffff`).
 
@@ -66,7 +72,7 @@ Layout mengikuti skeleton yang disepakati, yaitu satu halaman dengan tiga area u
 
 ### 4.3 Area Utama
 - Kiri: judul bagian, teks keterangan, tombol proses, dan teks hasil ringkas.
-- Kanan: panel visualisasi segmentasi dengan ukuran tetap, dan panel kontrol di bawahnya dengan toggle untuk menampilkan atau menyembunyikan kontur.
+- Kanan: satu panel visualisasi segmentasi dengan ukuran tetap, dan satu baris tombol alih tahap di bawahnya untuk berpindah di antara lima tahap praproses, dari citra asli hingga tahap segmentasi. Panelnya tetap satu, bukan lima panel terpisah.
 
 ### 4.4 Footer
 - Lima chip informasi: format yang didukung, ukuran maksimal, versi model, sumber data, dan disclaimer.
