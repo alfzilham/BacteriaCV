@@ -6,7 +6,7 @@ BacteriaCV adalah proyek computer vision untuk klasifikasi bentuk sel bakteri da
 
 - Ekstraksi penuh menghasilkan 692 citra dari 33 label spesies.
 - `Candida albicans` dikecualikan dari pelatihan karena jamur, bukan bakteri, sehingga tersisa 32 spesies yang dapat dilatih.
-- `data/index.csv` memuat 672 citra: 469 train, 138 validation, dan 65 test.
+- `data/index.csv` memuat 669 citra: 467 train, 136 validation, dan 66 test.
 - Lima lipatan hanya dibuat dari data train.
 - Nama spesies dipetakan melalui `bacteriacv/datasets/species_map.py`, bukan ditebak dari nama berkas.
 - Modul pelatihan dan antarmuka web belum menjadi bagian dari tahap dataset ini.
@@ -122,6 +122,20 @@ Tes mencakup pemetaan spesies, lokasi data, unduhan, ekstraksi, pembagian datase
 - [ARCHITECTURE](docs/ARCHITECTURE.md) — arsitektur dan keputusan teknis.
 - [DESIGN](docs/DESIGN.md) — desain antarmuka dan kontrak modul.
 - [AGENT](AGENT.md) — aturan kontribusi dan audit.
+
+## Menjalankan versi daring
+
+Aplikasi versi lengkap sudah berjalan di:
+
+```text
+https://bacteriacv-demo.up.railway.app
+```
+
+Unggah citra berformat png, jpg, jpeg, tif, atau tiff dengan batas 20 MB. Pemeriksaan keadaan tersedia di `/api/health` dan laporan evaluasi model di `/api/report`.
+
+Untuk mencoba tanpa menyiapkan citra sendiri, folder `docs/contoh/` memuat empat citra PNG 768 x 574 yang sudah diuji dan dapat diunggah langsung ke kolom Unggah.
+
+Citra contoh diturunkan dari dataset DIBaS (Zielinski dkk. 2017, PLOS ONE 12(9):e0184554), diperkecil ke 768 x 574 untuk keperluan demonstrasi. Status Gram yang dihasilkan platform terhadap citra contoh dapat berbeda dari hasil pada citra asli karena perbedaan skala.
 
 ## Lisensi
 
