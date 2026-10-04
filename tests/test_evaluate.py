@@ -110,6 +110,51 @@ def test_gram_uses_sigmoid_not_softmax_over_both_columns(tmp_path: Path) -> None
     assert "tidak boleh dipakai" in note
 
 
+def test_report_checkpoint_contains_only_file_name(tmp_path: Path) -> None:
+    """Laporan hanya boleh memuat nama berkas checkpoint, bukan path.
+
+    evaluation.json ikut ter-deploy dan dibaca siapa pun lewat /api/report.
+    Path absolut di dalamnya membocorkan struktur folder mesin pembangun, dan
+    melanggar AGENT.md bagian 3 aturan 5. Field ini pernah ditulis tanpa satu pun assertion yang membacanya, sehingga
+    kebocorannya lolos seluruh audit sebelumnya.
+
+    Path di bawah sengaja punya subdirektori supaya tes membuktikan direktori
+    dibuang, bukan kebetulan nama berkasnya memang tanpa direktori.
+    """
+    nested = tmp_path / "sub"
+    nested.mkdir()
+    store = _store_with_split(["train", "test", "test"], [BACILLI, COCci, BACILLI])
+    checkpoint = _checkpoint(nested / "heads.pt")
+
+    report = evaluate_checkpoint(store, checkpoint, "test")
+
+    assert report["checkpoint"] == "heads.pt"
+
+
+def test_report_checkpoint_has_no_path_syntax(tmp_path: Path) -> None:
+    """Nama berkas checkpoint tidak boleh memuat sisa sintaks path.
+
+    Empat pemeriksaan terpisah karena masing-masing mewakili kelas kesalahan
+    yang berbeda: separator POSIX, pemisah Windows, huruf drive, dan bentuk
+    path relatif maupun absolut yang menyamar.
+    """
+    nested = tmp_path / "sub"
+    nested.mkdir()
+    store = _store_with_split(["train", "test", "test"], [BACILLI, COCci, BACILLI])
+    checkpoint = _checkpoint(nested / "heads.pt")
+
+    report = evaluate_checkpoint(store, checkpoint, "test")
+    reported = report["checkpoint"]
+
+    assert isinstance(reported, str), type(reported)
+    for separator in ("/", "\\"):
+        assert separator not in reported, f"pemisah {separator!r} bocor"
+    assert ":" not in reported, "huruf drive atau dua titik bocor"
+    assert not reported.startswith("."), "path relatif bocor"
+    assert reported == reported.strip(), "spasi di tepi bocor"
+    assert Path(reported).name == reported, "masih ada unsur direktori"
+
+
 def test_confidence_does_not_change_accuracy(tmp_path: Path) -> None:
     """Perubahan cara menghitung confidence tidak boleh mengubah label.
 

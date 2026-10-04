@@ -282,7 +282,11 @@ def evaluate_checkpoint(
     # tidak ada kelas yang menyatukan keduanya. Angka gabungan semacam ini
     # pernah menyesatkan, jadi tidak ada lagi di laporan ini.
     return {
-        "checkpoint": str(checkpoint_path),
+        # Hanya nama berkasnya. Path absolut tidak boleh masuk laporan karena
+        # laporan ini ikut ter-deploy dan dibaca siapa pun, sedangkan path
+        # absolut membocorkan struktur folder mesin pembangun. Path() membungkus
+        # str maupun Path, dan .name aman terhadap pemisah Windows dan POSIX.
+        "checkpoint": Path(checkpoint_path).name,
         "split": split,
         "n_images": int(positions.size),
         "n_species": len(set(species_ids)),
