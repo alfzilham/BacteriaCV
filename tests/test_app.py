@@ -284,6 +284,11 @@ def test_index_html_has_one_panel_with_toggle() -> None:
     images = re.findall(r"<img\b[^>]*>", page)
     panels = [tag for tag in images if 'class="brand-logo"' not in tag]
     assert len(panels) == 1, f"harus ada tepat satu img panel, ada {len(panels)}"
+
+    # Tanpa ini, dua img logo ikut tersaring dan hitungan panel tetap satu.
+    logos = [tag for tag in images if 'class="brand-logo"' in tag]
+    assert len(logos) == 1, f"harus ada tepat satu img logo, ada {len(logos)}"
+
     assert 'id="tabs"' in page
     assert 'id="panel"' in page
 
