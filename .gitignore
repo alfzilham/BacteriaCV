@@ -44,3 +44,7 @@ notes/
 # Agent
 graphify-out/
 .agent/
+
+# Logs
+logs/
+*.log
