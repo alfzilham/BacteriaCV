@@ -63,6 +63,10 @@ SEGMENT_DILATION_DISK = 2
 SEGMENT_MIN_PEAK_DISTANCE = 5
 SEGMENT_MIN_OBJECT_AREA = 20
 
+# Ambang integritas data. Spesies dengan citra kurang dari angka ini dianggap
+# hasil ekstraksi tidak lengkap.
+MIN_IMAGES_PER_SPECIES = 15
+
 # ---------------------------------------------------------------------
 # Pembagian data
 # ---------------------------------------------------------------------

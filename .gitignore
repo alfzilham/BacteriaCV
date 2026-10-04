@@ -4,8 +4,8 @@
 data/raw/zips/
 data/raw/images/
 
-# index.csv dan zips_manifest.csv ikut di-commit sebagai bukti provenance.
-# Ukurannya kecil dan berguna untuk auditor.
+# index.csv, zips_manifest.csv, dan unreadable.csv ikut di-commit sebagai bukti
+# keputusan data. Ukurannya kecil dan berguna untuk auditor.
 
 # Python
 __pycache__/

@@ -17,6 +17,7 @@ RAW_DIR = DATA_DIR / "raw"
 ZIPS_DIR = RAW_DIR / "zips"
 IMAGES_DIR = RAW_DIR / "images"
 MANIFEST_PATH = RAW_DIR / "zips_manifest.csv"
+UNREADABLE_PATH = RAW_DIR / "unreadable.csv"
 INDEX_PATH = DATA_DIR / "index.csv"
 
 
