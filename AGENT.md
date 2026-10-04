@@ -4,12 +4,14 @@
 | Agen | Alat | Peran | Kewenangan |
 |------|------|-------|------------|
 | opencode | opencode | Penulis kode | Menulis dan mengubah kode sesuai SPEC, ARCHITECTURE, DESIGN |
-| Codex CLI | OpenAI Codex CLI | Auditor | Mengaudit; memperbaiki berkas tes yang disetujui pemilik; menyusun laporan final |
+| Codex CLI | OpenAI Codex CLI | Auditor read-only | Memverifikasi klaim dengan menghitung ulang angka dari sumber; melaporkan temuan dengan verdict LULUS atau BELUM LULUS; tidak mengubah kode produksi |
 | Antigravity CLI | Antigravity IDE 1.107.0, mode chat --mode agent | Penulis antarmuka | Menulis dan mengubah app/static/index.html dan docs/DESIGN.md sesuai DESIGN.md dan setelah persetujuan pemilik |
 
 Auditor dan penulis tidak boleh sama untuk satu tugas yang sama.
 
 Redesign antarmuka industrial brutalist dilaksanakan oleh Antigravity CLI versi 1.107.0, bukan oleh opencode.
+
+Nomor versi Codex CLI tidak dicatat karena perintah `codex --version` tidak tersedia di mesin tempat audit Task F dijalankan. Perannya tetap read-only dan tidak berubah.
 
 ## 2. Sumber Kebenaran
 Urutan prioritas bila terjadi konflik:
