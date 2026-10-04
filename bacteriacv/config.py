@@ -76,7 +76,6 @@ N_FOLDS = 5
 TRAIN_FRACTION = 0.70
 VAL_FRACTION = 0.20
 INDEX_SEED = 20260203
-RANDOM_SEED = INDEX_SEED
 
 # ---------------------------------------------------------------------
 # Pelatihan

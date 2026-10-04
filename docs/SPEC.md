@@ -27,6 +27,7 @@ Sistem Computer Vision yang memprediksi bentuk sel (cocci, bacilli, spiral) dan 
 - Hasil pembagian nyata: 467 latih, 136 validasi, 66 uji.
 - Bentuk sel: hanya dua kelas terisi, yaitu cocci dan bacilli. DIBaS tidak memuat spesies berbentuk spiral, sehingga kelas spiral dicatat sebagai tidak terisi.
 - Lima lipatan hanya dibagikan di dalam data latih. Data validasi dipakai untuk early stopping, data uji hanya dipakai sekali di akhir.
+- Lipatan diseimbangkan per spesies, bukan secara global, sehingga ukuran absolut tiap lipatan tidak sama (104/96/96/96/75). Stratifikasi tetap terjaga karena setiap spesies muncul di setiap lipatan.
 - Pembagian acak tidak mengukur generalisasi ke galur baru. Hasil uji hanya merepresentasikan performa pada galur yang mirip dengan data latih.
 - Label pelatihan diturunkan dari label spesies melalui lookup table.
 - Citra dengan label yang tidak konsisten terhadap lookup table dibuang dari pelatihan.

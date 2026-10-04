@@ -38,8 +38,8 @@ def test_feature_dim_is_2048() -> None:
     assert config.FEATURE_DIM == 2048
 
 
-def test_head_sizes_match_feature_dim() -> None:
-    """Ukuran head harus mengikuti dimensi fitur."""
+def test_head_sizes_match_class_count() -> None:
+    """Ukuran head mengikuti jumlah kelas."""
     assert config.HEAD_A_SIZE == config.N_SHAPE_CLASSES
     assert config.HEAD_B_SIZE == config.N_GRAM_CLASSES
 
@@ -57,18 +57,37 @@ def test_imagenet_stats_are_standard() -> None:
 
 def test_seeds_are_pinned_and_distinct() -> None:
     """Seed harus deterministik dan berbeda antar tahap."""
-    assert config.RANDOM_SEED == config.INDEX_SEED == 20260203
+    assert config.INDEX_SEED == 20260203
     assert config.TRAIN_SEED == 1337
     assert config.TRAIN_SEED != config.INDEX_SEED
 
 
+def test_no_stale_random_seed_alias() -> None:
+    """RANDOM_SEED sudah dihapus, hanya INDEX_SEED yang dipakai."""
+    assert not hasattr(config, "RANDOM_SEED")
+
+
 def test_training_hyperparameters_are_sane() -> None:
-    """Nilai pelatihan harus masuk akal untuk dataset kecil."""
-    assert 0 < config.LEARNING_RATE < 1
-    assert config.MAX_EPOCHS > 0
-    assert config.EARLY_STOPPING_PATIENCE > 0
-    assert config.BATCH_SIZE > 0
+    """Nilai pelatihan harus berada di rentang yang bermakna.
+
+    Batas longgar seperti 0 < LR < 1 tidak menangkap perubahan learning rate
+    dari 1e-3 ke 0,9 yang akan merusak pelatihan.
+    """
+    assert 1e-5 <= config.LEARNING_RATE <= 1e-2, config.LEARNING_RATE
+    assert 1e-6 <= config.WEIGHT_DECAY <= 1e-2, config.WEIGHT_DECAY
+    assert 50 <= config.MAX_EPOCHS <= 500, config.MAX_EPOCHS
+    assert 5 <= config.EARLY_STOPPING_PATIENCE <= 50, config.EARLY_STOPPING_PATIENCE
+    assert 8 <= config.BATCH_SIZE <= 128, config.BATCH_SIZE
     assert config.N_FOLDS == 5
+    assert config.MIN_DELTA > 0
+
+
+def test_head_sizes_relate_to_feature_dim() -> None:
+    """Ukuran head mengikuti jumlah kelas, bukan dimensi fitur."""
+    assert config.HEAD_A_SIZE == config.N_SHAPE_CLASSES == 2
+    assert config.HEAD_B_SIZE == config.N_GRAM_CLASSES == 2
+    assert config.FEATURE_DIM == 2048
+    assert config.HEAD_A_SIZE != config.FEATURE_DIM
 
 
 def test_paths_are_inside_project() -> None:

@@ -280,6 +280,18 @@ def test_verify_rejects_fold_on_test(project_tmp_dir: Path) -> None:
 # --------------------------------------------------------------------------
 
 
+def test_build_rows_verifies_itself(project_tmp_dir: Path) -> None:
+    """build_rows harus menjalankan pemeriksaan kebocoran sebelum mengembalikan.
+
+    Pemanggil yang mengimpor build_rows langsung tidak boleh melewatkan gerbang
+    yang di main().
+    """
+    import inspect
+
+    source = inspect.getsource(build_rows)
+    assert "verify_no_leakage(rows)" in source
+
+
 def test_verify_no_leakage_accepts_valid_rows(project_tmp_dir: Path) -> None:
     """Index yang benar harus lolos pemeriksaan kebocoran."""
     paths = _fake_images(project_tmp_dir)

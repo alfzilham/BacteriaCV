@@ -63,6 +63,11 @@ Pada tahap pelatihan, label target diambil dari lookup table [L] sebelum masuk k
   early stopping dan pemilihan checkpoint, data uji (10%) hanya dipakai sekali di akhir.
   Bila lipatan mencakup data validasi, maka data validasi ikut menjadi data latihan pada
   sebagian lipatan dan muncul optimistic bias pada metrik validasi.
+- Lipatan diseimbangkan per spesies, bukan secara global. Spesies dengan 20 citra train
+  menyumbang 3/3/3/3/2 ke lima lipatan, sedangkan spesies dengan 16 citra train
+  menyumbang 4/3/3/3/3. Akibatnya ukuran absolut lipatan tidak sama, misalnya
+  104/96/96/96/75. Yang dijaga adalah stratifikasi: setiap spesies tetap muncul
+  di setiap lipatan, sehingga perbandingan antar lipatan tetap unbiased.
 
 ### C6. Modul Keluaran
 - Menghasilkan label dan confidence score per head.

@@ -54,8 +54,13 @@ def test_lookup_values_are_valid() -> None:
 
 
 def test_no_spiral_species_in_lookup() -> None:
-    """Keputusan D1: tidak ada spesies DIBaS dengan bentuk spiral."""
-    assert all(shape in SHAPE_LABELS for shape, _ in LOOKUP.values())
+    """DIBaS tidak punya spesies spiral, apa pun definisi SHAPE_LABELS."""
+    from bacteriacv.config import SHAPE_LABELS_FULL, SHAPE_UNPOPULATED
+
+    shapes = {shape for shape, _ in LOOKUP.values()}
+    assert SHAPE_UNPOPULATED not in shapes
+    assert shapes == {"cocci", "bacilli"}
+    assert shapes < set(SHAPE_LABELS_FULL), "spiral harus tetap ada di enum lengkap"
 
 
 def test_bifidobacterium_is_gram_positive() -> None:
@@ -191,8 +196,13 @@ def test_lookup_summary_counts_match_expected() -> None:
     assert summary["gram"]["negatif"] == 9
 
 
-def test_class_weights_from_train_only() -> None:
-    """Bobot kelas harus dihitung dari data latih saja."""
+def test_class_weights_upweight_minority_class() -> None:
+    """Kelas minor harus berbobot lebih besar daripada kelas majoritas.
+
+    Jaminan bahwa bobot hanya dihitung dari data latih tidak dapat diuji pada
+    level fungsi ini karena class_weights tidak menerima argumen split. Jaminan
+    itu diuji di level pemanggil, yaitu train.compute_class_weights.
+    """
     weights = class_weights([0, 0, 0, 0, 1, 1])
     assert len(weights) == N_SHAPE_CLASSES
     assert weights[0] < weights[1], "kelas minor harus dapat bobot lebih besar"

@@ -122,7 +122,12 @@ def build_rows(
         n_folds: Jumlah lipatan validasi silang.
 
     Returns:
-        Daftar IndexRow terurut berdasarkan species_id lalu nama berkas.
+        Daftar IndexRow terurut berdasarkan species_id lalu nama berkas. Pemeriksaan
+        kebocoran dijalankan di akhir sehingga pemanggil tidak bisa melewatkannya.
+
+    Raises:
+        ValueError: Bila ada citra di luar root proyek.
+        RuntimeError: Bila hasil pembagian-data melanggar aturan split atau lipatan.
     """
     rng = random.Random(seed)
     rows: list[IndexRow] = []
@@ -157,6 +162,7 @@ def build_rows(
                 )
 
     rows.sort(key=lambda row: (row.species_id, row.path))
+    verify_no_leakage(rows)
     return rows
 
 

@@ -37,13 +37,42 @@ def test_all_urls_are_unique() -> None:
     assert len(set(urls)) == len(urls)
 
 
-def test_known_typos_are_normalized() -> None:
-    """Lima nama arsip mengandung salah ketik dan harus dipetakan ke nama baku."""
-    assert canonical_name("acinetobacter_baumannii") == "Acinetobacter baumannii"
-    assert canonical_name("actinomyces_israelii") == "Actinomyces israelii"
-    assert canonical_name("porphyromonas_gingivalis") == "Porphyromonas gingivalis"
-    assert canonical_name("veillonella_spp") == "Veillonella spp."
-    assert canonical_name("lactobacillus_plantarum") == "Lactobacillus plantarum"
+# Enam nama arsip DIBaS yang ejaannya berbeda dari nama taksonom baku.
+# Pasangan di sebelah kiri adalah nama arsip, di sebelah kanan nama kanonik.
+TYPO_PAIRS: tuple[tuple[str, str], ...] = (
+    ("Acinetobacter.baumanii", "Acinetobacter baumannii"),
+    ("Actinomyces.israeli", "Actinomyces israelii"),
+    ("Lactobacillus.jehnsenii", "Lactobacillus johnsonii"),
+    ("Porfyromonas.gingivalis", "Porphyromonas gingivalis"),
+    ("Staphylococcus.saprophiticus", "Staphylococcus saprophyticus"),
+    ("Veionella", "Veillonella spp."),
+)
+
+
+@pytest.mark.parametrize("zip_name,expected", TYPO_PAIRS)
+def test_archive_typo_is_normalized(zip_name: str, expected: str) -> None:
+    """Nama arsip yang salah ketik harus dipetakan ke nama taksonom baku."""
+    species = BY_ZIP_NAME[zip_name]
+    assert canonical_name(species.species_id) == expected
+    assert species.zip_name == zip_name, "nama arsip harus tetap apa adanya"
+
+
+def test_typo_pairs_cover_every_typo() -> None:
+    """Daftar pasangan harus memuat keenam salah ketik arsip."""
+    assert len(TYPO_PAIRS) == 6
+    for zip_name, _ in TYPO_PAIRS:
+        assert zip_name in BY_ZIP_NAME, zip_name
+
+
+def test_plantarum_is_not_a_typo() -> None:
+    """Lactobacillus.plantarum memang ejaan benar di arsip.
+
+    Salah ketik plantaru hanya ada di readme repository GitHub, bukan di nama
+    arsip DIBaS.
+    """
+    plantarum = BY_SPECIES_ID["lactobacillus_plantarum"]
+    assert plantarum.zip_name == "Lactobacillus.plantarum"
+    assert plantarum.zip_name not in {zip for zip, _ in TYPO_PAIRS}
 
 
 def test_plantarum_uses_working_url() -> None:
