@@ -24,7 +24,8 @@ from bacteriacv.datasets.build_index import (
     verify_no_leakage,
     write_index,
 )
-from bacteriacv.datasets.extract import IMAGE_SUFFIXES
+from bacteriacv.datasets.build_index import _relative_posix
+from bacteriacv.datasets.extract import IMAGE_SUFFIXES, UnreadableImage, write_unreadable_report
 from bacteriacv.datasets.species_map import SPECIES, TRAINABLE_SPECIES
 
 # Jumlah citra per spesies dari hitungan struktural arsip DIBaS. Angka ini yang
@@ -365,6 +366,97 @@ def test_build_rows_rejects_images_outside_root() -> None:
     grouped = {"escherichia_coli": [Path(tempfile.gettempdir()) / "keluar" / "a.tif"]}
     with pytest.raises(ValueError, match="di luar root proyek"):
         build_rows(grouped)
+
+
+def test_main_writes_index_when_record_is_in_sync(project_tmp_dir: Path) -> None:
+    """main harus menulis index bila unreadable.csv sinkron dengan disk."""
+    from bacteriacv.datasets import build_index as build_index_module
+    from bacteriacv.datasets.build_index import main
+
+    images = project_tmp_dir / "images"
+    report = project_tmp_dir / "unreadable.csv"
+    index = project_tmp_dir / "index.csv"
+    _full_fake_dataset(images)
+
+    broken = images / "listeria_monocytogenes" / "rusak_9999.tif"
+    broken.write_bytes(b"")
+    write_unreadable_report(
+        [
+            UnreadableImage(
+                path=_relative_posix(broken),
+                species_id="listeria_monocytogenes",
+                size_bytes=0,
+                reason="berkas 0 byte",
+            )
+        ],
+        report,
+    )
+
+    exit_code = main(
+        [
+            "--images-dir", str(images),
+            "--index-path", str(index),
+            "--unreadable", str(report),
+        ]
+    )
+
+    assert exit_code == 0
+    assert index.is_file()
+    written = list(csv.DictReader(index.open(newline="", encoding="utf-8")))
+    assert len(written) == 669
+    assert all("rusak_9999" not in row["path"] for row in written)
+    assert build_index_module.TEST_FOLD == -1
+
+
+def test_main_refuses_when_record_is_out_of_sync(project_tmp_dir: Path) -> None:
+    """main harus menolak menulis index bila ada kerusakan yang belum dicatat."""
+    from bacteriacv.datasets.build_index import main
+
+    images = project_tmp_dir / "images"
+    report = project_tmp_dir / "unreadable.csv"
+    index = project_tmp_dir / "index.csv"
+    _full_fake_dataset(images)
+    write_unreadable_report([], report)
+
+    broken = images / "listeria_monocytogenes" / "rusak_9998.tif"
+    broken.write_bytes(b"tidak boleh bocor ke index")
+
+    exit_code = main(
+        [
+            "--images-dir", str(images),
+            "--index-path", str(index),
+            "--unreadable", str(report),
+        ]
+    )
+
+    assert exit_code == 1
+    assert not index.exists(), "index tidak boleh ditulis saat rekonsiliasi gagal"
+
+
+def test_main_keeps_existing_index_when_refused(project_tmp_dir: Path) -> None:
+    """Index yang sudah ada tidak boleh tertimpa saat rekonsiliasi gagal."""
+    from bacteriacv.datasets.build_index import main
+
+    images = project_tmp_dir / "images"
+    report = project_tmp_dir / "unreadable.csv"
+    index = project_tmp_dir / "index.csv"
+    _full_fake_dataset(images)
+    index.write_text("path,species,species_id,split,fold\n", encoding="utf-8")
+    before = index.read_text(encoding="utf-8")
+    write_unreadable_report([], report)
+
+    (images / "listeria_monocytogenes" / "rusak_9997.tif").write_bytes(b"")
+
+    exit_code = main(
+        [
+            "--images-dir", str(images),
+            "--index-path", str(index),
+            "--unreadable", str(report),
+        ]
+    )
+
+    assert exit_code == 1
+    assert index.read_text(encoding="utf-8") == before
 
 
 def test_index_never_contains_absolute_path(project_tmp_dir: Path) -> None:

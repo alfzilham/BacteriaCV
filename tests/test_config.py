@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
 import bacteriacv.config as config
 
 
@@ -120,6 +122,22 @@ def _config_constant_names() -> set[str]:
     return names
 
 
+def _scanned_source_files() -> list[Path]:
+    """Daftar berkas yang wajib bebas duplikasi konstanta config.
+
+    Cakupannya bukan hanya paket bacteriacv. Backend app/ juga mengimpor
+    konstanta yang sama, jadi MAX_UPLOAD_BYTES atau ALLOWED_SUFFIXES yang
+    ditulis ulang di sana harus tertangkap.
+    """
+    from bacteriacv.paths import PROJECT_ROOT
+
+    files = sorted((PROJECT_ROOT / "bacteriacv").rglob("*.py"))
+    app_dir = PROJECT_ROOT / "app"
+    if app_dir.is_dir():
+        files.extend(sorted(app_dir.rglob("*.py")))
+    return [path for path in files if path.name != "config.py"]
+
+
 def test_no_hyperparameter_duplicated_outside_config() -> None:
     """Konstanta config.py tidak boleh dideklarasikan ulang di modul lain.
 
@@ -129,16 +147,11 @@ def test_no_hyperparameter_duplicated_outside_config() -> None:
     """
     import ast
 
-    from bacteriacv.paths import PROJECT_ROOT
-
     reserved = _config_constant_names()
     assert reserved, "config.py harus punya konstanta"
 
     offenders: list[str] = []
-    package = PROJECT_ROOT / "bacteriacv"
-    for source in sorted(package.rglob("*.py")):
-        if source.name == "config.py":
-            continue
+    for source in _scanned_source_files():
         tree = ast.parse(source.read_text(encoding="utf-8"), filename=str(source))
         for node in tree.body:
             if not isinstance(node, ast.Assign):
@@ -148,6 +161,17 @@ def test_no_hyperparameter_duplicated_outside_config() -> None:
                     offenders.append(f"{source.name}: {target.id}")
 
     assert not offenders, f"konstanta config diduplikasi di: {sorted(offenders)}"
+
+
+def test_guard_covers_app_package_when_it_exists() -> None:
+    """Penjaga duplikasi harus ikut memindai app/ begitu backend dibuat."""
+    from bacteriacv.paths import PROJECT_ROOT
+
+    scanned = {path.relative_to(PROJECT_ROOT).as_posix() for path in _scanned_source_files()}
+    if (PROJECT_ROOT / "app").is_dir():
+        assert any(name.startswith("app/") for name in scanned), scanned
+    else:
+        assert scanned, "minimal paket bacteriacv harus dipindai"
 
 
 def test_build_index_imports_from_config() -> None:

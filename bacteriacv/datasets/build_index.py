@@ -301,10 +301,17 @@ def report_exclusions() -> None:
 
 
 def main(argv: list[str] | None = None) -> int:
-    """Titik masuk baris perintah."""
+    """Titik masuk baris perintah.
+
+    Gerbang rekonsiliasi ada di sini: index hanya ditulis bila himpunan citra
+    yang tidak terbaca sama persis dengan yang tercatat di unreadable.csv.
+    Kerusakan baru atau perubahan daftar yang tidak dicatat membuat proses
+    berhenti tanpa menyentuh index.
+    """
     parser = argparse.ArgumentParser(description="Bangun data/index.csv dari citra DIBaS.")
     parser.add_argument("--images-dir", type=Path, default=IMAGES_DIR)
     parser.add_argument("--index-path", type=Path, default=INDEX_PATH)
+    parser.add_argument("--unreadable", type=Path, default=UNREADABLE_PATH)
     parser.add_argument("--seed", type=int, default=INDEX_SEED)
     args = parser.parse_args(argv)
 
@@ -313,14 +320,14 @@ def main(argv: list[str] | None = None) -> int:
         print("GAGAL: tidak ada citra ditemukan.", file=sys.stderr)
         return 1
 
-    expected_skipped = {row["path"] for row in read_unreadable_report()}
+    expected_skipped = {row["path"] for row in read_unreadable_report(args.unreadable)}
     actually_skipped = set(skipped)
     if actually_skipped != expected_skipped:
         missing = actually_skipped - expected_skipped
         stale = expected_skipped - actually_skipped
         print(
             "GAGAL: daftar citra tidak terbaca tidak cocok dengan "
-            f"{UNREADABLE_PATH.name}. Jalankan ekstraksi dengan verifikasi lebih dulu."
+            f"{args.unreadable.name}. Jalankan ekstraksi dengan verifikasi lebih dulu."
         )
         if missing:
             print(f"  tidak tercatat di laporan: {sorted(missing)}")

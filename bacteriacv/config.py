@@ -58,10 +58,29 @@ AUGMENT_HORIZONTAL_FLIP = True
 # ---------------------------------------------------------------------
 # Segmentasi morfologis
 # ---------------------------------------------------------------------
-SEGMENT_EROSION_DISK = 2
-SEGMENT_DILATION_DISK = 2
-SEGMENT_MIN_PEAK_DISTANCE = 5
-SEGMENT_MIN_OBJECT_AREA = 20
+# Keputusan pemilik proyek: segmentasi berjalan pada resolusi asli
+# 2048 x 1532, bukan pada 224 x 224. Alasannya bersifat skala.
+#
+# Pada resolusi asli, satu piksel setara sekitar 0,048 mikron, sehingga
+# sel bakteri 1 mikron berdiameter sekitar 21 piksel. Pada 224 x 224, satu
+# piksel setara sekitar 0,43 mikron, sehingga sel yang sama hanya
+# 2,3 piksel. Footprint morfologis bersifat scale-dependent: konstanta yang
+# sama berarti erosi jauh lebih destructive pada citra yang sudah di-resize.
+#
+# Nilai di bawah sudah diskalakan untuk resolusi asli. Ukuran objek median
+# dari citra DIBaS sekitar 21 piksel, sehingga jejak 5 sampai 7 piksel masih
+# proporsional terhadap ukuran sel.
+SEGMENT_SCALE = "full"
+
+SEGMENT_EROSION_DISK = 5
+SEGMENT_DILATION_DISK = 5
+SEGMENT_MIN_PEAK_DISTANCE = 15
+SEGMENT_MIN_OBJECT_AREA = 300
+
+# Perkiraan mikron per piksel pada kedua skala, dipakai untuk menuliskan
+# setara mikron dari konstanta morfologi pada laporan.
+APPROX_MICRONS_PER_PIXEL_FULL = 0.048
+APPROX_MICRONS_PER_PIXEL_RESIZED = 0.43
 
 # Ambang integritas data. Spesies dengan citra kurang dari angka ini dianggap
 # hasil ekstraksi tidak lengkap.
