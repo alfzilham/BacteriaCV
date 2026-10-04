@@ -404,6 +404,60 @@ def _declared_background(css: str, selector: str) -> str:
     return value
 
 
+# Track #EAE8E3 hanya 1,11:1 terhadap latar halaman #F4F4F0, jadi tanpa
+# pembatas dia praktis tidak terlihat. Ambang pembatas memakai standar yang
+# sama seperti ambang thumb, yaitu 3:1.
+SCROLLBAR_TRACK_MIN_CONTRAST = 3.0
+
+
+def _colour_in_shorthand(shorthand: str) -> str:
+    """Ambil warna hex dari satu shorthand, misalnya "2px solid #050505"."""
+    found = re.search(r"#[0-9A-Fa-f]{6}", shorthand)
+    assert found, f"shorthand tidak memuat warna hex, dapat {shorthand!r}"
+    return found.group(0)
+
+
+def test_scrollbar_track_has_visible_delimiter() -> None:
+    """Track scrollbar wajib punya pembatas yang kontrasnya minimal 3:1.
+
+    Track #EAE8E3 hanya 1,11:1 terhadap latar halaman #F4F4F0. Tanpa
+    pembatas, track menyatu dengan halaman dan hilang. Tes ini menuntut
+    adanya pembatas dan warnanya harus kontras minimal 3:1 terhadap track.
+
+    Tes ini sengaja tidak mengunci nilai pembatas. Kalau nanti track
+    digelapkan sebagai alternatif yang sah, cukup ganti pembatasnya; yang
+    tetap wajib adalah track itu punya pembatas yang terlihat.
+    """
+    css = (REPO_ROOT / "app" / "static" / "main.css").read_text(encoding="utf-8")
+
+    track = _declared_background(css, "::-webkit-scrollbar-track")
+
+    track_block = re.search(
+        r"::-webkit-scrollbar-track\s*\{([^}]*)\}", css
+    )
+    assert track_block, "blok ::-webkit-scrollbar-track tidak ditemukan di main.css"
+
+    border = re.search(r"(?<![-\w])border-left\s*:\s*([^;]+);", track_block.group(1))
+    assert border, (
+        "track scrollbar tidak punya pembatas, jadi tidak terlihat di atas "
+        "latar halaman: hex #EAE8E3 hanya 1,11:1 terhadap #F4F4F0"
+    )
+
+    delimiter = _colour_in_shorthand(_resolve(border.group(1), _design_tokens(css)))
+    ratio = _contrast_ratio(delimiter, track)
+
+    assert ratio >= SCROLLBAR_TRACK_MIN_CONTRAST, (
+        f"pembatas track {delimiter} cuma {ratio:.2f}:1 terhadap track {track}, "
+        f"di bawah ambang {SCROLLBAR_TRACK_MIN_CONTRAST}:1, jadi track tidak "
+        "terlihat di atas latar halaman"
+    )
+
+    print(
+        f"pembatas track {delimiter} di track {track} = {ratio:.2f}:1, "
+        f"ambang {SCROLLBAR_TRACK_MIN_CONTRAST}:1"
+    )
+
+
 def test_webkit_scrollbar_contrast_is_enforced() -> None:
     """Kontras scrollbar harus tetap di atas ambang 3:1.
 
