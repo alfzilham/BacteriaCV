@@ -44,6 +44,19 @@ Pada tahap pelatihan, label target diambil dari lookup table [L] sebelum masuk k
   Dua kelas: cocci dan bacilli. Bentuk spiral ada pada enum bentuk sebagai
   penanda kelas yang tidak terisi, karena DIBaS tidak memuat spesies spiral.
 - Head B: Linear(2048, 2), aktivasi sigmoid, loss binary cross-entropy berbobot.
+  **Hanya kolom keluaran kedua Head B yang masuk loss BCE.** Kolom keluaran
+  pertama tidak pernah diregularisasi oleh loss; ia hanya terpengaruh weight
+  decay, sehingga nilainya tidak membawa informasi yang dipelajari.
+  Konsekuensinya, probabilitas kelas positif Head B adalah
+  `sigmoid(logit kolom kedua)`, **bukan** softmax atas dua kolom. Memakai
+  softmax akan menggabungkan logit yang dilatih dengan logit yang tidak
+  dilatih, sehingga menambah noise dan menurunkan kalibrasi, bukan
+  memperbaikinya. Hal ini terverifikasi: memakai softmax menurunkan akurasi
+  validasi dari 1,0000 menjadi 0,9926 dan menambah citra berbanding rendah
+  pada data uji dari 0 menjadi 1. Ambang klasifikasi memakai
+  `sigmoid(logit) > 0,5`.
+  Implementasinya ada di `train.py` baris 599 untuk loss BCE Head B dan
+  `train.py` baris 363 untuk ambang klasifikasi.
 - Bobot kelas dihitung dari frekuensi pada data latih.
 
 ### C4. Lookup Table [L]
