@@ -17,6 +17,8 @@
     --font-mono: ui-monospace, "SF Mono", "Cascadia Code", "Source Code Pro", Consolas, "Courier New", monospace;
   }
 
+  [hidden] { display: none !important; }
+
   *, *::before, *::after {
     box-sizing: border-box;
     border-radius: 0 !important; /* Radius border NOL mutlak di seluruh dokumen */

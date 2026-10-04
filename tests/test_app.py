@@ -7,6 +7,7 @@ dapat diassert tanpa bergantung pada inisialisasi.
 
 from __future__ import annotations
 
+import re
 from pathlib import Path
 
 import numpy as np
@@ -314,6 +315,40 @@ def test_static_css_and_js_are_external_files() -> None:
     assert "<style" not in page
     assert page.count("<script") == 1
     assert "</script>" in page and "main.js" in page
+
+
+def test_hidden_attribute_beats_dialog_backdrop_display() -> None:
+    """Atribut hidden harus menang atas display yang ditulis .dialog-backdrop.
+
+    .dialog-backdrop mendeklarasikan display: flex, dan deklarasi display di
+    level penulis selalu menang atas [hidden] dari stylesheet bawaan browser.
+    Akibatnya atasan hidden mati total, kedua dialog tampil sejak halaman
+    dimuat, dan tidak ada yang bisa menutupnya.
+
+    Karena itu main.css wajib punya aturan global [hidden] dengan
+    display: none !important, dan aturan itu harus muncul sebelum
+    .dialog-backdrop.
+    """
+    css = (REPO_ROOT / "app" / "static" / "main.css").read_text(encoding="utf-8")
+
+    rule = re.search(r"\[hidden\]\s*\{[^}]*\}", css)
+    assert rule, "aturan [hidden] tidak ada di main.css"
+
+    block = rule.group(0)
+    assert "display" in block, "aturan [hidden] tidak mengatur display"
+    assert "none" in block, "aturan [hidden] tidak memakai display: none"
+    assert "!important" in block, "aturan [hidden] tidak memakai !important"
+
+    assert css.index("[hidden]") < css.index(".dialog-backdrop"), \
+        "aturan [hidden] harus muncul sebelum .dialog-backdrop"
+
+    # Inilah alasan aturan itu perlu: backdrop benar-benar menulis display.
+    backdrop = re.search(r"\.dialog-backdrop\s*\{([^}]*)\}", css)
+    assert backdrop, "aturan .dialog-backdrop tidak ditemukan di main.css"
+    assert re.search(r"display\s*:\s*(?!none)", backdrop.group(1)), (
+        ".dialog-backdrop tidak punya deklarasi display eksplisit, "
+        "jadi aturan [hidden] tidak diuji oleh keadaan sebenarnya"
+    )
 
 
 def test_index_html_has_no_hardcoded_metric_claims() -> None:
