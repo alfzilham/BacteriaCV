@@ -7,11 +7,13 @@ import tempfile
 from collections import Counter
 from pathlib import Path
 
+import cv2
+import numpy as np
 import pytest
 
+from bacteriacv.config import INDEX_SEED
 from bacteriacv.datasets.build_index import (
     N_FOLDS,
-    RANDOM_SEED,
     TEST_FOLD,
     IndexRow,
     _relative_posix,
@@ -28,7 +30,8 @@ from bacteriacv.datasets.species_map import SPECIES, TRAINABLE_SPECIES
 # Jumlah citra per spesies dari hitungan struktural arsip DIBaS. Angka ini yang
 # dipakai untuk menguji proporsi pada skala data sebenarnya, bukan 660 yang
 # disebut literatur lama dan tidak cocok dengan isi arsip. Candida albicans
-# dikecualikan karena jamur, sehingga total efektif 672 dari 692 citra.
+# dikecualikan karena jamur, dan tiga citra rusak dibuang, sehingga total
+# efektif 669 dari 692 berkas.
 REAL_SPECIES_COUNTS: dict[str, int] = {
     "acinetobacter_baumannii": 20,
     "actinomyces_israelii": 23,
@@ -50,8 +53,8 @@ REAL_SPECIES_COUNTS: dict[str, int] = {
     "lactobacillus_reuteri": 20,
     "lactobacillus_rhamnosus": 20,
     "lactobacillus_salivarius": 20,
-    "listeria_monocytogenes": 23,
-    "micrococcus_spp": 23,
+    "listeria_monocytogenes": 22,
+    "micrococcus_spp": 21,
     "neisseria_gonorrhoeae": 23,
     "porphyromonas_gingivalis": 23,
     "propionibacterium_acnes": 23,
@@ -66,15 +69,20 @@ REAL_SPECIES_COUNTS: dict[str, int] = {
 
 
 def _fake_images(project_tmp_dir: Path, count: int = 20) -> list[Path]:
-    """Buat berkas citra palsu untuk satu spesies."""
+    """Buat berkas citra TIFF valid untuk satu spesies."""
     directory = project_tmp_dir / "escherichia_coli"
     directory.mkdir(parents=True, exist_ok=True)
     paths = []
     for index in range(count):
         path = directory / f"Escherichia.coli_{index:04d}.tif"
-        path.write_bytes(b"\x00")
+        _write_tiff(path)
         paths.append(path)
     return paths
+
+
+def _write_tiff(path: Path) -> None:
+    """Buat TIFF valid yang benar-benar dapat dibuka cv2.imread."""
+    assert cv2.imwrite(str(path), np.full((32, 32, 3), 150, dtype=np.uint8))
 
 
 def _full_fake_dataset(project_tmp_dir: Path) -> dict[str, list[Path]]:
@@ -87,7 +95,7 @@ def _full_fake_dataset(project_tmp_dir: Path) -> dict[str, list[Path]]:
         paths = []
         for index in range(count):
             path = directory / f"{species.zip_name}_{index:04d}.tif"
-            path.write_bytes(b"\x00")
+            _write_tiff(path)
             paths.append(path)
         grouped[species.species_id] = paths
     return grouped
@@ -126,22 +134,22 @@ def test_split_proportions_stay_close_to_target(total: int) -> None:
 
 
 def test_full_dataset_totals_match_expected(project_tmp_dir: Path) -> None:
-    """Dataset efektif harus menghasilkan 469 train, 138 val, 65 test.
+    """Dataset efektif harus menghasilkan 467 train, 136 val, 66 test.
 
     Candida albicans dikecualikan karena jamur, sehingga total turun dari 692 ke
-    672. Angka 660 dari literatur lama tidak dipakai karena jumlah citra per
+    669. Angka 660 dari literatur lama tidak dipakai karena jumlah citra per
     spesies tidak seragam.
     """
     grouped = _full_fake_dataset(project_tmp_dir)
-    assert sum(len(paths) for paths in grouped.values()) == 672
+    assert sum(len(paths) for paths in grouped.values()) == 669
 
     rows = build_rows(grouped)
     counts = Counter(row.split for row in rows)
 
-    assert counts["train"] == 469
-    assert counts["val"] == 138
-    assert counts["test"] == 65
-    assert len(rows) == 672
+    assert counts["train"] == 467
+    assert counts["val"] == 136
+    assert counts["test"] == 66
+    assert len(rows) == 669
 
 
 def test_full_dataset_has_all_trainable_species(project_tmp_dir: Path) -> None:
@@ -373,17 +381,19 @@ def test_build_rows_is_deterministic(project_tmp_dir: Path) -> None:
 def test_different_seed_changes_assignment(project_tmp_dir: Path) -> None:
     """Seed berbeda harus menghasilkan pembagian berbeda, kalau tidak seed tidak dipakai."""
     grouped = _full_fake_dataset(project_tmp_dir)
-    first = build_rows(grouped, seed=RANDOM_SEED)
-    second = build_rows(grouped, seed=RANDOM_SEED + 1)
+    first = build_rows(grouped, seed=INDEX_SEED)
+    second = build_rows(grouped, seed=INDEX_SEED + 1)
     assert [row.path for row in first] != [row.path for row in second] or [
         row.split for row in first
     ] != [row.split for row in second]
 
 
-def test_random_seed_is_pinned() -> None:
-    """Seed harus berupa konstanta tertulis agar dapat direproduksi."""
-    assert isinstance(RANDOM_SEED, int)
-    assert RANDOM_SEED == 20260203
+def test_index_seed_is_pinned() -> None:
+    """Seed harus berasal dari config.py agar dapat direproduksi."""
+    from bacteriacv.config import INDEX_SEED
+
+    assert isinstance(INDEX_SEED, int)
+    assert INDEX_SEED == 20260203
 
 
 # --------------------------------------------------------------------------
@@ -394,12 +404,42 @@ def test_random_seed_is_pinned() -> None:
 def test_collect_images_ignores_non_images(project_tmp_dir: Path) -> None:
     """Berkas non-gambar di folder spesies harus diabaikan."""
     paths = _fake_images(project_tmp_dir, count=3)
-    (project_tmp_dir / "escherichia_coli" / "catatan.txt").write_text("bukan citra", encoding="utf-8")
-    grouped = collect_images(project_tmp_dir)
+    (project_tmp_dir / "escherichia_coli" / "catatan.txt").write_text(
+        "bukan citra", encoding="utf-8"
+    )
+    grouped, skipped = collect_images(project_tmp_dir)
     collected = grouped.get(SPECIES[8].species_id, [])
     assert len(collected) == 3
     assert all(path.suffix.lower() in IMAGE_SUFFIXES for path in collected)
     assert set(collected) == set(paths)
+    assert skipped == []
+
+
+def test_collect_images_skips_unreadable_files(project_tmp_dir: Path) -> None:
+    """Berkas yang tidak dapat dibuka harus dilewati, bukan menggagalkan."""
+    paths = _fake_images(project_tmp_dir, count=5)
+    broken = project_tmp_dir / "escherichia_coli" / "rusak_9999.tif"
+    broken.write_bytes(b"bukan tiff" * 100)
+
+    grouped, skipped = collect_images(project_tmp_dir)
+
+    collected = grouped.get(SPECIES[8].species_id, [])
+    assert broken not in collected
+    assert len(collected) == 5
+    assert len(skipped) == 1
+    assert skipped[0].endswith("rusak_9999.tif")
+
+
+def test_collect_images_keeps_unreadable_when_asked(project_tmp_dir: Path) -> None:
+    """Bila skip_unreadable=False, semua berkas dikembalikan."""
+    _fake_images(project_tmp_dir, count=5)
+    broken = project_tmp_dir / "escherichia_coli" / "rusak_9998.tif"
+    broken.write_bytes(b"")
+
+    grouped, skipped = collect_images(project_tmp_dir, skip_unreadable=False)
+
+    assert len(grouped.get(SPECIES[8].species_id, [])) == 6
+    assert skipped == []
 
 
 def test_index_roundtrip_keeps_columns(project_tmp_dir: Path) -> None:
@@ -433,7 +473,7 @@ def test_report_runs_without_error(project_tmp_dir: Path, capsys: pytest.Capture
     rows = build_rows(_full_fake_dataset(project_tmp_dir))
     report(rows)
     captured = capsys.readouterr()
-    assert "Total 672 citra" in captured.out
+    assert "Total 669 citra" in captured.out
     assert "Lipatan (hanya data latih)" in captured.out
 
 

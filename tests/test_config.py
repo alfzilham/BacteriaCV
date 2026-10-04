@@ -84,6 +84,71 @@ def test_max_upload_is_20_megabytes() -> None:
     assert config.MAX_UPLOAD_BYTES == 20 * 1024 * 1024
 
 
+def _config_constant_names() -> set[str]:
+    """Kumpulkan nama konstanta yang benar-benar dideklarasikan di config.py."""
+    import ast
+
+    from bacteriacv.paths import PROJECT_ROOT
+
+    source = (PROJECT_ROOT / "bacteriacv" / "config.py").read_text(encoding="utf-8")
+    tree = ast.parse(source)
+    names: set[str] = set()
+    for node in tree.body:
+        if isinstance(node, ast.Assign):
+            for target in node.targets:
+                if isinstance(target, ast.Name) and target.id.isupper():
+                    names.add(target.id)
+    return names
+
+
+def test_no_hyperparameter_duplicated_outside_config() -> None:
+    """Konstanta config.py tidak boleh dideklarasikan ulang di modul lain.
+
+    config.py menyatakan dirinya sebagai sumber kebenaran tunggal. Tanpa tes ini,
+    mengubah config.INDEX_SEED tidak akan mengubah index.csv karena modul lain
+    masih memakai salinan lokal.
+    """
+    import ast
+
+    from bacteriacv.paths import PROJECT_ROOT
+
+    reserved = _config_constant_names()
+    assert reserved, "config.py harus punya konstanta"
+
+    offenders: list[str] = []
+    package = PROJECT_ROOT / "bacteriacv"
+    for source in sorted(package.rglob("*.py")):
+        if source.name == "config.py":
+            continue
+        tree = ast.parse(source.read_text(encoding="utf-8"), filename=str(source))
+        for node in tree.body:
+            if not isinstance(node, ast.Assign):
+                continue
+            for target in node.targets:
+                if isinstance(target, ast.Name) and target.id in reserved:
+                    offenders.append(f"{source.name}: {target.id}")
+
+    assert not offenders, f"konstanta config diduplikasi di: {sorted(offenders)}"
+
+
+def test_build_index_imports_from_config() -> None:
+    """build_index harus mengambil hyperparameter dari config, bukan menyalin."""
+    from bacteriacv.datasets import build_index
+
+    assert build_index.INDEX_SEED == config.INDEX_SEED
+    assert build_index.N_FOLDS == config.N_FOLDS
+    assert build_index.TRAIN_FRACTION == config.TRAIN_FRACTION
+    assert build_index.VAL_FRACTION == config.VAL_FRACTION
+
+
+def test_min_images_threshold_lives_in_config() -> None:
+    """Ambang integritas data harus terpusat di config.py."""
+    from bacteriacv.datasets import extract
+
+    assert extract.MIN_IMAGES_PER_SPECIES == config.MIN_IMAGES_PER_SPECIES
+    assert config.MIN_IMAGES_PER_SPECIES > 0
+
+
 def test_allowed_suffixes_cover_design_formats() -> None:
     """DESIGN bagian 5 menyebut PNG, JPG, dan TIFF."""
     for suffix in (".png", ".jpg", ".jpeg", ".tif", ".tiff"):

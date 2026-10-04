@@ -12,18 +12,43 @@ Pemakaian:
 from __future__ import annotations
 
 import argparse
+import csv
 import shutil
 import sys
 import zipfile
 from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
 
-from ..paths import IMAGES_DIR, ZIPS_DIR, ensure_data_dirs
+import cv2
+
+from ..config import MIN_IMAGES_PER_SPECIES
+from ..paths import IMAGES_DIR, PROJECT_ROOT, UNREADABLE_PATH, ZIPS_DIR, ensure_data_dirs
 from .species_map import EXPECTED_SPECIES_COUNT, SPECIES, Species
 
 IMAGE_SUFFIXES = (".tif", ".tiff", ".png", ".jpg", ".jpeg", ".bmp")
 
-MIN_IMAGES_PER_SPECIES = 15
+UNREADABLE_FIELDS = ("path", "species_id", "bytes", "reason")
+
+
+def _relative_posix(path: Path) -> str:
+    """Ubah path citra menjadi path relatif proyek dengan garis miring maju.
+
+    Args:
+        path: Lokasi berkas citra.
+
+    Returns:
+        Path relatif terhadap root proyek.
+
+    Raises:
+        ValueError: Bila citra berada di luar root proyek.
+    """
+    resolved = path.resolve()
+    if not resolved.is_relative_to(PROJECT_ROOT):
+        raise ValueError(
+            f"Citra di luar root proyek: {resolved}. "
+            f"Index hanya menerima citra di dalam {PROJECT_ROOT.name}."
+        )
+    return resolved.relative_to(PROJECT_ROOT).as_posix()
 
 
 @dataclass(frozen=True)
@@ -144,8 +169,135 @@ def extract_all(zips_dir: Path = ZIPS_DIR, images_dir: Path = IMAGES_DIR) -> lis
     return results
 
 
-def verify_all(images_dir: Path = IMAGES_DIR) -> bool:
-    """Periksa bahwa setiap spesies punya cukup citra dan nama file unik.
+@dataclass(frozen=True)
+class UnreadableImage:
+    """Citra yang tidak dapat dibuka oleh pustaka citra.
+
+    Attributes:
+        path: Path relatif terhadap root proyek.
+        species_id: Kunci spesies pemilik berkas.
+        size_bytes: Ukuran berkas di disk.
+        reason: Alasan kenapa citra tidak terbaca.
+    """
+
+    path: str
+    species_id: str
+    size_bytes: int
+    reason: str
+
+
+def classify_unreadable(size_bytes: int) -> str:
+    """Tentukan alasan sebuah citra tidak dapat dibaca.
+
+    Args:
+        size_bytes: Ukuran berkas di disk.
+
+    Returns:
+        Alasan singkat dalam bahasa Indonesia.
+    """
+    if size_bytes == 0:
+        return "berkas 0 byte, tidak ada data gambar"
+    return "struktur TIFF rusak atau kompresi tidak didukung"
+
+
+def find_unreadable(images_dir: Path = IMAGES_DIR) -> list[UnreadableImage]:
+    """Temukan seluruh citra yang tidak dapat dibaca.
+
+    Pembacaan dilakukan dengan cv2.imread, sama seperti yang dipakai pipeline.
+    Daftar yang dikecualikan bukan yang dikembalikan, melainkan yangHealthy
+    ditemukan, supaya bisa dicatat di data/raw/unreadable.csv.
+
+    Args:
+        images_dir: Folder citra hasil ekstraksi.
+
+    Returns:
+        Daftar UnreadableImage, terurut menurut path.
+    """
+    found: list[UnreadableImage] = []
+    for species in SPECIES:
+        directory = images_dir / species.species_id
+        if not directory.is_dir():
+            continue
+        for path in sorted(directory.iterdir()):
+            if path.suffix.lower() not in IMAGE_SUFFIXES:
+                continue
+            size_bytes = path.stat().st_size
+            if size_bytes == 0 or cv2.imread(str(path), cv2.IMREAD_COLOR) is None:
+                found.append(
+                    UnreadableImage(
+                        path=_relative_posix(path),
+                        species_id=species.species_id,
+                        size_bytes=size_bytes,
+                        reason=classify_unreadable(size_bytes),
+                    )
+                )
+    return found
+
+
+def write_unreadable_report(
+    unreadable: list[UnreadableImage], report_path: Path = UNREADABLE_PATH
+) -> None:
+    """Catat citra tidak terbaca ke data/raw/unreadable.csv.
+
+    Berkas ini di-commit sebagai bukti keputusan data, sama seperti
+    zips_manifest.csv.
+
+    Args:
+        unreadable: Daftar citra yang tidak terbaca.
+        report_path: Lokasi berkas keluaran.
+    """
+    report_path.parent.mkdir(parents=True, exist_ok=True)
+    with report_path.open("w", newline="", encoding="utf-8") as handle:
+        writer = csv.DictWriter(
+            handle, fieldnames=UNREADABLE_FIELDS, lineterminator="\n"
+        )
+        writer.writeheader()
+        for item in unreadable:
+            writer.writerow(
+                {
+                    "path": item.path,
+                    "species_id": item.species_id,
+                    "bytes": item.size_bytes,
+                    "reason": item.reason,
+                }
+            )
+
+
+def read_unreadable_report(report_path: Path = UNREADABLE_PATH) -> list[dict[str, str]]:
+    """Baca data/raw/unreadable.csv bila ada.
+
+    Args:
+        report_path: Lokasi berkas.
+
+    Returns:
+        Daftar baris sebagai dictionary, atau daftar kosong bila berkas tidak ada.
+    """
+    if not report_path.is_file():
+        return []
+    with report_path.open(newline="", encoding="utf-8") as handle:
+        return list(csv.DictReader(handle))
+
+
+def verify_all(
+    images_dir: Path = IMAGES_DIR, report_path: Path = UNREADABLE_PATH
+) -> bool:
+    """Periksa kelengkapan dataset hasil ekstraksi.
+
+    Empat pemeriksaan dilakukan:
+    1. Setiap spesies punya cukup citra.
+    2. Tidak ada nama berkas kembar di dua spesies.
+    3. Setiap citra benar-benar dapat dibuka oleh cv2.imread.
+    4. Daftar citra tidak terbaca dicatat di unreadable.csv.
+
+    Pemeriksaan ketiga membedakan kerusakan yang sudah diketahui dari kerusakan
+    baru. Kerusakan yang sudah tercatat di unreadable.csv dan tidak bertambah
+    dianggap sesuai keputusan data, bukan kegagalan. Kerusakan yang bertambah
+    atau belum pernah tercatat membuat verifikasi gagal.
+
+    Args:
+        images_dir: Folder citra hasil ekstraksi.
+        report_path: Lokasi keluaran laporan citra tidak terbaca. Harus
+            diteruskan saat pemanggilan dari tes agar tidak menimpa berkas proyek.
 
     Returns:
         True bila semua pemeriksaan lolos.
@@ -157,7 +309,10 @@ def verify_all(images_dir: Path = IMAGES_DIR) -> bool:
         directory = images_dir / species.species_id
         count = count_images(directory)
         if count < MIN_IMAGES_PER_SPECIES:
-            print(f"GAGAL  {species.species_id}: {count} citra, kurang dari {MIN_IMAGES_PER_SPECIES}")
+            print(
+                f"GAGAL  {species.species_id}: {count} citra, "
+                f"kurang dari {MIN_IMAGES_PER_SPECIES}"
+            )
             ok = False
         for path in sorted(directory.glob("*")) if directory.is_dir() else []:
             if path.suffix.lower() not in IMAGE_SUFFIXES:
@@ -171,7 +326,34 @@ def verify_all(images_dir: Path = IMAGES_DIR) -> bool:
             else:
                 seen[path.name] = species.species_id
 
-    print(f"Total {len(seen)} berkas citra unik.")
+    previously_recorded = {row["path"] for row in read_unreadable_report(report_path)}
+    unreadable = find_unreadable(images_dir)
+    write_unreadable_report(unreadable, report_path)
+
+    if unreadable:
+        found = {item.path for item in unreadable}
+        known_before = previously_recorded
+        new_damage = found - known_before
+        for item in unreadable:
+            marker = "diketahui" if item.path in known_before else "BARU"
+            print(f"    {item.path}  ({item.reason}) [{marker}]")
+        if new_damage:
+            ok = False
+            print(
+                f"GAGAL  {len(new_damage)} kerusakan baru ditemukan, "
+                f"total {len(found)} citra tidak terbaca."
+            )
+        else:
+            print(
+                f"CATATAN  {len(found)} citra tidak terbaca, semua sudah "
+                f"tercatat di {report_path.name}."
+            )
+
+    readable = len(seen) - len(unreadable)
+    print(
+        f"Total {len(seen)} berkas citra unik, {readable} terbaca, "
+        f"{len(unreadable)} rusak."
+    )
     return ok
 
 
@@ -189,7 +371,7 @@ def main(argv: list[str] | None = None) -> int:
 
     try:
         if args.verify_only:
-            return 0 if verify_all(args.images_dir) else 1
+            return 0 if verify_all(args.images_dir, UNREADABLE_PATH) else 1
         extract_all(args.zips_dir, args.images_dir)
     except (FileNotFoundError, RuntimeError) as error:
         print(f"GAGAL: {error}", file=sys.stderr)
@@ -199,7 +381,7 @@ def main(argv: list[str] | None = None) -> int:
         print("GAGAL: jumlah spesies tidak sesuai.", file=sys.stderr)
         return 1
 
-    return 0 if verify_all(args.images_dir) else 1
+    return 0 if verify_all(args.images_dir, UNREADABLE_PATH) else 1
 
 
 if __name__ == "__main__":

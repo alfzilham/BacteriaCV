@@ -22,8 +22,11 @@ from collections import Counter, defaultdict
 from dataclasses import dataclass
 from pathlib import Path
 
-from ..paths import IMAGES_DIR, INDEX_PATH, PROJECT_ROOT
-from .extract import IMAGE_SUFFIXES
+import cv2
+
+from ..config import INDEX_SEED, N_FOLDS, TRAIN_FRACTION, VAL_FRACTION
+from ..paths import IMAGES_DIR, INDEX_PATH, PROJECT_ROOT, UNREADABLE_PATH
+from .extract import IMAGE_SUFFIXES, read_unreadable_report
 from .species_map import (
     EXCLUDED_FROM_TRAINING,
     SPECIES,
@@ -32,11 +35,6 @@ from .species_map import (
 )
 
 INDEX_FIELDS = ("path", "species", "species_id", "split", "fold")
-
-RANDOM_SEED = 20260203
-TRAIN_FRACTION = 0.70
-VAL_FRACTION = 0.20
-N_FOLDS = 5
 
 TEST_FOLD = -1
 
@@ -60,17 +58,33 @@ class IndexRow:
     fold: int
 
 
-def collect_images(images_dir: Path) -> dict[str, list[Path]]:
-    """Kumpulkan citra per spesies, diurutkan agar hasilnya deterministik."""
+def collect_images(
+    images_dir: Path, skip_unreadable: bool = True
+) -> tuple[dict[str, list[Path]], list[str]]:
+    """Kumpulkan citra yang dapat dibaca per spesies, terurut secara deterministik.
+
+    Args:
+        images_dir: Folder citra hasil ekstraksi.
+        skip_unreadable: Bila True, berkas yang tidak dapat dibuka cv2.imread
+            dilewati dan dikembalikan sebagai daftar kedua.
+
+    Returns:
+        Pasangan (peta species_id ke daftar path, daftar path yang dilewati).
+    """
     grouped: dict[str, list[Path]] = defaultdict(list)
-    for species in SPECIES:
+    skipped: list[str] = []
+    for species in TRAINABLE_SPECIES:
         directory = images_dir / species.species_id
         if not directory.is_dir():
             continue
         for path in sorted(directory.iterdir()):
-            if path.suffix.lower() in IMAGE_SUFFIXES:
-                grouped[species.species_id].append(path)
-    return dict(grouped)
+            if path.suffix.lower() not in IMAGE_SUFFIXES:
+                continue
+            if skip_unreadable and cv2.imread(str(path), cv2.IMREAD_COLOR) is None:
+                skipped.append(_relative_posix(path))
+                continue
+            grouped[species.species_id].append(path)
+    return dict(grouped), sorted(skipped)
 
 
 def _split_counts(total: int) -> tuple[int, int]:
@@ -91,7 +105,7 @@ def _split_counts(total: int) -> tuple[int, int]:
 
 def build_rows(
     grouped: dict[str, list[Path]],
-    seed: int = RANDOM_SEED,
+    seed: int = INDEX_SEED,
     n_folds: int = N_FOLDS,
 ) -> list[IndexRow]:
     """Bangun baris index lengkap dengan split dan lipatan.
@@ -285,12 +299,27 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Bangun data/index.csv dari citra DIBaS.")
     parser.add_argument("--images-dir", type=Path, default=IMAGES_DIR)
     parser.add_argument("--index-path", type=Path, default=INDEX_PATH)
-    parser.add_argument("--seed", type=int, default=RANDOM_SEED)
+    parser.add_argument("--seed", type=int, default=INDEX_SEED)
     args = parser.parse_args(argv)
 
-    grouped = collect_images(args.images_dir)
+    grouped, skipped = collect_images(args.images_dir)
     if not grouped:
         print("GAGAL: tidak ada citra ditemukan.", file=sys.stderr)
+        return 1
+
+    expected_skipped = {row["path"] for row in read_unreadable_report()}
+    actually_skipped = set(skipped)
+    if actually_skipped != expected_skipped:
+        missing = actually_skipped - expected_skipped
+        stale = expected_skipped - actually_skipped
+        print(
+            "GAGAL: daftar citra tidak terbaca tidak cocok dengan "
+            f"{UNREADABLE_PATH.name}. Jalankan ekstraksi dengan verifikasi lebih dulu."
+        )
+        if missing:
+            print(f"  tidak tercatat di laporan: {sorted(missing)}")
+        if stale:
+            print(f"  tercatat tapi ternyata terbaca: {sorted(stale)}")
         return 1
 
     rows = build_rows(grouped, seed=args.seed)
@@ -304,6 +333,10 @@ def main(argv: list[str] | None = None) -> int:
     write_index(rows, args.index_path)
     report(rows)
     report_exclusions()
+    if skipped:
+        print(f"\n{len(skipped)} citra tidak terbaca dan tidak masuk index:")
+        for name in skipped:
+            print(f"  {name}")
     print(f"\nIndex ditulis: {args.index_path}")
     return 0
 
