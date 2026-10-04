@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1000" role="img" aria-label="BacteriaCV">
+  <rect x="243" y="225" width="515" height="517"
+        fill="none" stroke="#050505" stroke-width="28"/>
+  <circle cx="427" cy="479" r="112" fill="#D31515"/>
+  <rect x="558" y="323" width="120" height="307" rx="60" fill="#050505"/>
+</svg>

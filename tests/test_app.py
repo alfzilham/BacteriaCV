@@ -279,7 +279,11 @@ def test_index_html_has_one_panel_with_toggle() -> None:
     """
     page = (REPO_ROOT / "app" / "static" / "index.html").read_text(encoding="utf-8")
 
-    assert page.count("<img") == 1
+    # Logo merek juga memakai <img> dan itu bukan panel, jadi yang dihitung
+    # adalah img selain logo. Jumlahnya tetap harus tepat satu.
+    images = re.findall(r"<img\b[^>]*>", page)
+    panels = [tag for tag in images if 'class="brand-logo"' not in tag]
+    assert len(panels) == 1, f"harus ada tepat satu img panel, ada {len(panels)}"
     assert 'id="tabs"' in page
     assert 'id="panel"' in page
 

@@ -101,6 +101,13 @@
     gap: 12px;
   }
 
+  .brand-logo {
+    height: 32px;
+    width: auto;
+    display: inline-block;
+    vertical-align: baseline;
+  }
+
   .brand-title {
     margin: 0;
     font-size: 28px;
