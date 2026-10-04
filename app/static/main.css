@@ -662,10 +662,6 @@
 
     /* Citra DIBaS 2048x1532 tidak boleh meluber dari panel. */
     .visual-viewport { min-height: 240px; }
-    #panel {
-      max-width: 100%;
-      height: auto;
-    }
   }
 
   /* Tablet: dua kolom tetap, hanya proporsinya. Pane kiri dikecilkan supaya
