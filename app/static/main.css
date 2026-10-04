@@ -24,6 +24,26 @@
     border-radius: 0 !important; /* Radius border NOL mutlak di seluruh dokumen */
   }
 
+  /* SCROLLBAR: kotak siku, kontras tinggi, tanpa radius */
+  html {
+    scrollbar-width: thin;
+    scrollbar-color: #050505 #EAE8E3;
+  }
+
+  ::-webkit-scrollbar { width: 14px; height: 14px; }
+
+  ::-webkit-scrollbar-track {
+    background: #EAE8E3;
+    border-left: 2px solid #050505;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: #050505;
+    border: 2px solid #EAE8E3;
+  }
+
+  ::-webkit-scrollbar-thumb:hover { background: #D31515; }
+
   body {
     margin: 0;
     padding: 0;
@@ -614,4 +634,6 @@
     padding: 24px;
     max-height: 90vh;
     overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: #050505 #EAE8E3;
   }
