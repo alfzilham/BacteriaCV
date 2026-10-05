@@ -1,5 +1,5 @@
 
-// Referensi elemen DOM wajib
+// Required DOM element references
 const tabsEl = document.getElementById("tabs");
 const panelEl = document.getElementById("panel");
 const panelPlaceholderEl = document.getElementById("panel-placeholder");
@@ -25,7 +25,7 @@ let state = {
   prediction: null
 };
 
-// Ambil batas unggah dari /api/health
+// Fetch the upload limit from /api/health
 fetch("/api/health")
   .then(r => r.json())
   .then(d => {
@@ -37,14 +37,14 @@ fetch("/api/health")
   })
   .catch(() => {});
 
-// Validasi format berkas
+// Validate the file format
 function isAllowedFile(fileName) {
   const allowed = [".png", ".jpg", ".jpeg", ".tif", ".tiff"];
   const lower = fileName.toLowerCase();
   return allowed.some(ext => lower.endsWith(ext));
 }
 
-// Event change input berkas
+// change event on the file input
 fileEl.addEventListener("change", () => {
   const file = fileEl.files[0];
   showError("");
@@ -55,7 +55,7 @@ fileEl.addEventListener("change", () => {
     return;
   }
 
-  // Validasi format berkas persis DESIGN.md Bagian 7
+  // Validate the file format exactly per DESIGN.md Section 7
   if (!isAllowedFile(file.name)) {
     showError("Format berkas tidak didukung. Gunakan PNG, JPG, atau TIFF.");
     submitEl.disabled = true;
@@ -63,7 +63,7 @@ fileEl.addEventListener("change", () => {
     return;
   }
 
-  // Validasi ukuran berkas persis DESIGN.md Bagian 7 (20 MB = 20 * 1024 * 1024)
+  // Validate the file size exactly per DESIGN.md Section 7 (20 MB = 20 * 1024 * 1024)
   if (file.size > 20 * 1024 * 1024) {
     showError("Ukuran berkas melebihi 20 MB.");
     submitEl.disabled = true;
@@ -75,7 +75,7 @@ fileEl.addEventListener("change", () => {
   submitEl.disabled = false;
 });
 
-// Drag & Drop Handling
+// Drag & Drop handling
 dropzoneEl.addEventListener("dragover", e => {
   e.preventDefault();
   dropzoneEl.classList.add("dragover");
@@ -94,7 +94,7 @@ dropzoneEl.addEventListener("drop", e => {
   }
 });
 
-// Submit / Analisis
+// Submit / Analyse
 submitEl.addEventListener("click", async () => {
   const file = fileEl.files[0];
   if (!file) return;
@@ -115,7 +115,7 @@ submitEl.addEventListener("click", async () => {
     const data = await response.json();
     if (!response.ok) {
       let msg = data.detail || "Permintaan gagal";
-      // Pemetaan pesan kesalahan persis DESIGN.md Bagian 7
+      // Error message mapping exactly per DESIGN.md Section 7
       if (response.status === 415 || msg.includes("tidak didukung")) {
         msg = "Format berkas tidak didukung. Gunakan PNG, JPG, atau TIFF.";
       } else if (response.status === 413 || msg.includes("melebihi batas")) {
@@ -137,7 +137,7 @@ submitEl.addEventListener("click", async () => {
 
 function formatConfidence(confidence, level) {
   const pct = (confidence * 100).toFixed(1);
-  // Pastikan teks Tinggi, Sedang, Rendah eksplisit huruf awal kapital (DESIGN 2.1)
+  // Make sure the High, Medium, Low text is explicitly capitalised (DESIGN 2.1)
   const capLevel = level.charAt(0).toUpperCase() + level.slice(1);
   return `<span class="level-${level}">${pct}% (${capLevel})</span>`;
 }
@@ -158,19 +158,19 @@ function render(data) {
   shapeMetaEl.innerHTML = formatConfidence(p.shape_confidence, p.shape_level);
   gramMetaEl.innerHTML = formatConfidence(p.gram_confidence, p.gram_level);
 
-  // Tampilkan peringatan jika confidence rendah pada salah satu head
+  // Show a warning if confidence is low on either head
   if (p.shape_level === "rendah" || p.gram_level === "rendah") {
     lowConfidenceWarningEl.hidden = false;
   } else {
     lowConfidenceWarningEl.hidden = true;
   }
 
-  // Tampilkan peringatan jika segmentasi gagal persis DESIGN.md Bagian 7
+  // Show a warning if segmentation failed exactly per DESIGN.md Section 7
   if (p.segmentation_ok === false || (data.failed_stages && data.failed_stages.length > 0)) {
     showError("Segmentasi tidak berhasil. Hasil klasifikasi tetap ditampilkan tanpa visualisasi.");
   }
 
-  // Tampilkan catatan pipeline
+  // Display the pipeline notes
   notesEl.innerHTML = "";
   const notes = [...data.notes];
   if (data.disclaimer && !notes.includes(data.disclaimer)) {
@@ -223,7 +223,7 @@ function showError(message) {
   errorEl.textContent = message;
 }
 
-// Dialog Laporan & Tentang
+// Report & About dialogs
 const reportDialog = document.getElementById("dialog-report");
 const aboutDialog = document.getElementById("dialog-about");
 const btnReport = document.getElementById("btn-report");

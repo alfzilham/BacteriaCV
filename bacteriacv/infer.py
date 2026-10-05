@@ -1,13 +1,13 @@
-"""Inferensi untuk satu citra dan perakitan hasil lengkap.
+"""Inference for a single image and assembly of the full result.
 
-Jalur inferensi tidak pernah menyentuh augmentasi. preprocess tidak punya
-parameter augmentasi dan tidak memanggil augment_train_variants, sehingga tidak
-ada jalan untuk membocorkannya ke sini.
+The inference path never touches augmentation. preprocess has no
+augmentation parameter and never calls augment_train_variants, so there is
+no way for it to leak in here.
 
-Segmentasi tidak memengaruhi metrik model. ARCHITECTURE bagian 3 menyatakan
-segmentasi tidak dibutuhkan inferensi karena klasifikasi bentuk dan status Gram
-berasal dari citra, bukan dari mask. Hasil segmentasi tetap dihitung karena
-dipakai panel visualisasi, dan kegagalan segmentasi tidak menghentikan prediksi.
+Segmentation does not affect the model metrics. ARCHITECTURE section 3 states
+that segmentation is not needed for inference because shape and Gram status
+classification comes from the image, not the mask. The segmentation result is
+still computed because the visualisation panel uses it, and a segmentation
 """
 
 from __future__ import annotations
@@ -38,22 +38,22 @@ DEFAULT_CHECKPOINT = CHECKPOINT_DIR / CHECKPOINT_NAME
 
 @dataclass(frozen=True)
 class Prediction:
-    """Hasil prediksi untuk satu citra.
+    """Prediction result for one image.
 
     Attributes:
-        shape_label: Nama kelas bentuk.
-        shape_confidence: Confidence bentuk.
-        gram_label: Nama kelas status Gram.
-        gram_confidence: Confidence Gram.
-        shape_index: Indeks kelas bentuk.
-        gram_index: Indeks kelas status Gram.
-        shape_level: Level verbal confidence bentuk.
-        gram_level: Level verbal confidence Gram.
-        object_count: Jumlah objek segmentasi, nol bila segmentasi gagal.
-        segmentation_ok: Apakah segmentasi menghasilkan objek.
-        segmentation_validated: Selalu salah, see SEGMENTATION_LIMITATION.
-        stages_ok: Status keberhasilan tiap tahap pra-pemrosesan.
-        notes: Catatan yang wajib ditampilkan pengguna.
+        shape_label: The shape class name.
+        shape_confidence: The shape confidence.
+        gram_label: The Gram status class name.
+        gram_confidence: The Gram confidence.
+        shape_index: The shape class index.
+        gram_index: The Gram status class index.
+        shape_level: The verbal confidence level for shape.
+        gram_level: The verbal confidence level for Gram.
+        object_count: The segmentation object count, zero when it failed.
+        segmentation_ok: Whether segmentation produced objects.
+        segmentation_validated: Always False, see SEGMENTATION_LIMITATION.
+        stages_ok: Success status of each preprocessing stage.
+        notes: Notes that must be shown to the user.
     """
 
     shape_label: str
@@ -71,7 +71,7 @@ class Prediction:
     notes: tuple[str, ...]
 
     def to_dict(self) -> dict:
-        """Ubah prediksi menjadi dictionary untuk serialisasi JSON."""
+        """Turn the prediction into a dictionary for JSON serialisation."""
         payload = asdict(self)
         payload["notes"] = list(self.notes)
         return payload
@@ -79,11 +79,11 @@ class Prediction:
 
 @dataclass(frozen=True)
 class InferenceResult:
-    """Prediksi beserta panel visualisasi untuk satu citra.
+    """A prediction together with its visualisation panels for one image.
 
     Attributes:
-        prediction: Hasil prediksi kedua head.
-        visualization: Lima panel berannotasi.
+        prediction: The prediction result of both heads.
+        visualization: Five annotated panels.
     """
 
     prediction: Prediction
@@ -91,37 +91,37 @@ class InferenceResult:
 
 
 class Predictor:
-    """Pembungkus model untuk prediksi satu citra.
+    """Model wrapper for single image prediction.
 
-    Model dibangun sekali lalu dipakai berulang. Backbone dibekukan, sehingga
-    tidak ada alasan membangun ulang di antara permintaan.
+    The model is built once and reused. The backbone is frozen, so
+    there is no reason to rebuild it between requests.
     """
 
     def __init__(self, checkpoint_path: Path | str = DEFAULT_CHECKPOINT) -> None:
-        """Bangun model dan muat checkpoint head.
+        """Build the model and load the head checkpoint.
 
         Args:
-            checkpoint_path: Lokasi checkpoint head.
+            checkpoint_path: The head checkpoint location.
 
         Raises:
-            FileNotFoundError: Bila checkpoint tidak ada.
+            FileNotFoundError: When the checkpoint does not exist.
         """
         self.model = load_checkpoint(build_model(pretrained=True), checkpoint_path)
         self.model.eval()
         self.checkpoint_path = Path(checkpoint_path)
 
     def predict(self, image: np.ndarray | Path | str) -> InferenceResult:
-        """Praproses satu citra lalu prediksi kedua head.
+        """Preprocess one image then predict both heads.
 
         Args:
-            image: Array RGB, atau path berkas citra.
+            image: An RGB array, or an image file path.
 
         Returns:
-            InferenceResult berisi prediksi dan panel visualisasi.
+            An InferenceResult holding the prediction and visualisation panels.
 
         Raises:
-            FileNotFoundError: Bila path citra tidak ada.
-            ValueError: Bila citra tidak dapat dibaca.
+            FileNotFoundError: When the image path does not exist.
+            ValueError: When the image cannot be read.
         """
         prepared: PreprocessResult = preprocess(image)
 
@@ -164,25 +164,25 @@ class Predictor:
         )
 
     def predict_many(self, images: list[np.ndarray | Path | str]) -> list[InferenceResult]:
-        """Prediksi sekumpulan citra secara berurutan.
+        """Predict a batch of images in order.
 
         Args:
-            images: Daftar citra.
+            images: The list of images.
 
         Returns:
-            Daftar InferenceResult sepanjang daftar masukan.
+            A list of InferenceResult, one per input image.
         """
         return [self.predict(image) for image in images]
 
 
 def _notes(prepared: PreprocessResult) -> tuple[str, ...]:
-    """Susun catatan yang wajib ditampilkan pengguna.
+    """Assemble the notes that must be shown to the user.
 
     Args:
-        prepared: Hasil pra-pemrosesan.
+        prepared: The preprocessing result.
 
     Returns:
-        Catatan berurutan dari yang paling penting.
+        Notes ordered from most to least important.
     """
     notes: list[str] = [SEGMENTATION_LIMITATION, LOW_CONFIDENCE_WARNING]
     if prepared.message:
@@ -197,13 +197,13 @@ def _notes(prepared: PreprocessResult) -> tuple[str, ...]:
 
 
 def check_suffix(path: Path | str) -> None:
-    """Pastikan ekstensi citra yang diizinkan.
+    """Make sure the image extension is allowed.
 
     Args:
-        path: Path berkas citra.
+        path: The image file path.
 
     Raises:
-        ValueError: Bila ekstensi tidak ada di ALLOWED_SUFFIXES.
+        ValueError: When the extension is not in ALLOWED_SUFFIXES.
     """
     suffix = Path(path).suffix.lower()
     if suffix not in ALLOWED_SUFFIXES:
@@ -212,13 +212,13 @@ def check_suffix(path: Path | str) -> None:
 
 
 def main(argv: list[str] | None = None) -> int:
-    """Jalankan inferensi satu citra dari baris perintah.
+    """Run single image inference from the command line.
 
     Args:
-        argv: Daftar argumen. Default-nya sys.argv.
+        argv: The argument list. Defaults to sys.argv.
 
     Returns:
-        Kode keluar, nol bila prediksi selesai.
+        The exit code, zero when the prediction finished.
     """
     parser = argparse.ArgumentParser(
         description="Prediksi bentuk sel dan status Gram untuk satu citra."

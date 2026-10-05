@@ -1,24 +1,25 @@
-"""Lookup table pemetaan spesies DIBaS ke bentuk sel dan status Gram.
+"""Lookup table mapping DIBaS species to cell shape and Gram status.
 
-Modul ini hanya dipakai pada tahap pelatihan. Pada tahap inferensi, label spesies
-tidak diketahui sehingga tabel ini tidak boleh dipanggil.
+This module is only used at the training stage. At inference the species label
+is not known, so this table must not be called.
 
-Catatan untuk laporan:
-1. Bifidobacterium adalah Gram positif meskipun namanya mengandung "bacterium".
-   Kesalahan yang sering terjadi adalah menganggapnya Gram negatif.
-2. Neisseria gonorrhoeae berupa diplococci, bukan spiral.
-3. Fusobacterium berupa fusiform bacillus, bukan spiral.
-4. DIBaS tidak memuat satu pun spesies berbentuk spiral, sehingga Head A dilatih
-   hanya pada dua kelas. Enum bentuk tetap memuat spiral sebagai penanda kelas
-   yang tidak terisi.
-5. Acinetobacter baumannii dan Porphyromonas gingivalis adalah coccobacillus,
-   yaitu bentuk antara. Keduanya dipetakan ke bacilli karena sumbu batang tetap
-   dominan pada bentuk tersebut.
-6. Actinomyces israelii berupa filamen bercabang. Pada perbesaran 1000x selnya
-   terlihat sebagai fragmen batang pendek, sehingga dipetakan ke bacilli. Ini
-   satu-satunya spesies yang tidak benar-benar muat ke tiga kategori dasar.
-7. Candida albicans tidak ada di tabel karena dikeluarkan dari pelatihan. Jamur,
-   bukan bakteri. Lihat EXCLUDED_FROM_TRAINING pada datasets/species_map.py.
+Notes for the report:
+1. Bifidobacterium is Gram positive even though its name contains "bacterium".
+   The mistake that often occurs is treating it as Gram negative.
+2. Neisseria gonorrhoeae is diplococci, not spiral.
+3. Fusobacterium is a fusiform bacillus, not spiral.
+4. DIBaS contains no spiral shaped species at all, so Head A is trained
+   on only two classes. The shape enum still holds spiral as the marker of
+   an unpopulated class.
+5. Acinetobacter baumannii and Porphyromonas gingivalis are coccobacilli,
+   an intermediate shape. Both are mapped to bacilli because the rod axis
+   stays dominant in that shape.
+6. Actinomyces israelii is branching filaments. At 1000x magnification its
+   cells look like short rod fragments, so it is mapped to bacilli. This is
+   the only species that does not truly fit the three base categories.
+7. Candida albicans is absent from the table because it is excluded from
+   training. A fungus, not a bacterium. See EXCLUDED_FROM_TRAINING in
+   datasets/species_map.py.
 """
 
 from __future__ import annotations
@@ -34,7 +35,7 @@ from .datasets.species_map import (
     display_name,
 )
 
-# Lookup table [L]. Kunci adalah species_id dari datasets/species_map.py.
+# Lookup table [L]. The keys are species_id values from datasets/species_map.py.
 LOOKUP: dict[str, tuple[str, str]] = {
     "acinetobacter_baumannii": ("bacilli", "negative"),
     "actinomyces_israelii": ("bacilli", "positive"),
@@ -79,17 +80,17 @@ GRAM_TO_INDEX: dict[str, int] = {
 
 
 def to_targets(species_ids: list[str]) -> tuple[list[int], list[int]]:
-    """Ubah daftar species_id menjadi indeks bentuk dan status Gram.
+    """Turn a list of species_id values into shape and Gram indices.
 
     Args:
-        species_ids: Daftar species_id dari data/index.csv.
+        species_ids: The species_id values from data/index.csv.
 
     Returns:
-        Pasangan (indeks_bentuk, indeks_gram).
+        A (shape_index, gram_index) pair.
 
     Raises:
-        KeyError: Bila ada species_id yang tidak ada di LOOKUP, termasuk yang
-            sengaja dikecualikan seperti candida_albicans.
+        KeyError: When a species_id is absent from LOOKUP, including those
+            deliberately excluded such as candida_albicans.
     """
     shapes: list[int] = []
     grams: list[int] = []
@@ -101,35 +102,35 @@ def to_targets(species_ids: list[str]) -> tuple[list[int], list[int]]:
 
 
 def unmapped_species(species_ids: list[str]) -> list[str]:
-    """Kembalikan species_id yang tidak ada di lookup table.
+    """Return the species_id values that are absent from the lookup table.
 
-    Berguna untuk melaporkan citra yang dibuang, sesuai SPEC bagian 3.
+    Useful for reporting discarded images, per SPEC section 3.
 
     Args:
-        species_ids: Daftar species_id yang diperiksa.
+        species_ids: The species_id values to check.
 
     Returns:
-        Daftar species_id yang tidak terpetakan, unik dan terurut.
+        The unmapped species_id values, unique and sorted.
     """
     missing = {species_id for species_id in species_ids if species_id not in LOOKUP}
     return sorted(missing)
 
 
 def excluded_from_lookup() -> list[str]:
-    """Kembalikan species_id yang sengaja dikeluarkan dari lookup.
+    """Return the species_id values deliberately excluded from the lookup.
 
     Returns:
-        Daftar species_id yang dikecualikan, unik dan terurut.
+        The excluded species_id values, unique and sorted.
     """
     return sorted(EXCLUDED_FROM_TRAINING)
 
 
 def lookup_summary() -> dict[str, object]:
-    """Ringkasan distribusi lookup table untuk keperluan laporan.
+    """Summary of the lookup table distribution for reporting purposes.
 
     Returns:
-        Dictionary berisi jumlah spesies total, distribusi bentuk, dan
-        distribusi status Gram.
+        A dictionary holding the total species count, the shape distribution,
+        and the Gram status distribution.
     """
     shape_counts = Counter(shape for shape, _ in LOOKUP.values())
     gram_counts = Counter(gram for _, gram in LOOKUP.values())
@@ -142,23 +143,23 @@ def lookup_summary() -> dict[str, object]:
 
 
 def class_weights(targets: list[int], n_classes: int | None = None) -> torch.Tensor:
-    """Hitung bobot kelas dari frekuensi data latih.
+    """Compute class weights from the frequency of the train data.
 
-    Bobot tiap kelas memakai rumus sklearn, yaitu jumlah sampel dibagi jumlah
-    kelas dikali frekuensi kelas tersebut. Rumus ini menghasilkan bobot satu
-    untuk data seimbang dan bobot lebih besar pada kelas minor. Hanya data
-    latih yang boleh dipakai.
+    Each class weight uses the sklearn formula, the sample count divided by the
+    class count times that class frequency. The formula yields a weight of one
+    for balanced data and a larger weight on the minority class. Only train
+    data may be used.
 
     Args:
-        targets: Daftar indeks kelas dari data latih.
-        n_classes: Jumlah kelas total. Default-nya jumlah label bentuk.
+        targets: The class indices from the train data.
+        n_classes: The total class count. Defaults to the number of shape labels.
 
     Returns:
-        Tensor bobot sepanjang n_classes. Kelas yang tidak muncul di data latih
-        diberi bobot satu.
+        A weight tensor of length n_classes. A class that does not appear in
+        the train data is given a weight of one.
 
     Raises:
-        ValueError: Bila targets kosong atau hanya berisi satu kelas.
+        ValueError: When targets is empty or holds only one class.
     """
     if n_classes is None:
         n_classes = len(SHAPE_LABELS)

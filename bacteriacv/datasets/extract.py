@@ -1,11 +1,11 @@
-"""Ekstrak arsip ZIP DIBaS ke folder per spesies.
+"""Extract the DIBaS ZIP archives into a folder per species.
 
-Struktur di dalam arsip tidak konsisten. Hanya Acinetobacter.baumanii yang
-memiliki subfolder, sedangkan 32 arsip lain menyimpan berkas TIFF datar di root.
-Modul ini memflatten semua entri ke satu folder per spesies dan menolak entri
-yang bukan gambar.
+The structure inside the archives is inconsistent. Only Acinetobacter.baumanii
+has a subfolder, while the other 32 archives store flat TIFF files at the root.
+This module flattens every entry into one folder per species and rejects
+entries that are not images.
 
-Pemakaian:
+Usage:
     python -m bacteriacv.datasets.extract
 """
 
@@ -31,16 +31,16 @@ UNREADABLE_FIELDS = ("path", "species_id", "bytes", "reason")
 
 
 def _relative_posix(path: Path) -> str:
-    """Ubah path citra menjadi path relatif proyek dengan garis miring maju.
+    """Turn an image path into a project relative path with forward slashes.
 
     Args:
-        path: Lokasi berkas citra.
+        path: The image file location.
 
     Returns:
-        Path relatif terhadap root proyek.
+        A path relative to the project root.
 
     Raises:
-        ValueError: Bila citra berada di luar root proyek.
+        ValueError: When the image lies outside the project root.
     """
     resolved = path.resolve()
     if not resolved.is_relative_to(PROJECT_ROOT):
@@ -53,13 +53,13 @@ def _relative_posix(path: Path) -> str:
 
 @dataclass(frozen=True)
 class ExtractResult:
-    """Hasil ekstraksi satu arsip.
+    """The extraction result of one archive.
 
     Attributes:
-        species: Spesies asal arsip.
-        directory: Folder tujuan.
-        image_count: Jumlah berkas gambar yang terekstrak.
-        skipped: True bila folder tujuan sudah lengkap.
+        species: The source species of the archive.
+        directory: The target folder.
+        image_count: The number of image files extracted.
+        skipped: True when the target folder is already complete.
     """
 
     species: Species
@@ -69,19 +69,19 @@ class ExtractResult:
 
 
 def _is_image_member(member: str, name: str) -> bool:
-    """Periksa apakah sebuah entri arsip adalah citra yang layak diekstrak.
+    """Check whether an archive entry is an image worth extracting.
 
-    Arsip yang dibuat di macOS menyertakan sidecar AppleDouble di folder
-    ``__MACOSX`` dengan nama diawali ``._``. Berkas sidecar itu berakhiran
-    ``.tif`` sehingga akan lolos bila hanya sufiksnya yang diperiksa, padahal
-    isinya bukan citra.
+    Archives created on macOS include an AppleDouble sidecar in the
+    ``__MACOSX`` folder under names starting with ``._``. Those sidecar files
+    end in ``.tif`` so they would pass when only the suffix is checked, even
+    though their content is not an image.
 
     Args:
-        member: Nama entri lengkap di dalam arsip.
-        name: Nama berkas tanpa folder.
+        member: The full entry name inside the archive.
+        name: The filename without the folder.
 
     Returns:
-        True bila entri adalah citra asli.
+        True when the entry is a real image.
     """
     parts = PurePosixPath(member).parts
     if "__MACOSX" in parts:
@@ -92,7 +92,7 @@ def _is_image_member(member: str, name: str) -> bool:
 
 
 def count_images(directory: Path) -> int:
-    """Hitung berkas gambar di satu folder."""
+    """Count the image files in one folder."""
     if not directory.is_dir():
         return 0
     return sum(
@@ -105,20 +105,20 @@ def extract_species(
     zips_dir: Path = ZIPS_DIR,
     images_dir: Path = IMAGES_DIR,
 ) -> ExtractResult:
-    """Ekstrak satu arsip ke folder spesies, atau lewati bila sudah lengkap.
+    """Extract one archive into the species folder, or skip when already complete.
 
     Args:
-        species: Spesies yang akan diekstrak.
-        zips_dir: Folder berisi berkas ZIP.
-        images_dir: Folder tujuan citra.
+        species: The species to extract.
+        zips_dir: The folder holding the ZIP files.
+        images_dir: The target image folder.
 
     Returns:
-        ExtractResult berisi lokasi dan jumlah citra.
+        An ExtractResult holding the location and image count.
 
     Raises:
-        FileNotFoundError: Bila arsip ZIP tidak ditemukan.
-        RuntimeError: Bila arsip tidak berisi berkas gambar, atau jumlah citra
-            di folder tujuan kurang dari batas minimum.
+        FileNotFoundError: When the ZIP archive is not found.
+        RuntimeError: When the archive holds no image files, or the image
+            count in the target folder is below the minimum.
     """
     archive = zips_dir / f"{species.zip_name}.zip"
     if not archive.is_file():
@@ -151,7 +151,7 @@ def extract_species(
 
 
 def extract_all(zips_dir: Path = ZIPS_DIR, images_dir: Path = IMAGES_DIR) -> list[ExtractResult]:
-    """Ekstrak seluruh arsip dan kembalikan daftar hasil."""
+    """Extract every archive and return the result list."""
     ensure_data_dirs()
     results: list[ExtractResult] = []
     for index, species in enumerate(SPECIES, start=1):
@@ -171,13 +171,13 @@ def extract_all(zips_dir: Path = ZIPS_DIR, images_dir: Path = IMAGES_DIR) -> lis
 
 @dataclass(frozen=True)
 class UnreadableImage:
-    """Citra yang tidak dapat dibuka oleh pustaka citra.
+    """An image that cannot be opened by the image library.
 
     Attributes:
-        path: Path relatif terhadap root proyek.
-        species_id: Kunci spesies pemilik berkas.
-        size_bytes: Ukuran berkas di disk.
-        reason: Alasan kenapa citra tidak terbaca.
+        path: A path relative to the project root.
+        species_id: The species key owning the file.
+        size_bytes: The file size on disk.
+        reason: The reason the image cannot be read.
     """
 
     path: str
@@ -187,13 +187,13 @@ class UnreadableImage:
 
 
 def classify_unreadable(size_bytes: int) -> str:
-    """Tentukan alasan sebuah citra tidak dapat dibaca.
+    """Determine the reason an image cannot be read.
 
     Args:
-        size_bytes: Ukuran berkas di disk.
+        size_bytes: The file size on disk.
 
     Returns:
-        Alasan singkat dalam bahasa Indonesia.
+        A short reason, in Indonesian. Left as data, not translated here.
     """
     if size_bytes == 0:
         return "berkas 0 byte, tidak ada data gambar"
@@ -201,17 +201,17 @@ def classify_unreadable(size_bytes: int) -> str:
 
 
 def find_unreadable(images_dir: Path = IMAGES_DIR) -> list[UnreadableImage]:
-    """Temukan seluruh citra yang tidak dapat dibaca.
+    """Find every image that cannot be read.
 
-    Pembacaan dilakukan dengan cv2.imread, sama seperti yang dipakai pipeline.
-    Daftar yang dikecualikan bukan yang dikembalikan, melainkan yangHealthy
-    ditemukan, supaya bisa dicatat di data/raw/unreadable.csv.
+    Reading uses cv2.imread, the same call the pipeline uses.
+    The list that is excluded is not the one returned, but the one that is
+    found, so it can be recorded in data/raw/unreadable.csv.
 
     Args:
-        images_dir: Folder citra hasil ekstraksi.
+        images_dir: The folder of extracted images.
 
     Returns:
-        Daftar UnreadableImage, terurut menurut path.
+        A list of UnreadableImage, sorted by path.
     """
     found: list[UnreadableImage] = []
     for species in SPECIES:
@@ -237,14 +237,14 @@ def find_unreadable(images_dir: Path = IMAGES_DIR) -> list[UnreadableImage]:
 def write_unreadable_report(
     unreadable: list[UnreadableImage], report_path: Path = UNREADABLE_PATH
 ) -> None:
-    """Catat citra tidak terbaca ke data/raw/unreadable.csv.
+    """Record the unreadable images into data/raw/unreadable.csv.
 
-    Berkas ini di-commit sebagai bukti keputusan data, sama seperti
+    This file is committed as evidence of a data decision, the same as
     zips_manifest.csv.
 
     Args:
-        unreadable: Daftar citra yang tidak terbaca.
-        report_path: Lokasi berkas keluaran.
+        unreadable: The list of unreadable images.
+        report_path: The output file location.
     """
     report_path.parent.mkdir(parents=True, exist_ok=True)
     with report_path.open("w", newline="", encoding="utf-8") as handle:
@@ -264,13 +264,13 @@ def write_unreadable_report(
 
 
 def read_unreadable_report(report_path: Path = UNREADABLE_PATH) -> list[dict[str, str]]:
-    """Baca data/raw/unreadable.csv bila ada.
+    """Read data/raw/unreadable.csv when it exists.
 
     Args:
-        report_path: Lokasi berkas.
+        report_path: The file location.
 
     Returns:
-        Daftar baris sebagai dictionary, atau daftar kosong bila berkas tidak ada.
+        The rows as dictionaries, or an empty list when the file is absent.
     """
     if not report_path.is_file():
         return []
@@ -281,26 +281,26 @@ def read_unreadable_report(report_path: Path = UNREADABLE_PATH) -> list[dict[str
 def verify_all(
     images_dir: Path = IMAGES_DIR, report_path: Path = UNREADABLE_PATH
 ) -> bool:
-    """Periksa kelengkapan dataset hasil ekstraksi.
+    """Check the completeness of the extracted dataset.
 
-    Empat pemeriksaan dilakukan:
-    1. Setiap spesies punya cukup citra.
-    2. Tidak ada nama berkas kembar di dua spesies.
-    3. Setiap citra benar-benar dapat dibuka oleh cv2.imread.
-    4. Daftar citra tidak terbaca dicatat di unreadable.csv.
+Four checks are performed:
+1. Every species has enough images.
+2. No filename is duplicated across two species.
+3. Every image genuinely opens through cv2.imread.
+4. The list of unreadable images is recorded in unreadable.csv.
 
-    Pemeriksaan ketiga membedakan kerusakan yang sudah diketahui dari kerusakan
-    baru. Kerusakan yang sudah tercatat di unreadable.csv dan tidak bertambah
-    dianggap sesuai keputusan data, bukan kegagalan. Kerusakan yang bertambah
-    atau belum pernah tercatat membuat verifikasi gagal.
+The third check separates known damage from new
+damage. Damage already recorded in unreadable.csv that does not grow
+counts as the agreed data decision, not a failure. Damage that grows,
+or was never recorded makes the verification fail.
 
     Args:
-        images_dir: Folder citra hasil ekstraksi.
-        report_path: Lokasi keluaran laporan citra tidak terbaca. Harus
-            diteruskan saat pemanggilan dari tes agar tidak menimpa berkas proyek.
+        images_dir: The folder of extracted images.
+        report_path: The output location of the unreadable image report. Must
+            be passed in by test calls so project files are not overwritten.
 
     Returns:
-        True bila semua pemeriksaan lolos.
+        True when every check passes.
     """
     ok = True
     seen: dict[str, str] = {}
@@ -358,7 +358,7 @@ def verify_all(
 
 
 def main(argv: list[str] | None = None) -> int:
-    """Titik masuk baris perintah."""
+    """Command line entry point."""
     parser = argparse.ArgumentParser(description="Ekstrak arsip DIBaS per spesies.")
     parser.add_argument("--zips-dir", type=Path, default=ZIPS_DIR)
     parser.add_argument("--images-dir", type=Path, default=IMAGES_DIR)

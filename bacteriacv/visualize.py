@@ -1,13 +1,13 @@
-"""Penyusun panel visualisasi untuk antarmuka web.
+"""Builder of the visualisation panels for the web interface.
 
-DESIGN bagian 3 menetapkan satu panel dengan tombol alih, bukan lima panel
-sekaligus. Modul ini karena itu menyiapkan kelima panel sebagai berkas terpisah
-lalu membakar annotate ke masing-masing, supaya tombol alih tidak perlu
-menulis ulang teks setiap kali panel berganti.
+DESIGN section 3 establishes one panel with a toggle, not five panels
+at once. This module therefore prepares the five panels as separate files
+then burns the annotations into each one, so the toggle does not have to
+rewrite the text every time the panel changes.
 
-Aturan yang tidak boleh dilanggar: panel wajib menulis bahwa klasifikasi bentuk
-belum tervalidasi dari objek hasil segmentasi. Angka pada catatan itu berasal
-dari eksperimen pada data DIBaS dan tidak boleh diganti tanpa eksperimen baru.
+A rule that must not be broken: the panel must state that shape classification
+is not yet validated from the segmented objects. The figures in that note come
+from an experiment on DIBaS data and must not change without a new experiment.
 """
 
 from __future__ import annotations
@@ -34,8 +34,8 @@ STAGE_TITLES = {
     "watershed": "Batas objek",
 }
 
-# Bukti dari eksperimen segmentasi pada DIBaS. Angka ini hasil pengukuran,
-# bukan estimasi. Elongasi memakai metrik major/minor axis.
+# Evidence from the segmentation experiment on DIBaS. These figures are measured,
+# not estimated. Elongation uses the major/minor axis metric.
 SEGMENTATION_LIMITATION = (
     "Bentuk sel belum tervalidasi dari segmentasi: elongasi median kokus "
     "1.30-1.43 dan batang 1.64-1.76, tetapi rentang intraspesies 1.03-4.19 "
@@ -51,15 +51,15 @@ LINE_HEIGHT = 18
 
 @dataclass(frozen=True)
 class VisualizationBundle:
-    """Kelima panel yang sudah diberi annotate.
+    """The five panels, already annotated.
 
     Attributes:
-        panels: Lima citra RGB berannotasi, urut sesuai stage_names.
-        stage_names: Kunci tahap untuk tombol alih.
-        titles: Judul tahap sesuai stage_names.
-        failed_stages: Tahap yang gagal, disorot di antarmuka.
-        object_count: Jumlah objek segmentasi, nol bila gagal.
-        notes: Catatan yang harus tampil di bawah panel.
+        panels: Five annotated RGB images, ordered per stage_names.
+        stage_names: The stage keys for the toggle.
+        titles: The stage titles matching stage_names.
+        failed_stages: The stages that failed, highlighted in the interface.
+        object_count: The segmentation object count, zero when it failed.
+        notes: The notes that must appear below the panel.
     """
 
     panels: tuple[np.ndarray, ...]
@@ -71,13 +71,13 @@ class VisualizationBundle:
 
 
 def confidence_level(value: float) -> str:
-    """Ubah confidence menjadi level verbal.
+    """Turn a confidence into a verbal level.
 
     Args:
-        value: Confidence antara nol dan satu.
+        value: A confidence between zero and one.
 
     Returns:
-        "tinggi", "sedang", atau "rendah".
+        "tinggi", "sedang", or "rendah".
     """
     if value >= CONFIDENCE_HIGH:
         return "tinggi"
@@ -89,18 +89,18 @@ def confidence_level(value: float) -> str:
 def annotate(
     panel: np.ndarray, lines: list[str], strip_alpha: float = 0.65
 ) -> np.ndarray:
-    """Bakar teks ke panel dengan latar gelap.
+    """Burn text onto a panel with a dark backdrop.
 
     Args:
-        panel: Array RGB uint8.
-        lines: Baris teks yang ditulis di kiri atas.
-        strip_alpha: Kelembutan latar, nol berarti transparan.
+        panel: A uint8 RGB array.
+        lines: The text lines drawn at the top left.
+        strip_alpha: The backdrop opacity, zero meaning transparent.
 
     Returns:
-        Salinan panel dengan teks terburna.
+        A copy of the panel with the text burned in.
 
     Raises:
-        ValueError: Bila lines kosong.
+        ValueError: When lines is empty.
     """
     if not lines:
         raise ValueError("Setidaknya satu baris annotate wajib ada.")
@@ -127,13 +127,13 @@ def annotate(
 
 
 def encode_png(panel: np.ndarray) -> bytes:
-    """Ubah panel RGB menjadi PNG di memori.
+    """Convert an RGB panel into an in memory PNG.
 
     Args:
-        panel: Array RGB uint8.
+        panel: A uint8 RGB array.
 
     Returns:
-        Isi berkas PNG.
+        The PNG file content.
     """
     ok, buffer = cv2.imencode(".png", cv2.cvtColor(panel, cv2.COLOR_RGB2BGR))
     if not ok:
@@ -142,13 +142,13 @@ def encode_png(panel: np.ndarray) -> bytes:
 
 
 def encode_png_base64(panel: np.ndarray) -> str:
-    """Ubah panel RGB menjadi PNG basis64 untuk disisipkan ke HTML.
+    """Convert an RGB panel into base64 PNG for embedding in HTML.
 
     Args:
-        panel: Array RGB uint8.
+        panel: A uint8 RGB array.
 
     Returns:
-        Teks PNG basis64 tanpa prefiks data URI.
+        Base64 PNG text without the data URI prefix.
     """
     return base64.b64encode(encode_png(panel)).decode("ascii")
 
@@ -159,7 +159,7 @@ def _headline(
     gram_label: str,
     gram_confidence: float,
 ) -> str:
-    """Susun baris ringkasan prediksi untuk annotate."""
+    """Assemble the prediction summary lines for annotation."""
     return (
         f"Bentuk: {shape_label} ({shape_confidence:.0%}, "
         f"{confidence_level(shape_confidence)})   "
@@ -175,20 +175,20 @@ def build_visualization(
     gram_label: str,
     gram_confidence: float,
 ) -> VisualizationBundle:
-    """Bangun kelima panel berannotasi dari hasil pra-pemrosesan.
+    """Build the five annotated panels from the preprocessing result.
 
     Args:
-        result: Hasil preprocess.
-        shape_label: Nama kelas bentuk hasil prediksi.
-        shape_confidence: Confidence prediksi bentuk.
-        gram_label: Nama kelas status Gram hasil prediksi.
-        gram_confidence: Confidence prediksi Gram.
+        result: The preprocess result.
+        shape_label: The predicted shape class name.
+        shape_confidence: The shape prediction confidence.
+        gram_label: The predicted Gram status class name.
+        gram_confidence: The Gram prediction confidence.
 
     Returns:
-        VisualizationBundle siap dikirim ke antarmuka.
+        A VisualizationBundle ready to send to the interface.
 
     Raises:
-        ValueError: Bila confidence di luar rentang nol sampai satu.
+        ValueError: When a confidence falls outside the range zero to one.
     """
     for name, value in (
         ("shape_confidence", shape_confidence),
@@ -228,19 +228,19 @@ def build_visualization(
 
 
 def panel_sizes(bundle: VisualizationBundle) -> list[tuple[int, int]]:
-    """Kembalikan ukuran tiap panel untuk pemeriksaan antarmuka.
+    """Return the size of each panel for interface checks.
 
     Args:
-        bundle: Bundle visualisasi.
+        bundle: The visualisation bundle.
 
     Returns:
-        Daftar pasangan (tinggi, lebar) untuk tiap panel.
+        A list of (height, width) pairs, one per panel.
     """
     return [panel.shape[:2] for panel in bundle.panels]
 
 
 def shape_label_text(index: int) -> str:
-    """Ubah indeks kelas bentuk menjadi label, dengan fallback aman."""
+    """Turn a shape class index into a label, with a safe fallback."""
     if 0 <= index < len(SHAPE_LABELS):
         return SHAPE_LABELS[index]
     return "tidak_diketahui"

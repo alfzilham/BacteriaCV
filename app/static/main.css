@@ -21,10 +21,10 @@
 
   *, *::before, *::after {
     box-sizing: border-box;
-    border-radius: 0 !important; /* Radius border NOL mutlak di seluruh dokumen */
+    border-radius: 0 !important; /* Border radius ABSOLUTELY ZERO across the whole document */
   }
 
-  /* SCROLLBAR: kotak siku, kontras tinggi, tanpa radius */
+  /* SCROLLBAR: square corners, high contrast, no radius */
   html {
     scrollbar-width: thin;
     scrollbar-color: var(--ink-carbon) var(--surface-sub);
@@ -58,7 +58,7 @@
     -webkit-font-smoothing: antialiased;
   }
 
-  /* Scanline CRT halus sebagai tekstur (kontras tetap > 4.5:1) */
+  /* A subtle CRT scanline as texture (contrast stays > 4.5:1) */
   body::before {
     content: "";
     position: fixed;
@@ -74,13 +74,13 @@
     z-index: 9999;
   }
 
-  /* Aksesibilitas keyboard fokus tegas */
+  /* Firm keyboard focus accessibility */
   :focus-visible {
     outline: 2px solid var(--accent-hazard) !important;
     outline-offset: 2px !important;
   }
 
-  /* Input file disembunyikan secara visual (tetap aksesibel keyboard) */
+  /* The file input is visually hidden (still keyboard accessible) */
   .visually-hidden {
     position: absolute !important;
     width: 1px !important;
@@ -93,7 +93,7 @@
     border: 0 !important;
   }
 
-  /* CONTAINER STRUKTURAL */
+  /* STRUCTURAL CONTAINER */
   .layout-wrapper {
     max-width: 1240px;
     margin: 0 auto;
@@ -181,7 +181,7 @@
     gap: 8px;
   }
 
-  /* BARIS ATAS: Kartu Unggah & Kartu Ringkasan Hasil */
+  /* TOP ROW: Upload Card & Result Summary Card */
   .top-row-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -229,7 +229,7 @@
     text-transform: uppercase;
   }
 
-  /* AREA UNGGAH */
+  /* UPLOAD AREA */
   label.upload-dropzone {
     display: block;
     border: 2px dashed var(--ink-carbon);
@@ -238,7 +238,7 @@
     text-align: center;
     cursor: pointer;
     color: var(--ink-carbon);
-    transition: none; /* Tanpa animasi mulus */
+    transition: none; /* No smooth animation */
   }
 
   label.upload-dropzone:hover,
@@ -281,7 +281,7 @@
     word-break: break-all;
   }
 
-  /* KARTU RINGKASAN HASIL */
+  /* RESULT SUMMARY CARD */
   .summary-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -325,7 +325,7 @@
     font-weight: 600;
   }
 
-  /* AREA UTAMA */
+  /* MAIN AREA */
   .main-content-grid {
     display: grid;
     grid-template-columns: 420px 1fr;
@@ -364,7 +364,7 @@
     color: var(--ink-secondary);
   }
 
-  /* TOMBOL PROSES */
+  /* PROCESS BUTTON */
   button.btn-process {
     display: block;
     width: 100%;
@@ -398,7 +398,7 @@
     cursor: not-allowed;
   }
 
-  /* PERINGATAN DAN PESAN KESALAHAN */
+  /* WARNINGS AND ERROR MESSAGES */
   .alert-box {
     border: var(--border-thick);
     padding: 12px;
@@ -420,7 +420,7 @@
     color: var(--level-med);
   }
 
-  /* CATATAN RINGKASAN HASIL */
+  /* RESULT SUMMARY NOTES */
   .notes-card {
     border: var(--border-thick);
     background-color: var(--surface-sub);
@@ -449,7 +449,7 @@
     margin-bottom: 6px;
   }
 
-  /* PANE KANAN: Visualisasi & Panel Kontrol */
+  /* RIGHT PANE: Visualisation & Control Panel */
   .main-right-pane {
     background-color: var(--surface-pure);
     padding: 24px;
@@ -487,7 +487,7 @@
     padding: 24px;
   }
 
-  /* PANEL KONTROL TOGGLE / TOMBOL ALIH */
+  /* TOGGLE CONTROL PANEL / TOGGLE BUTTONS */
   .control-strip {
     border: var(--border-thick);
     background-color: var(--surface-sub);
@@ -517,7 +517,7 @@
     margin: 0;
   }
 
-  /* Wadah tombol alih (id="tabs" wajib sesuai uji test_app.py) */
+  /* Toggle container (id="tabs" is required by the test_app.py test) */
   #tabs {
     display: flex;
     flex-wrap: wrap;
@@ -555,7 +555,7 @@
     color: var(--accent-hazard);
   }
 
-  /* TEKS KETERBATASAN SEGMENTASI (WAJIB TAMPIL PERSIS SPEC BAGIAN 8 BUTIR 5) */
+  /* SEGMENTATION LIMITATION TEXT (MUST APPEAR EXACTLY PER SPEC SECTION 8 ITEM 5) */
   .segmentation-limitation-box {
     border: var(--border-thick);
     background-color: var(--bg-paper);
@@ -574,7 +574,7 @@
     margin-bottom: 4px;
   }
 
-  /* LEVEL CONFIDENCE ACCESSIBILITY */
+  /* CONFIDENCE LEVEL ACCESSIBILITY */
   .level-tinggi {
     color: var(--level-high);
     font-weight: 700;
@@ -590,7 +590,7 @@
     font-weight: 700;
   }
 
-  /* FOOTER & CHIP INFORMASI */
+  /* FOOTER & INFO CHIPS */
   footer.site-footer {
     border-top: var(--border-thick);
     background-color: var(--surface-pure);
@@ -619,7 +619,7 @@
     color: var(--ink-secondary);
   }
 
-  /* MODAL / OVERLAY LAPORAN */
+  /* REPORT MODAL / OVERLAY */
   .dialog-backdrop {
     position: fixed;
     top: 0; left: 0; right: 0; bottom: 0;
@@ -645,10 +645,10 @@
     scrollbar-color: var(--ink-carbon) var(--surface-sub);
   }
 
-  /* RESPONSIVE: PONSEL (<640) dan TABLET (641-1024) */
+  /* RESPONSIVE: MOBILE (<640) and TABLET (641-1024) */
 
-  /* Ponsel: satu kolom, chip jadi satu kolom, padding kartu dikecilkan.
-     Ukuran teks sengaja tidak dikecilkan; DESIGN.md bagian 3 jadi acuan. */
+  /* Mobile: one column, chips become one column, card padding reduced.
+     Text sizes are deliberately not reduced; DESIGN.md section 3 is the reference. */
   @media (max-width: 640px) {
     header.site-header { padding: 12px 16px; }
     footer.site-footer { padding: 12px 16px; }
@@ -662,12 +662,12 @@
       grid-template-columns: 1fr;
     }
 
-    /* Citra DIBaS 2048x1532 tidak boleh meluber dari panel. */
+    /* A 2048x1532 DIBaS image must not overflow the panel. */
     .visual-viewport { min-height: 240px; }
   }
 
-  /* Tablet: dua kolom tetap, hanya proporsinya. Pane kiri dikecilkan supaya
-     panel visualisasi tidak tergencet, panel memakai sisa lebar. */
+  /* Tablet: still two columns, only the proportions differ. The left pane is reduced so
+     the visualisation panel is not squeezed, and the panel takes the remaining width. */
   @media (min-width: 641px) and (max-width: 1024px) {
     .main-content-grid {
       grid-template-columns: 340px 1fr;

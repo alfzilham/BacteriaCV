@@ -1,15 +1,15 @@
-"""Lokasi folder dan berkas proyek.
+"""Project folder and file locations.
 
-Semua path disimpan relatif terhadap root proyek agar tidak ada path absolut
-yang bocor ke dalam kode (AGENT.md bagian 3 aturan 5).
+Every path is kept relative to the project root so no absolute path can
+leak into the code (AGENT.md section 3 rule 5).
 """
 
 from __future__ import annotations
 
 from pathlib import Path
 
-# paths.py berada di bacteriacv/, sehingga parents[0] adalah bacteriacv dan
-# parents[1] adalah root proyek.
+# paths.py lives in bacteriacv/, so parents[0] is bacteriacv and
+# parents[1] is the project root.
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 
 DATA_DIR = PROJECT_ROOT / "data"
@@ -22,6 +22,6 @@ INDEX_PATH = DATA_DIR / "index.csv"
 
 
 def ensure_data_dirs() -> None:
-    """Buat folder data yang dibutuhkan bila belum ada."""
+    """Create the required data folders if they do not exist yet."""
     ZIPS_DIR.mkdir(parents=True, exist_ok=True)
     IMAGES_DIR.mkdir(parents=True, exist_ok=True)

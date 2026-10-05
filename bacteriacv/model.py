@@ -1,10 +1,10 @@
-"""Backbone ResNet-50 beku dengan dua classification head.
+"""Frozen ResNet-50 backbone with two classification heads.
 
-Head A memakai softmax dua kelas bentuk sel, Head B memakai sigmoid dua kelas
-status Gram. Backbone dibekukan sehingga hanya head yang dilatih.
+Head A uses a two class softmax over cell shape, Head B uses a two class sigmoid
+over Gram status. The backbone is frozen so only the heads are trained.
 
-Berkas checkpoint hanya menyimpan head. Backbone diambil ulang dari torchvision
-setiap kali model dibangun, karena bobotnya besar dan tidak pernah berubah.
+The checkpoint file stores only the heads. The backbone is reloaded from torchvision
+each time the model is built, because its weights are large and never change.
 """
 
 from __future__ import annotations
@@ -29,22 +29,22 @@ HEAD_PREFIX = "head_"
 
 
 class BacteriaNet(nn.Module):
-    """ResNet-50 beku dengan dua head klasifikasi.
+    """Frozen ResNet-50 with two classification heads.
 
     Attributes:
-        backbone: ResNet-50 dengan classifier atas dilepas, seluruhnya beku.
-        head_a: Lapisan klasifikasi bentuk sel.
-        head_b: Lapisan klasifikasi status Gram.
+        backbone: ResNet-50 with the top classifier removed, entirely frozen.
+        head_a: Cell shape classification layer.
+        head_b: Gram status classification layer.
     """
 
     def __init__(self, pretrained: bool = True) -> None:
-        """Bangun model.
+        """Build the model.
 
         Args:
-            pretrained: Bila True, muat bobot ImageNet pada backbone.
+            pretrained: When True, load the ImageNet weights into the backbone.
 
         Raises:
-            ValueError: Bila nama backbone pada config tidak didukung.
+            ValueError: When the backbone name in config is not supported.
         """
         super().__init__()
 
@@ -64,42 +64,42 @@ class BacteriaNet(nn.Module):
         self.reset_heads()
 
     def reset_heads(self) -> None:
-        """Inisialisasi ulang bobot head dengan standar PyTorch."""
+        """Reinitialise the head weights with the PyTorch defaults."""
         for head in (self.head_a, self.head_b):
             nn.init.kaiming_normal_(head.weight)
             nn.init.zeros_(head.bias)
 
     def train(self, mode: bool = True) -> "BacteriaNet":
-        """Set mode(latihan), tetapi backbone tetap eval karena dibekukan.
+        """Set train mode, but the backbone stays in eval because it is frozen.
 
         Args:
-            mode: Mode yang diminta untuk head.
+            mode: The mode requested for the heads.
 
         Returns:
-            Module itu sendiri, agar pemanggil bisa merangkai.
+            The module itself, so the caller can chain.
         """
         super().train(mode)
         self.backbone.eval()
         return self
 
     def extract_features(self, batch: torch.Tensor) -> torch.Tensor:
-        """Ambil vektor fitur dari batch citra.
+        """Extract the feature vectors from a batch of images.
 
         Args:
-            batch: Tensor B x 3 x 224 x 224.
+            batch: B x 3 x 224 x 224 tensor.
 
         Returns:
-            Tensor B x 2048 tanpa gradien.
+            B x 2048 tensor without gradients.
         """
         self.backbone.eval()
         with torch.inference_mode():
             return self.backbone(batch)
 
     def head_state_dict(self) -> dict[str, torch.Tensor]:
-        """Ambil bobot head saja untuk disimpan sebagai checkpoint.
+        """Extract only the head weights, to be saved as the checkpoint.
 
         Returns:
-            Dictionary yang hanya memuat kunci berawalan head.
+            A dictionary holding only head prefixed keys.
         """
         return {
             key: value.detach().clone()
@@ -109,30 +109,30 @@ class BacteriaNet(nn.Module):
 
 
 def build_model(pretrained: bool = True) -> BacteriaNet:
-    """Bangun BacteriaNet.
+    """Build BacteriaNet.
 
     Args:
-        pretrained: Bila True, muat bobot ImageNet pada backbone.
+        pretrained: When True, load the ImageNet weights into the backbone.
 
     Returns:
-        Instans BacteriaNet siap pakai.
+        A ready to use BacteriaNet instance.
     """
     return BacteriaNet(pretrained=pretrained)
 
 
 def load_state_dicts(model: BacteriaNet, state: dict[str, torch.Tensor]) -> None:
-    """Muat bobot head ke model.
+    """Load the head weights into the model.
 
-    Bobot backbone sengaja diabaikan karena checkpoint tidak menyimpannya.
-    Ketidakcocokan pada kunci head tetap menjadi error, sedangkan kunci
-    backbone yang absen dianggap wajar.
+    Backbone weights are deliberately ignored because the checkpoint does not
+    store them. A mismatch on a head key is still an error, while a missing
+    backbone key is treated as expected.
 
     Args:
-        model: Model tujuan.
-        state: Dictionary bobot head.
+        model: The target model.
+        state: Dictionary of head weights.
 
     Raises:
-        RuntimeError: Bila ada kunci head yang hilang atau tidak cocok.
+        RuntimeError: When a head key is missing or does not match.
     """
     unexpected = [key for key in state if not key.startswith(HEAD_PREFIX)]
     if unexpected:
@@ -151,14 +151,14 @@ def load_state_dicts(model: BacteriaNet, state: dict[str, torch.Tensor]) -> None
 
 
 def save_checkpoint(model: BacteriaNet, path: Path | str) -> Path:
-    """Simpan bobot head ke path yang diberikan.
+    """Save the head weights to the given path.
 
     Args:
-        model: Model yang head-nya disimpan.
-        path: Lokasi berkas tujuan.
+        model: The model whose heads are saved.
+        path: Target file location.
 
     Returns:
-        Path berkas yang ditulis.
+        The path of the file that was written.
     """
     target = Path(path)
     target.parent.mkdir(parents=True, exist_ok=True)
@@ -167,17 +167,17 @@ def save_checkpoint(model: BacteriaNet, path: Path | str) -> Path:
 
 
 def load_checkpoint(model: BacteriaNet, path: Path | str) -> BacteriaNet:
-    """Muat bobot head dari checkpoint.
+    """Load the head weights from a checkpoint.
 
     Args:
-        model: Model tujuan.
-        path: Lokasi checkpoint.
+        model: The target model.
+        path: Checkpoint location.
 
     Returns:
-        Model yang sudah dimuat.
+        The loaded model.
 
     Raises:
-        FileNotFoundError: Bila checkpoint tidak ada.
+        FileNotFoundError: When the checkpoint does not exist.
     """
     location = Path(path)
     if not location.is_file():
@@ -189,16 +189,16 @@ def load_checkpoint(model: BacteriaNet, path: Path | str) -> BacteriaNet:
 def predict_batch(
     model: BacteriaNet, features: torch.Tensor
 ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
-    """Prediksi bentuk dan status Gram dari sekumpulan fitur.
+    """Predict shape and Gram status from a batch of features.
 
     Args:
-        model: Model BacteriaNet.
-        features: Tensor B x 2048.
+        model: The BacteriaNet model.
+        features: B x 2048 tensor.
 
     Returns:
-        Pasangan empat tensor (label_bentuk, confidence_bentuk, label_gram,
-        confidence_gram). Confidence Gram adalah probabilitas kelas yang
-        dipilih, bukan nilai ambang mutlak.
+        A tuple of four tensors (shape_label, shape_confidence, gram_label,
+        gram_confidence). Gram confidence is the probability of the chosen
+        class, not an absolute threshold value.
     """
     was_training = model.training
     model.eval()
@@ -209,9 +209,9 @@ def predict_batch(
             gram_probabilities = model.head_b(features).sigmoid()
 
             shape_index = shape_probabilities.argmax(dim=-1)
-            # Ambang 0,5 diterapkan pada probabilitas kelas positif saja.
-            # Membandingkan matriks penuh dengan ambang akan menghasilkan
-            # tensor B x 2, bukan B x 1.
+            # The 0.5 threshold is applied only to the positive class probability.
+            # Comparing the full matrix against the threshold would yield a
+            # B x 2 tensor instead of B x 1.
             gram_index = (gram_probabilities[:, 1] > 0.5).to(torch.int64)
             shape_confidence = shape_probabilities.max(dim=-1).values
             gram_confidence = gram_probabilities.gather(
@@ -225,13 +225,13 @@ def predict_batch(
 
 
 def shape_label(index: int) -> str:
-    """Ubah indeks kelas bentuk menjadi label.
+    """Turn a shape class index into a label.
 
     Args:
-        index: Indeks kelas.
+        index: The class index.
 
     Returns:
-        Nama label, atau "tidak_diketahui" bila di luar rentang.
+        The label name, or "tidak_diketahui" when out of range.
     """
     if 0 <= index < len(SHAPE_LABELS):
         return SHAPE_LABELS[index]
@@ -239,13 +239,13 @@ def shape_label(index: int) -> str:
 
 
 def gram_label(index: int) -> str:
-    """Ubah indeks kelas status Gram menjadi label.
+    """Turn a Gram status class index into a label.
 
     Args:
-        index: Indeks kelas.
+        index: The class index.
 
     Returns:
-        Nama label, atau "tidak_diketahui" bila di luar rentang.
+        The label name, or "tidak_diketahui" when out of range.
     """
     if 0 <= index < len(GRAM_LABELS):
         return GRAM_LABELS[index]

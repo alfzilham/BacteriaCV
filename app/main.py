@@ -1,14 +1,14 @@
-"""Antarmuka web BacteriaCV dengan FastAPI.
+"""The BacteriaCV web interface with FastAPI.
 
-DESIGN bagian 3 menetapkan satu panel citra dengan tombol alih tahap, bukan
-lima panel sekaligus. Karena itu predict mengembalikan satu panel untuk tahap
-yang dipilih, bukan lima berkas.
+DESIGN section 3 establishes one image panel with a stage toggle, not
+five panels at once. Therefore predict returns one panel for the selected
+stage, not five files.
 
-Batas penting:
-1. Checkpoint dimuat sekali saat aplikasi mulai, bukan per permintaan.
-2. Kegagalan segmentasi tidak menghentikan prediksi, dan status tahap dikirim
-   ke antarmuka agar panel kosong bisa diberi tanda.
-3. Catatan keterbatasan segmentasi selalu ikut dalam respons.
+Important limits:
+1. The checkpoint is loaded once at application startup, not per request.
+2. A segmentation failure does not stop the prediction, and the stage status is
+   sent to the interface so an empty panel can be marked.
+3. The segmentation limitation note is always included in the response.
 """
 
 from __future__ import annotations
@@ -42,45 +42,45 @@ EVALUATION_NAME = "evaluation.json"
 
 
 class AppState:
-    """Pemredict bersama untuk seluruh permintaan.
+    """The shared predictor for every request.
 
-    Model dibekukan dan tidak punya state per citra, jadi satu instans dipakai
-    untuk semua permintaan. Membangun ulang per permintaan akan memuat bobot
-    backbone sekitar 100 MB setiap kali.
+    The model is frozen and has no per image state, so one instance serves
+    all requests. Rebuilding per request would load the backbone weights,
+    roughly 100 MB, every time.
     """
 
     def __init__(self, checkpoint_path: Path | None = None) -> None:
-        """Muat checkpoint head sekali.
+        """Load the head checkpoint once.
 
         Args:
-            checkpoint_path: Lokasi checkpoint. Default-nya DEFAULT_CHECKPOINT.
+            checkpoint_path: The checkpoint location. Defaults to DEFAULT_CHECKPOINT.
 
         Raises:
-            FileNotFoundError: Bila checkpoint tidak ada.
+            FileNotFoundError: When the checkpoint does not exist.
         """
         self.checkpoint_path = Path(checkpoint_path or DEFAULT_CHECKPOINT)
         self.predictor = Predictor(self.checkpoint_path)
 
 
 def build_lifespan(checkpoint_path: Path | None = None):
-    """Buat pengelola siklus hidup yang memuat checkpoint saat aplikasi mulai.
+    """Create the lifespan manager that loads the checkpoint at startup.
 
     Args:
-        checkpoint_path: Lokasi checkpoint. Bawaannya DEFAULT_CHECKPOINT.
+        checkpoint_path: The checkpoint location. Defaults to DEFAULT_CHECKPOINT.
 
     Returns:
-        Fungsi async context manager untuk argumen lifespan FastAPI.
+        An async context manager function for the FastAPI lifespan argument.
     """
 
     @asynccontextmanager
     async def lifespan(application: FastAPI):
-        """Bangun Predictor saat aplikasi mulai dan lepas saat berhenti.
+        """Build the Predictor at startup and release it at shutdown.
 
         Args:
-            application: Aplikasi FastAPI.
+            application: The FastAPI application.
 
         Yields:
-            Aplikasi setelah Predictor siap, lalu dilepas saat berhenti.
+            The application once the Predictor is ready, released at shutdown.
         """
         cv2.utils.logging.setLogLevel(cv2.utils.logging.LOG_LEVEL_ERROR)
         application.state.bacteria = AppState(checkpoint_path)
@@ -96,13 +96,13 @@ def build_lifespan(checkpoint_path: Path | None = None):
 
 
 def create_app(checkpoint_path: Path | None = None) -> FastAPI:
-    """Bangun aplikasi FastAPI.
+    """Build the FastAPI application.
 
     Args:
-        checkpoint_path: Lokasi checkpoint. Bawaannya DEFAULT_CHECKPOINT.
+        checkpoint_path: The checkpoint location. Defaults to DEFAULT_CHECKPOINT.
 
     Returns:
-        Aplikasi yang siap dijalankan dengan uvicorn.
+        An application ready to run under uvicorn.
     """
     app = FastAPI(title="BacteriaCV", lifespan=build_lifespan(checkpoint_path))
 
@@ -111,10 +111,10 @@ def create_app(checkpoint_path: Path | None = None) -> FastAPI:
 
     @app.get("/", response_class=HTMLResponse)
     async def index() -> HTMLResponse:
-        """Sajikan halaman utama.
+        """Serve the main page.
 
         Returns:
-            Isi app/static/index.html sebagai HTML.
+            The content of app/static/index.html as HTML.
         """
         page = STATIC_DIR / "index.html"
         if not page.is_file():
@@ -123,13 +123,13 @@ def create_app(checkpoint_path: Path | None = None) -> FastAPI:
 
     @app.get("/api/health")
     async def health(request: Request) -> dict:
-        """Laporkan status aplikasi dan keberadaan checkpoint.
+        """Report the application status and whether the checkpoint is present.
 
         Args:
-            request: Permintaan HTTP.
+            request: The HTTP request.
 
         Returns:
-            Dictionary status sederhana.
+            A simple status dictionary.
         """
         state = getattr(request.app.state, "bacteria", None)
         return {
@@ -140,18 +140,18 @@ def create_app(checkpoint_path: Path | None = None) -> FastAPI:
 
     @app.post("/api/predict")
     async def predict(request: Request, file: UploadFile) -> JSONResponse:
-        """Prediksi satu citra dan kembalikan satu panel sesuai tahap.
+        """Predict one image and return one panel for the given stage.
 
         Args:
-            request: Permintaan HTTP.
-            file: Berkas citra yang diunggah.
+            request: The HTTP request.
+            file: The uploaded image file.
 
         Returns:
-            JSON berisi prediksi, stage yang dipilih, dan panel PNG basis64.
+            JSON holding the prediction, the selected stage, and a base64 PNG panel.
 
         Raises:
-            HTTPException: Bila predict belum siap, berkas tidak valid, atau
-                citra tidak dapat dibaca.
+            HTTPException: When predict is not ready, the file is invalid, or
+                the image cannot be read.
         """
         state: AppState | None = getattr(request.app.state, "bacteria", None)
         if state is None:
@@ -188,7 +188,7 @@ def create_app(checkpoint_path: Path | None = None) -> FastAPI:
 
         try:
             result = state.predictor.predict(image)
-        except Exception as error:  # noqa: BLE001 - laporkan, jangan tumpahkan
+        except Exception as error:  # noqa: BLE001 - report it, do not leak it
             LOGGER.exception("Prediksi gagal")
             raise HTTPException(status_code=500, detail=str(error)) from error
 
@@ -208,8 +208,8 @@ def create_app(checkpoint_path: Path | None = None) -> FastAPI:
                 "stage_names": list(result.visualization.stage_names),
                 "stage_titles": list(result.visualization.titles),
                 "panel": encode_png_base64(panels[stage_index]),
-                # Lima panel dikirim sekaligus supaya tombol alih tidak perlu
-                # unggah ulang citra. Yang ditampilkan di layar tetap satu.
+                # All five panels are sent at once so the toggle does not have to
+                # re-upload the image. What is shown on screen stays one.
                 "panels": [encode_png_base64(panel) for panel in panels],
                 "notes": list(result.visualization.notes),
                 "disclaimer": LOW_CONFIDENCE_WARNING,
@@ -219,10 +219,10 @@ def create_app(checkpoint_path: Path | None = None) -> FastAPI:
 
     @app.get("/api/report")
     async def report() -> JSONResponse:
-        """Sajikan hasil evaluasi terakhir bila tersedia.
+        """Serve the most recent evaluation result when available.
 
         Returns:
-            Isi evaluation.json, atau 404 bila evaluasi belum dijalankan.
+            The content of evaluation.json, or 404 when no evaluation has been run.
         """
         path = CHECKPOINT_DIR / EVALUATION_NAME
         if not path.is_file():
@@ -233,13 +233,13 @@ def create_app(checkpoint_path: Path | None = None) -> FastAPI:
 
 
 def _decode(payload: bytes) -> np.ndarray:
-    """Ubah isi berkas menjadi citra RGB.
+    """Convert file content into an RGB image.
 
     Args:
-        payload: Isi berkas citra.
+        payload: The image file content.
 
     Returns:
-        Array RGB uint8.
+        A uint8 RGB array.
 
     Raises:
         ValueError: When the file content cannot be read as an image.

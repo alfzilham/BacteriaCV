@@ -1,13 +1,13 @@
-"""Evaluasi checkpoint pada data uji.
+"""Evaluate a checkpoint on the test data.
 
-Modul ini membaca checkpoint head yang sama dengan yang dipakai inferensi,
-lalu menilainya pada split test saja. Split train dan val sengaja tidak
-disentuh supaya angka yang dilaporkan tetap berasal dari data yang belum pernah
-dipakai untuk mengambil keputusan apa pun.
+This module reads the same head checkpoint that inference uses,
+then evaluates it on the test split only. The train and val splits are
+deliberately left untouched so the reported figures still come from data that
+was never used to make any decision.
 
-Feature ditukar dari cache yang sama dengan pelatihan. Kunci cache memuat
-nama berkas, ukuran, dan waktu modifikasi setiap citra, sehingga evaluate.py
-tidak pernah menjalankan backbone dua kali untuk citra yang sama.
+Features come from the same cache as training. The cache key holds
+the filename, size, and modification time of each image, so evaluate.py
+never runs the backbone twice for the same image.
 """
 
 from __future__ import annotations
@@ -51,17 +51,17 @@ REPORT_NAME = "evaluation.json"
 
 @dataclass(frozen=True)
 class HeadMetrics:
-    """Metrik satu head pada split uji.
+    """Metrics for one head on the test split.
 
     Attributes:
-        head: Nama head.
-        labels: Nama kelas sesuai urutan indeks.
-        f1_macro: F1 makro lintas kelas.
-        accuracy: Proporsi prediksi benar.
-        per_class: F1, presisi, dan recall tiap kelas.
-        confusion: Matriks kebingungan dengan baris sebenarnya.
-        support: Jumlah sampel per kelas sebenarnya.
-        positive_support: Jumlah sampel kelas positif.
+        head: The head name.
+        labels: Class names in index order.
+        f1_macro: Macro F1 across classes.
+        accuracy: Proportion of correct predictions.
+        per_class: F1, precision and recall per class.
+        confusion: The confusion matrix with true rows.
+        support: Sample count per true class.
+        positive_support: Sample count of the positive class.
     """
 
     head: str
@@ -74,20 +74,20 @@ class HeadMetrics:
     positive_support: int
 
     def to_dict(self) -> dict:
-        """Ubah metrik menjadi dictionary untuk serialisasi JSON."""
+        """Turn the metrics into a dictionary for JSON serialisation."""
         return asdict(self)
 
 
 def confusion_matrix(truth: np.ndarray, prediction: np.ndarray, n_classes: int) -> list[list[int]]:
-    """Bangun matriks kebingungan dengan baris kelas sebenarnya.
+    """Build the confusion matrix with true class rows.
 
     Args:
-        truth: Label sebenarnya.
-        prediction: Label hasil prediksi.
-        n_classes: Jumlah kelas.
+        truth: The true labels.
+        prediction: The predicted labels.
+        n_classes: The number of classes.
 
     Returns:
-        Matriks n_classes kali n_classes, elemen int.
+        An n_classes by n_classes matrix of ints.
     """
     matrix = [[0 for _ in range(n_classes)] for _ in range(n_classes)]
     for actual, predicted in zip(truth, prediction):
@@ -98,16 +98,16 @@ def confusion_matrix(truth: np.ndarray, prediction: np.ndarray, n_classes: int) 
 def per_class_metrics(
     truth: np.ndarray, prediction: np.ndarray, labels: list[str], n_classes: int
 ) -> tuple[list[dict[str, float]], list[int]]:
-    """Hitung presisi, recall, dan F1 untuk tiap kelas.
+    """Compute precision, recall and F1 for each class.
 
     Args:
-        truth: Label sebenarnya.
-        prediction: Label hasil prediksi.
-        labels: Nama kelas sesuai urutan indeks.
-        n_classes: Jumlah kelas.
+        truth: The true labels.
+        prediction: The predicted labels.
+        labels: Class names in index order.
+        n_classes: The number of classes.
 
     Returns:
-        Pasangan (daftar metrik per kelas, jumlah sampel per kelas).
+        A (per class metric list, sample count per class) tuple.
     """
     rows: list[dict[str, float]] = []
     support: list[int] = []
@@ -146,17 +146,17 @@ def evaluate_head(
     labels: list[str],
     n_classes: int,
 ) -> HeadMetrics:
-    """Rangkum seluruh metrik satu head.
+    """Summarise all metrics for one head.
 
     Args:
-        head: Nama head untuk laporan.
-        truth: Label sebenarnya.
-        prediction: Label hasil prediksi.
-        labels: Nama kelas sesuai urutan indeks.
-        n_classes: Jumlah kelas.
+        head: The head name for the report.
+        truth: The true labels.
+        prediction: The predicted labels.
+        labels: Class names in index order.
+        n_classes: The number of classes.
 
     Returns:
-        HeadMetrics untuk head tersebut.
+        The HeadMetrics for that head.
     """
     rows, support = per_class_metrics(truth, prediction, labels, n_classes)
     return HeadMetrics(
@@ -172,17 +172,17 @@ def evaluate_head(
 
 
 def select_split(store: FeatureStore, split: str) -> np.ndarray:
-    """Kembalikan indeks baris untuk satu split.
+    """Return the row indices for one split.
 
     Args:
-        store: Feature store.
-        split: Nama split yang dicari.
+        store: The feature store.
+        split: The split name to look for.
 
     Returns:
-        Array indeks baris yang terpilih, urut sesuai baris feature store.
+        An array of the selected row indices, in feature store row order.
 
     Raises:
-        ValueError: Bila split tidak punya baris.
+        ValueError: When the split has no rows.
     """
     positions = np.array(
         [index for index, value in enumerate(store.splits) if value == split],
@@ -196,15 +196,15 @@ def select_split(store: FeatureStore, split: str) -> np.ndarray:
 def species_breakdown(
     species_ids: list[str], correct: np.ndarray, predictions: np.ndarray
 ) -> list[dict]:
-    """Ringkas akurasi per spesies untuk interpretasi hasil.
+    """Summarise accuracy per species to interpret the results.
 
     Args:
-        species_ids: species_id tiap citra uji.
-        correct: Masker boolean ketepatan prediksi bentuk.
-        predictions: Indeks kelas hasil prediksi bentuk.
+        species_ids: The species_id of each test image.
+        correct: A boolean mask of correct shape predictions.
+        predictions: The predicted shape class indices.
 
     Returns:
-        Daftar baris per spesies, terurut menurut species_id.
+        A list of per species rows, sorted by species_id.
     """
     rows: list[dict] = []
     for species_id in sorted(set(species_ids)):
@@ -232,19 +232,19 @@ def species_breakdown(
 def evaluate_checkpoint(
     store: FeatureStore, checkpoint_path: Path | str, split: str = TEST_SPLIT
 ) -> dict:
-    """Nilai checkpoint pada satu split dan susun laporan JSON.
+    """Evaluate a checkpoint on one split and build the JSON report.
 
     Args:
-        store: Feature store berisi fitur untuk seluruh data.
-        checkpoint_path: Lokasi checkpoint head.
-        split: Split yang dinilai.
+        store: The feature store holding features for all data.
+        checkpoint_path: The head checkpoint location.
+        split: The split being evaluated.
 
     Returns:
-        Dictionary laporan yang bisa diserialisasi ke JSON.
+        A report dictionary that can be serialised to JSON.
 
     Raises:
-        FileNotFoundError: Bila checkpoint tidak ada.
-        ValueError: Bila split kosong atau dimensi fitur tidak cocok.
+        FileNotFoundError: When the checkpoint does not exist.
+        ValueError: When the split is empty or the feature dimensions do not match.
     """
     model = build_model(pretrained=False)
     load_checkpoint(model, checkpoint_path)
@@ -276,16 +276,16 @@ def evaluate_checkpoint(
         "gram", gram_truth, gram_prediction, list(GRAM_LABELS), N_GRAM_CLASSES
     )
 
-    # Confidence dilaporkan terpisah per head. Menjumlahkan confidence bentuk
-    # dengan confidence Gram lalu membagi dua menghasilkan angka yang tidak
-    # bermakna: kedua head memakai skala dan basiskalibrasi yang berbeda, dan
-    # tidak ada kelas yang menyatukan keduanya. Angka gabungan semacam ini
-    # pernah menyesatkan, jadi tidak ada lagi di laporan ini.
+    # Confidence is reported separately per head. Adding the shape confidence
+    # to the Gram confidence and dividing by two yields a figure that carries
+    # no meaning: the two heads use different scales and calibrations, and
+    # no class unifies the two. A combined figure of that kind
+    # has misled before, so it is gone from this report.
     return {
-        # Hanya nama berkasnya. Path absolut tidak boleh masuk laporan karena
-        # laporan ini ikut ter-deploy dan dibaca siapa pun, sedangkan path
-        # absolut membocorkan struktur folder mesin pembangun. Path() membungkus
-        # str maupun Path, dan .name aman terhadap pemisah Windows dan POSIX.
+        # The filename only. Absolute paths must not enter the report because
+        # this report is deployed and read by anyone, while an absolute path
+        # leaks the folder structure of the build machine. Path() wraps both
+        # str and Path, and .name is safe across Windows and POSIX separators.
         "checkpoint": Path(checkpoint_path).name,
         "split": split,
         "n_images": int(positions.size),
@@ -318,13 +318,13 @@ def evaluate_checkpoint(
 
 
 def main(argv: list[str] | None = None) -> int:
-    """Jalankan evaluasi dari baris perintah.
+    """Run the evaluation from the command line.
 
     Args:
-        argv: Daftar argumen. Default-nya sys.argv.
+        argv: The argument list. Defaults to sys.argv.
 
     Returns:
-        Kode keluar, nol bila evaluasi selesai.
+        The exit code, zero when the evaluation finished.
     """
     parser = argparse.ArgumentParser(
         description="Nilai checkpoint BacteriaCV pada split data uji."
@@ -339,8 +339,8 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--out", type=Path, default=CHECKPOINT_DIR / REPORT_NAME)
     args = parser.parse_args(argv)
 
-    # TIFF DIBaS memakai tag 33560 yang tidak dikenal OpenCV. Peringatan ini
-    # muncul sekali per citra dan tidak memengaruhi hasil baca.
+    # DIBaS TIFF files carry tag 33560 which OpenCV does not know. This warning
+    # appears once per image and does not affect the read result.
     cv2.utils.logging.setLogLevel(cv2.utils.logging.LOG_LEVEL_ERROR)
 
     rows = read_index_rows(args.index)

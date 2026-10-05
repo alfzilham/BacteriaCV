@@ -1,14 +1,14 @@
-"""Bangun ``data/index.csv`` dari citra hasil ekstraksi.
+"""Build ``data/index.csv`` from the extracted images.
 
-Pembagian data mengikuti SPEC:
-1. Split 70:20:10 stratified per spesies dengan seed tetap.
-2. Lima lipatan validasi silang hanya dibagikan di dalam data latih. Data
-   validasi dan data uji memakai penanda fold -1.
-3. Data uji tidak pernah dipakai untuk keputusan apa pun selama pelatihan.
-4. Bobot kelas dihitung dari data latih saja. Modul ini tidak menghitung
-   bobot apa pun, hanya menyiapkan label metadata.
+The data split follows SPEC:
+1. A 70:20:10 split stratified per species with a fixed seed.
+2. The five cross validation folds are distributed only within the train data.
+   Validation and test data use the fold -1 marker.
+3. Test data is never used for any decision during training.
+4. Class weights are computed from train data only. This module computes no
+   weights at all, it only prepares metadata labels.
 
-Pemakaian:
+Usage:
     python -m bacteriacv.datasets.build_index
 """
 
@@ -41,14 +41,14 @@ TEST_FOLD = -1
 
 @dataclass(frozen=True)
 class IndexRow:
-    """Satu baris index.
+    """One index row.
 
     Attributes:
-        path: Path citra relatif terhadap root proyek, dengan garis miring maju.
-        species: Nama spesies tampilan.
-        species_id: Kunci spesies.
-        split: train, val, atau test.
-        fold: Nomor lipatan 0 sampai 4, atau -1 untuk test.
+        path: The image path relative to the project root, with forward slashes.
+        species: The display species name.
+        species_id: The species key.
+        split: train, val, or test.
+        fold: The fold number 0 to 4, or -1 for test.
     """
 
     path: str
@@ -61,15 +61,15 @@ class IndexRow:
 def collect_images(
     images_dir: Path, skip_unreadable: bool = True
 ) -> tuple[dict[str, list[Path]], list[str]]:
-    """Kumpulkan citra yang dapat dibaca per spesies, terurut secara deterministik.
+    """Collect the readable images per species, in a deterministic order.
 
     Args:
-        images_dir: Folder citra hasil ekstraksi.
-        skip_unreadable: Bila True, berkas yang tidak dapat dibuka cv2.imread
-            dilewati dan dikembalikan sebagai daftar kedua.
+        images_dir: The folder of extracted images.
+        skip_unreadable: When True, files cv2.imread cannot open are
+            skipped and returned as a second list.
 
     Returns:
-        Pasangan (peta species_id ke daftar path, daftar path yang dilewati).
+        A (species_id to path list map, skipped path list) pair.
     """
     grouped: dict[str, list[Path]] = defaultdict(list)
     skipped: list[str] = []
@@ -88,13 +88,13 @@ def collect_images(
 
 
 def _split_counts(total: int) -> tuple[int, int]:
-    """Tentukan jumlah train dan val untuk satu spesies.
+    """Determine the train and val counts for one species.
 
     Args:
-        total: Jumlah citra satu spesies.
+        total: The image count of one species.
 
     Returns:
-        Pasangan (jumlah_train, jumlah_val).
+        A (train_count, val_count) pair.
     """
     n_train = int(round(total * TRAIN_FRACTION))
     n_val = int(round(total * VAL_FRACTION))
@@ -108,26 +108,26 @@ def build_rows(
     seed: int = INDEX_SEED,
     n_folds: int = N_FOLDS,
 ) -> list[IndexRow]:
-    """Bangun baris index lengkap dengan split dan lipatan.
+    """Build the full index rows with split and fold.
 
-    Lipatan hanya dibagikan di dalam data latih. Data validasi dan data uji
-    memakai ``TEST_FOLD``. Alasannya, bila lipatan mencakup data validasi
-    maka data validasi ikut menjadi data latihan pada sebagian lipatan, dan
-    optimistic bias muncul saat data validasi yang sama dipakai untuk
-    pemilihan checkpoint.
+    Folds are distributed only within the train data. Validation and test data
+    use ``TEST_FOLD``. The reason is that if folds covered validation data,
+    validation data would become training data in some folds, and
+    optimistic bias would appear when the same validation data is used for
+    checkpoint selection.
 
     Args:
-        grouped: Citra per species_id.
-        seed: Seed untuk pengacakan, agar hasil dapat direproduksi.
-        n_folds: Jumlah lipatan validasi silang.
+        grouped: The images per species_id.
+        seed: The shuffling seed, so the result is reproducible.
+        n_folds: The number of cross validation folds.
 
     Returns:
-        Daftar IndexRow terurut berdasarkan species_id lalu nama berkas. Pemeriksaan
-        kebocoran dijalankan di akhir sehingga pemanggil tidak bisa melewatkannya.
+        A list of IndexRow sorted by species_id then filename. The leakage
+        check runs at the end so a caller cannot skip it.
 
     Raises:
-        ValueError: Bila ada citra di luar root proyek.
-        RuntimeError: Bila hasil pembagian-data melanggar aturan split atau lipatan.
+        ValueError: When an image lies outside the project root.
+        RuntimeError: When the split result violates the split or fold rules.
     """
     rng = random.Random(seed)
     rows: list[IndexRow] = []
@@ -167,18 +167,18 @@ def build_rows(
 
 
 def _relative_posix(path: Path) -> str:
-    """Ubah path citra menjadi path relatif proyek dengan garis miring maju.
+    """Turn an image path into a project relative path with forward slashes.
 
     Args:
-        path: Lokasi berkas citra.
+        path: The image file location.
 
     Returns:
-        Path relatif terhadap root proyek.
+        A path relative to the project root.
 
     Raises:
-        ValueError: Bila citra berada di luar root proyek. Menulis path absolut
-            ke index.csv melanggar AGENT.md bagian 3 aturan 5, jadi lebih baik
-            gagal Than diam-diam membocorkan lokasi mesin lokal.
+        ValueError: When the image lies outside the project root. Writing an
+            absolute path into index.csv breaks AGENT.md section 3 rule 5, so
+            failing is better than silently leaking a local machine location.
     """
     resolved = path.resolve()
     if not resolved.is_relative_to(PROJECT_ROOT):
@@ -190,7 +190,7 @@ def _relative_posix(path: Path) -> str:
 
 
 def write_index(rows: list[IndexRow], index_path: Path = INDEX_PATH) -> None:
-    """Tulis index.csv."""
+    """Write index.csv."""
     index_path.parent.mkdir(parents=True, exist_ok=True)
     with index_path.open("w", newline="", encoding="utf-8") as handle:
         writer = csv.DictWriter(handle, fieldnames=INDEX_FIELDS, lineterminator="\n")
@@ -208,18 +208,18 @@ def write_index(rows: list[IndexRow], index_path: Path = INDEX_PATH) -> None:
 
 
 def verify_no_leakage(rows: list[IndexRow]) -> None:
-    """Periksa integritas pembagian data.
+    """Check the integrity of the data split.
 
-    Empat hal diperiksa:
-    1. Hanya baris ``train`` yang boleh punya nomor lipatan. Baris ``val``
-       dan ``test`` harus memakai ``TEST_FOLD``.
-    2. Nomor lipatan pada baris train harus berada di rentang 0 sampai
+Four things are checked:
+    1. Only ``train`` rows may carry a fold number. ``val`` and ``test``
+       rows must use ``TEST_FOLD``.
+    2. The fold number on a train row must lie in the range 0 to
        ``N_FOLDS - 1``.
-    3. Tidak ada citra yang muncul di dua lipatan.
-    4. Tidak ada citra yang muncul di dua split.
+    3. No image appears in two folds.
+    4. No image appears in two splits.
 
     Raises:
-        RuntimeError: Bila ditemukan kebocoran atau pelanggaran aturan lipatan.
+        RuntimeError: When leakage or a fold rule violation is found.
     """
     for row in rows:
         if row.split != "train" and row.fold != TEST_FOLD:
@@ -262,7 +262,7 @@ def verify_no_leakage(rows: list[IndexRow]) -> None:
 
 
 def report(rows: list[IndexRow]) -> None:
-    """Cetak ringkasan jumlah citra per spesies, split, dan lipatan."""
+    """Print a summary of image counts per species, split and fold."""
     per_species = Counter(row.species_id for row in rows)
     per_split = Counter(row.split for row in rows)
     per_fold = Counter(row.fold for row in rows)
@@ -286,9 +286,9 @@ def report(rows: list[IndexRow]) -> None:
 
 
 def report_exclusions() -> None:
-    """Cetak spesies yang dikecualikan dari pelatihan beserta alasannya.
+    """Print the species excluded from training along with their reasons.
 
-    Pengecualian dilaporkan eksplisit agar tidak hilang diam-diam dari laporan.
+    The exclusion is reported explicitly so it does not vanish from the report.
     """
     if not EXCLUDED_FROM_TRAINING:
         return
@@ -301,12 +301,12 @@ def report_exclusions() -> None:
 
 
 def main(argv: list[str] | None = None) -> int:
-    """Titik masuk baris perintah.
+    """Command line entry point.
 
-    Gerbang rekonsiliasi ada di sini: index hanya ditulis bila himpunan citra
-    yang tidak terbaca sama persis dengan yang tercatat di unreadable.csv.
-    Kerusakan baru atau perubahan daftar yang tidak dicatat membuat proses
-    berhenti tanpa menyentuh index.
+    The reconciliation gate is here: the index is only written when the set of
+    unreadable images matches exactly what unreadable.csv records.
+    New damage or an unrecorded change to the list makes the process
+    stop without touching the index.
     """
     parser = argparse.ArgumentParser(description="Bangun data/index.csv dari citra DIBaS.")
     parser.add_argument("--images-dir", type=Path, default=IMAGES_DIR)

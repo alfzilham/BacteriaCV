@@ -1,11 +1,11 @@
-"""Unduh arsip ZIP DIBaS per spesies dan catat manifest SHA-256.
+"""Download the DIBaS ZIP archives per species and record a SHA-256 manifest.
 
-Server asal memakai sertifikat TLS yang sudah kedaluwarsa sehingga unduhan
-hanya bisa jalan tanpa verifikasi sertifikat. Untuk menutup celah integritas,
-setiap berkas di-hash SHA-256 dan hasilnya ditulis ke ``zips_manifest.csv``
-sebagai bukti provenance untuk laporan.
+The source server uses an already expired TLS certificate, so downloading
+is only possible without certificate verification. To close that integrity gap,
+each archive is hashed with SHA-256 and the result written to
+``zips_manifest.csv`` as provenance evidence for the report.
 
-Pemakaian:
+Usage:
     python -m bacteriacv.datasets.download
 """
 
@@ -35,14 +35,14 @@ _SOCKET_TIMEOUT = 300
 
 @dataclass(frozen=True)
 class DownloadResult:
-    """Hasil unduhan satu arsip.
+    """The download result of one archive.
 
     Attributes:
-        species: Spesies asal arsip.
-        path: Lokasi berkas ZIP di disk.
-        size_bytes: Ukuran berkas dalam byte.
-        sha256: Hash SHA-256 berkas, huruf kecil heksadesimal.
-        skipped: True bila berkas sudah ada dan hash cocok.
+        species: The source species of the archive.
+        path: The ZIP file location on disk.
+        size_bytes: The file size in bytes.
+        sha256: The SHA-256 hash of the file, lowercase hexadecimal.
+        skipped: True when the file already exists and the hash matches.
     """
 
     species: Species
@@ -53,10 +53,10 @@ class DownloadResult:
 
 
 def _insecure_context() -> ssl.SSLContext:
-    """Konteks TLS tanpa verifikasi sertifikat.
+    """TLS context without certificate verification.
 
-    Dipakai hanya karena sertifikat server DIBaS kedaluwarsa. Integritas
-    dijamin lewat SHA-256 yang dicatat di manifest, bukan lewat sertifikat.
+    Used only because the DIBaS server certificate is expired. Integrity
+    is guaranteed by the SHA-256 recorded in the manifest, not by the certificate.
     """
     context = ssl.create_default_context()
     context.check_hostname = False
@@ -65,7 +65,7 @@ def _insecure_context() -> ssl.SSLContext:
 
 
 def sha256_of(path: Path) -> str:
-    """Hitung SHA-256 berkas dengan pembacaan bertahap."""
+    """Compute the SHA-256 of a file with chunked reading."""
     digest = hashlib.sha256()
     with path.open("rb") as handle:
         while chunk := handle.read(_CHUNK):
@@ -74,10 +74,10 @@ def sha256_of(path: Path) -> str:
 
 
 def _discard_partial(target: Path) -> None:
-    """Hapus berkas unduhan sementara, abaikan bila sedang terkunci.
+    """Remove a temporary download file, ignoring it when it is locked.
 
-    Kegagalan menghapus sisa unduhan tidak boleh menutupi error asli, jadi
-    di sini error sengaja ditelan.
+    A failure to remove leftover download content must not mask the original
+    error, so the error is deliberately swallowed here.
     """
     partial = target.with_suffix(target.suffix + ".part")
     try:
@@ -87,10 +87,10 @@ def _discard_partial(target: Path) -> None:
 
 
 def _download_once(url: str, target: Path) -> None:
-    """Unduh satu URL ke target lewat berkas sementara.
+    """Download one URL to a target through a temporary file.
 
-    Timeout generous dipakai karena server asal lambat dan koneksi sering
-    menganggur di tengah unduhan berkas besar.
+    A generous timeout is used because the source server is slow and the
+    connection often stalls in the middle of a large file download.
     """
     context = _insecure_context()
     partial = target.with_suffix(target.suffix + ".part")
@@ -103,17 +103,17 @@ def _download_once(url: str, target: Path) -> None:
 
 
 def download_species(species: Species, zips_dir: Path = ZIPS_DIR) -> DownloadResult:
-    """Unduh satu arsip ZIP, atau lewati bila sudah lengkap.
+    """Download one ZIP archive, or skip it when already complete.
 
     Args:
-        species: Spesies yang akan diunduh.
-        zips_dir: Folder tujuan.
+        species: The species to download.
+        zips_dir: The target folder.
 
     Returns:
-        DownloadResult berisi lokasi, ukuran, dan hash berkas.
+        A DownloadResult holding the file location, size and hash.
 
     Raises:
-        RuntimeError: Bila unduhan gagal setelah semua percobaan.
+        RuntimeError: When the download fails after every attempt.
     """
     target = zips_dir / f"{species.zip_name}.zip"
 
@@ -145,7 +145,7 @@ def download_species(species: Species, zips_dir: Path = ZIPS_DIR) -> DownloadRes
 
 
 def write_manifest(results: list[DownloadResult], manifest_path: Path = MANIFEST_PATH) -> None:
-    """Tulis manifest SHA-256 untuk seluruh arsip."""
+    """Write the SHA-256 manifest for all archives."""
     manifest_path.parent.mkdir(parents=True, exist_ok=True)
     with manifest_path.open("w", newline="", encoding="utf-8") as handle:
         writer = csv.DictWriter(handle, fieldnames=MANIFEST_FIELDS, lineterminator="\n")
@@ -163,7 +163,7 @@ def write_manifest(results: list[DownloadResult], manifest_path: Path = MANIFEST
 
 
 def download_all(zips_dir: Path = ZIPS_DIR) -> list[DownloadResult]:
-    """Unduh seluruh 33 arsip dan tulis manifest."""
+    """Download all 33 archives and write the manifest."""
     ensure_data_dirs()
     if len(SPECIES) != EXPECTED_SPECIES_COUNT:
         raise RuntimeError(
@@ -191,7 +191,7 @@ def download_all(zips_dir: Path = ZIPS_DIR) -> list[DownloadResult]:
 
 
 def main(argv: list[str] | None = None) -> int:
-    """Titik masuk baris perintah."""
+    """Command line entry point."""
     parser = argparse.ArgumentParser(description="Unduh arsip DIBaS dan tulis manifest.")
     parser.add_argument(
         "--zips-dir",

@@ -1,17 +1,17 @@
-"""Ekstraksi fitur beku dan loop pelatihan dua head.
+"""Frozen feature extraction and the two head training loop.
 
-Feature caching diletakkan di modul ini, bukan modul terpisah, karena
-train.py sudah tercatat di ARCHITECTURE bagian 4 dan FEATURES_DIR sudah ada di
-config. Konsekuensinya satuberriesi.
+Feature caching lives in this module rather than a separate one, because
+train.py is already listed in ARCHITECTURE section 4 and FEATURES_DIR already
+exists in config. The consequence is a single source of truth.
 
-Alasan caching: backbone dibekukan, sehingga vektor fitur sebuah citra tidak
-berubah antar epoch. Kalau citra diteruskan lewat backbone setiap epoch, biaya
-satu epoch adalah 76 ms kali jumlah citra. Dengan caching, backbone dijalankan
-sekali untuk seluruh data latih, dan epoch berikutnya hanya menjalankan dua
-lapisan Linear(2048, 2) yang bobotnya beberapa ribu parameter.
+Reason for caching: the backbone is frozen, so the feature vector of an image
+does not change between epochs. Passing every image through the backbone each epoch
+costs 76 ms times the image count per epoch. With caching the backbone runs
+once for all train data, and later epochs only run the two
+Linear(2048, 2) layers whose weights are a few thousand parameters.
 
-Data uji tidak pernah dipakai untuk early stopping. Data uji hanya dievaluasi
-sekali, setelah bobot terbaik dipulihkan. Aturan ini ditegakkan oleh
+Test data is never used for early stopping. Test data is evaluated
+only once, after the best weights are restored. This rule is enforced by
 test_train_does_not_use_test_for_early_stopping.
 """
 
@@ -53,8 +53,8 @@ from .model import BacteriaNet, build_model, save_checkpoint
 from .paths import INDEX_PATH, PROJECT_ROOT
 from .preprocess import augment_train_variants, load_image, preprocess_tensor
 
-# Bump nilai ini bila pipeline pra-pemrosesan berubah, supaya cache lama tidak
-# dipakai untuk citra yang sudah diproses dengan aturan berbeda.
+# Bump this value when the preprocessing pipeline changes, so an old cache is not
+# reused for images already processed under different rules.
 CACHE_VERSION = "features-v1"
 
 MATRIX_NAME = "features.npy"
@@ -78,13 +78,13 @@ REQUIRED_SPLITS = (TRAIN_SPLIT, VAL_SPLIT)
 
 @dataclass(frozen=True)
 class FeatureStore:
-    """Vektor fitur beku beserta label yang menunjangnya.
+    """Frozen feature vectors together with their supporting labels.
 
     Attributes:
-        matrix: Matriks N x FEATURE_DIM bertipe float32.
-        species_ids: species_id tiap baris, untuk diturunkan jadi label head.
-        splits: Nama split tiap baris.
-        paths: Path citra asal tiap baris, relatif terhadap folder citra.
+        matrix: An N x FEATURE_DIM float32 matrix.
+        species_ids: The species_id of each row, from which head labels are derived.
+        splits: The split name of each row.
+        paths: The source image path of each row, relative to the image folder.
     """
 
     matrix: np.ndarray
@@ -94,14 +94,14 @@ class FeatureStore:
 
 
 def save_feature_store(store: FeatureStore, directory: Path | str) -> Path:
-    """Tulis feature store ke disk.
+    """Write the feature store to disk.
 
     Args:
-        store: Feature store yang ditulis.
-        directory: Folder tujuan, dibuat bila belum ada.
+        store: The feature store being written.
+        directory: The target folder, created when missing.
 
     Returns:
-        Folder tempat berkas ditulis.
+        The folder the files were written into.
     """
     target = Path(directory)
     target.mkdir(parents=True, exist_ok=True)
@@ -118,17 +118,17 @@ def save_feature_store(store: FeatureStore, directory: Path | str) -> Path:
 
 
 def load_feature_store(directory: Path | str) -> FeatureStore:
-    """Baca feature store dari disk.
+    """Read the feature store from disk.
 
     Args:
-        directory: Folder yang berisi features.npy dan labels.npz.
+        directory: The folder holding features.npy and labels.npz.
 
     Returns:
-        FeatureStore yang pulih persis seperti saat disimpan.
+        A FeatureStore recovered exactly as it was saved.
 
     Raises:
-        FileNotFoundError: Bila folder atau berkas matriks tidak ada.
-        ValueError: Bila dimensi matriks atau panjang label tidak konsisten.
+        FileNotFoundError: When the folder or the matrix file is missing.
+        ValueError: When the matrix dimensions or label length are inconsistent.
     """
     source = Path(directory)
     matrix_path = source / MATRIX_NAME
@@ -158,18 +158,18 @@ def load_feature_store(directory: Path | str) -> FeatureStore:
 
 
 def cache_signature(images_dir: Path | str, rows: list[dict], augment: bool) -> str:
-    """Hitung sidik jari cache dari isi citra dan aturan pipeline.
+    """Compute the cache fingerprint from image content and pipeline rules.
 
-    Sidik jari memuat nama berkas, ukuran, dan waktu modifikasi setiap citra.
-    Mengubah satu piksel pada citra sumber karena itu membatalkan cache.
+    The fingerprint holds the filename, size, and modification time of each image.
+    Changing a single pixel in a source image therefore invalidates the cache.
 
     Args:
-        images_dir: Folder dasar tempat path relatif dihitung.
-        rows: Baris index.
-        augment: Apakah augmentasi dilLewati saat ekstraksi.
+        images_dir: The base folder relative paths are computed from.
+        rows: The index rows.
+        augment: Whether augmentation is skipped during extraction.
 
     Returns:
-        Sidik jari hex sepanjang 16 karakter.
+        A 16 character hex fingerprint.
     """
     base = Path(images_dir)
     digest = hashlib.sha256()
@@ -198,29 +198,29 @@ def extract_features_for_rows(
     batch_size: int = EXTRACT_BATCH_SIZE,
     verbose: bool = False,
 ) -> FeatureStore:
-    """Ekstraksi vektor fitur untuk setiap baris index.
+    """Extract the feature vector for every index row.
 
-    Augmentasi hanya berlaku pada baris ber-split train, sesuai keputusan D3.
-    Jumlah baris latih menjadi AUGMENT_VARIANTS kali lebih banyak: satu citra
-    asli dan AUGMENT_VARIANTS - 1 varian augmentasi.
+    Augmentation applies only to rows with split train, per decision D3.
+    The train row count becomes AUGMENT_VARIANTS times larger: one original
+    image plus AUGMENT_VARIANTS - 1 augmented variants.
 
-    Ekstraksi memakai preprocess_tensor, bukan preprocess, sehingga segmentasi
-    tidak dijalankan. Segmentasi hanya untuk panel visualisasi dan tidak
-    memengaruhi metrik model.
+    Extraction uses preprocess_tensor, not preprocess, so segmentation
+    does not run. Segmentation exists only for the visualisation panels and does
+    not affect the model metrics.
 
     Args:
-        model: Model BacteriaNet. Backbonenya dibekukan oleh model itu sendiri.
-        images_dir: Folder dasar untuk path relatif pada baris index.
-        rows: Baris index dengan kunci path, species_id, dan split.
-        augment: Bila True, baris train diberi varian augmentasi.
-        batch_size: Jumlah citra per inferensi backbone.
-        verbose: Bila True, cetak kemajuan setiap PROGRESS_EVERY citra.
+        model: The BacteriaNet model. Its backbone is frozen by the model itself.
+        images_dir: The base folder for relative paths in the index rows.
+        rows: Index rows with path, species_id and split keys.
+        augment: When True, train rows get augmented variants.
+        batch_size: The number of images per backbone inference.
+        verbose: When True, print progress every PROGRESS_EVERY images.
 
     Returns:
-        FeatureStore berisi matriks fitur dan labelnya.
+        A FeatureStore holding the feature matrix and its labels.
 
     Raises:
-        FileNotFoundError: Bila ada citra yang tidak ditemukan.
+        FileNotFoundError: When an image cannot be found.
     """
     base = Path(images_dir)
     tensors: list[torch.Tensor] = []
@@ -274,18 +274,18 @@ def build_or_load_features(
     cache_root: Path | str | None = None,
     verbose: bool = False,
 ) -> tuple[FeatureStore, Path, bool]:
-    """Ambil fitur dari cache bila tersedia, ekstrak ulang bila tidak.
+    """Take features from cache when available, re-extract when not.
 
     Args:
-        model: Model BacteriaNet.
-        images_dir: Folder dasar untuk path relatif pada baris index.
-        rows: Baris index.
-        augment: Bila True, baris train diberi varian augmentasi.
-        cache_root: Folder akar cache. Default-nya FEATURES_DIR dari config.
-        verbose: Bila True, cetak kemajuan saat ekstraksi.
+        model: The BacteriaNet model.
+        images_dir: The base folder for relative paths in the index rows.
+        rows: The index rows.
+        augment: When True, train rows get augmented variants.
+        cache_root: The cache root folder. Defaults to FEATURES_DIR from config.
+        verbose: When True, print progress during extraction.
 
     Returns:
-        Tiga elemen (store, folder_cache, dipakai_cache).
+        Three elements: (store, cache_folder, cache_used).
     """
     root = Path(cache_root) if cache_root is not None else FEATURES_DIR
     directory = root / f"store_{cache_signature(images_dir, rows, augment)}"
@@ -301,22 +301,22 @@ def build_or_load_features(
 
 
 # =====================================================================
-# Metrik
+# Metrics
 # =====================================================================
 
 
 def f1_macro(truth: np.ndarray, prediction: np.ndarray, n_classes: int) -> float:
-    """Hitung F1 makro tanpa dependensi sklearn.
+    """Compute macro F1 without depending on sklearn.
 
     Args:
-        truth: Label sebenarnya.
-        prediction: Label hasil prediksi.
-        n_classes: Jumlah kelas yang dinilai.
+        truth: The true labels.
+        prediction: The predicted labels.
+        n_classes: The number of classes evaluated.
 
     Returns:
-        Rata-rata F1 per kelas. Kelas yang tidak pernah muncul di sebenarnya
-        maupun prediksi diberi skor nol agar kelas kosong tidak menaikkan
-        rata-rata.
+        The mean F1 per class. A class that never appears in either the true
+        or the predicted labels is given a score of zero so an empty class does
+        not raise the mean.
     """
     scores: list[float] = []
     for index in range(n_classes):
@@ -329,14 +329,14 @@ def f1_macro(truth: np.ndarray, prediction: np.ndarray, n_classes: int) -> float
 
 
 def accuracy(truth: np.ndarray, prediction: np.ndarray) -> float:
-    """Hitung akurasi sebagai proporsi prediksi benar.
+    """Compute accuracy as the proportion of correct predictions.
 
     Args:
-        truth: Label sebenarnya.
-        prediction: Label hasil prediksi.
+        truth: The true labels.
+        prediction: The predicted labels.
 
     Returns:
-        Nilai antara nol dan satu, nol bila arrays kosong.
+        A value between zero and one, zero when the arrays are empty.
     """
     if truth.size == 0:
         return 0.0
@@ -346,14 +346,14 @@ def accuracy(truth: np.ndarray, prediction: np.ndarray) -> float:
 def _head_predictions(
     model: BacteriaNet, features: torch.Tensor
 ) -> tuple[np.ndarray, np.ndarray]:
-    """Ambil prediksi kedua head untuk sekumpulan fitur.
+    """Take the predictions of both heads for a batch of features.
 
     Args:
-        model: Model BacteriaNet.
-        features: Tensor N x FEATURE_DIM.
+        model: The BacteriaNet model.
+        features: An N x FEATURE_DIM tensor.
 
     Returns:
-        Pasangan (prediksi_bentuk, prediksi_gram) sebagai array integer.
+        A (shape_prediction, gram_prediction) pair of integer arrays.
     """
     was_training = model.training
     model.eval()
@@ -374,17 +374,17 @@ def _evaluate(
     gram_truth: torch.Tensor,
     mask: torch.Tensor,
 ) -> tuple[float, float, float, float]:
-    """Nilai satu split pada keempat metrik.
+    """Evaluate one split on all four metrics.
 
     Args:
-        model: Model BacteriaNet.
-        features: Matriks fitur seluruh data.
-        shape_truth: Label bentuk seluruh data.
-        gram_truth: Label Gram seluruh data.
-        mask: Masker baris yang termasuk split ini.
+        model: The BacteriaNet model.
+        features: The feature matrix of all data.
+        shape_truth: The shape labels of all data.
+        gram_truth: The Gram labels of all data.
+        mask: A row mask for the rows in this split.
 
     Returns:
-        Empat nilai (f1_bentuk, f1_gram, akurasi_bentuk, akurasi_gram).
+        Four values: (shape_f1, gram_f1, shape_accuracy, gram_accuracy).
     """
     selected = torch.nonzero(mask, as_tuple=False).reshape(-1)
     if selected.numel() == 0:
@@ -403,23 +403,23 @@ def _evaluate(
 
 
 # =====================================================================
-# Loop pelatihan
+# Training loop
 # =====================================================================
 
 
 @dataclass(frozen=True)
 class TrainConfig:
-    """Hyperparameter pelatihan. Semua nilai bawaan berasal dari config.
+    """Training hyperparameters. All defaults come from config.
 
     Attributes:
-        epochs: Batas atas epoch.
-        patience: Jumlah epoch tanpa perbaikan sebelum berhenti.
-        learning_rate: Learning rate AdamW.
-        weight_decay: Weight decay AdamW.
-        min_delta: Perbaikan minimum agar epoch dihitung sebagai perbaikan.
-        batch_size: Jumlah baris per langkah optimizer.
-        seed: Seed untuk inisialisasi head dan pengocokan batch.
-        checkpoint_dir: Folder tempat checkpoint ditulis.
+        epochs: The upper bound on epochs.
+        patience: Epochs without improvement before stopping.
+        learning_rate: The AdamW learning rate.
+        weight_decay: The AdamW weight decay.
+        min_delta: The minimum improvement for an epoch to count as an improvement.
+        batch_size: Rows per optimizer step.
+        seed: The seed for head initialisation and batch shuffling.
+        checkpoint_dir: The folder checkpoints are written into.
     """
 
     epochs: int = MAX_EPOCHS
@@ -434,28 +434,28 @@ class TrainConfig:
 
 @dataclass(frozen=True)
 class TrainingReport:
-    """Hasil pelatihan beserta metrik akhir.
+    """Training result together with the final metrics.
 
-    test_f1_shape dan test_f1_gram adalah daftar sepanjang satu karena data
-    uji hanya dievaluasi sekali. Bentuk daftar membuat aturan itu terlihat di
-    laporan, bukan sekadar tersirat.
+    test_f1_shape and test_f1_gram are one element lists because the test
+    data is only evaluated once. The list shape makes that rule visible in
+    the report rather than merely implied.
 
     Attributes:
-        epochs_run: Jumlah epoch yang benar-benar dijalankan.
-        best_epoch: Epoch dengan skor validasi terbaik, satu basis.
-        best_val_f1_shape: F1 makro bentuk pada epoch terbaik.
-        best_val_f1_gram: F1 makro Gram pada epoch terbaik.
-        test_f1_shape: Daftar F1 makro bentuk pada data uji, panjang satu.
-        test_f1_gram: Daftar F1 makro Gram pada data uji, panjang satu.
-        test_accuracy_shape: Akurasi bentuk pada data uji.
-        test_accuracy_gram: Akurasi Gram pada data uji.
-        history: Riwayat per epoch tanpa metrik data uji.
-        checkpoint_path: Lokasi checkpoint bobot terbaik.
-        n_train: Jumlah baris latih setelah augmentasi.
-        n_val: Jumlah baris validasi.
-        n_test: Jumlah baris uji.
-        class_counts: Jumlah baris latih per kelas bentuk dan Gram.
-        config: Konfigurasi pelatihan yang dipakai.
+        epochs_run: The number of epochs actually run.
+        best_epoch: The epoch with the best validation score, one based.
+        best_val_f1_shape: The shape macro F1 at the best epoch.
+        best_val_f1_gram: The Gram macro F1 at the best epoch.
+        test_f1_shape: The shape macro F1 list on the test data, length one.
+        test_f1_gram: The Gram macro F1 list on the test data, length one.
+        test_accuracy_shape: The shape accuracy on the test data.
+        test_accuracy_gram: The Gram accuracy on the test data.
+        history: The per epoch history without any test metrics.
+        checkpoint_path: The location of the best weights checkpoint.
+        n_train: The number of train rows after augmentation.
+        n_val: The number of validation rows.
+        n_test: The number of test rows.
+        class_counts: Train row counts per shape and Gram class.
+        config: The training configuration used.
     """
 
     epochs_run: int
@@ -475,17 +475,17 @@ class TrainingReport:
     config: dict
 
     def to_dict(self) -> dict:
-        """Ubah laporan menjadi dictionary yang bisa diserialisasi ke JSON.
+        """Turn the report into a dictionary that can be serialised to JSON.
 
         Returns:
-            Dictionary tanpa objek Path dan tanpa array numpy.
+            A dictionary with no Path objects and no numpy arrays.
         """
         payload = asdict(self)
         checkpoint = payload.get("checkpoint_path")
         if checkpoint is not None:
-            # Hanya nama berkasnya. training_report.json ikut ter-deploy, jadi
-            # path absolut di dalamnya membocorkan struktur folder mesin
-            # pembangun dan melanggar AGENT.md bagian 3 aturan 5.
+            # The filename only. training_report.json is deployed too, so an
+            # absolute path inside it would leak the folder structure of the
+            # build machine and would break AGENT.md section 3 rule 5.
             payload["checkpoint_path"] = Path(checkpoint).name
         payload["labels"] = {
             "shape": list(SHAPE_LABELS),
@@ -495,16 +495,16 @@ class TrainingReport:
 
 
 def _split_masks(splits: list[str]) -> dict[str, torch.Tensor]:
-    """Buat masker baris untuk tiap split.
+    """Build the row mask for each split.
 
     Args:
-        splits: Nama split tiap baris.
+        splits: The split name of each row.
 
     Returns:
-        Dictionary masker boolean untuk train, val, dan test.
+        A dictionary of boolean masks for train, val and test.
 
     Raises:
-        ValueError: Bila split latih atau validasi kosong.
+        ValueError: When the train or validation split is empty.
     """
     masks = {
         name: torch.tensor([value == name for value in splits], dtype=torch.bool)
@@ -517,7 +517,7 @@ def _split_masks(splits: list[str]) -> dict[str, torch.Tensor]:
 
 
 def _safe_weights(targets: list[int], n_classes: int) -> torch.Tensor:
-    """Hitung bobot kelas, fallback ke satu bila hanya ada satu kelas."""
+    """Compute class weights, falling back to one when there is only one class."""
     try:
         return class_weights(targets, n_classes)
     except ValueError:
@@ -525,19 +525,19 @@ def _safe_weights(targets: list[int], n_classes: int) -> torch.Tensor:
 
 
 def train(store: FeatureStore, config: TrainConfig | None = None) -> TrainingReport:
-    """Latih kedua head pada fitur beku.
+    """Train both heads on the frozen features.
 
     Args:
-        store: Feature store hasil ekstraksi.
-        config: Hyperparameter pelatihan. Default-nya TrainConfig().
+        store: The feature store from extraction.
+        config: The training hyperparameters. Defaults to TrainConfig().
 
     Returns:
-        TrainingReport berisi riwayat, metrik validasi terbaik, dan satu
-        evaluasi data uji.
+        A TrainingReport holding the history, the best validation metrics, and one
+        test data evaluation.
 
     Raises:
-        ValueError: Bila dimensi fitur tidak cocok atau split wajib kosong.
-        KeyError: Bila ada species_id yang tidak ada di lookup table.
+        ValueError: When the feature dimensions do not match or a required split is empty.
+        KeyError: When a species_id is absent from the lookup table.
     """
     settings = config or TrainConfig()
 
@@ -645,7 +645,7 @@ def train(store: FeatureStore, config: TrainConfig | None = None) -> TrainingRep
 
     checkpoint_path = save_checkpoint(model, Path(settings.checkpoint_dir) / CHECKPOINT_NAME)
 
-    # Data uji dievaluasi tepat satu kali, di titik ini.
+    # The test data is evaluated exactly once, right here.
     test_shape_f1, test_gram_f1, test_shape_acc, test_gram_acc = _evaluate(
         model, features, shape_tensor, gram_tensor, masks[TEST_SPLIT]
     )
@@ -685,7 +685,7 @@ def train(store: FeatureStore, config: TrainConfig | None = None) -> TrainingRep
             "min_delta": settings.min_delta,
             "batch_size": settings.batch_size,
             "seed": settings.seed,
-            # Nama folder saja, bukan path absolut. Lihat catatan pada
+            # The folder name only, not an absolute path. See the note on
             # TrainingReport.to_dict.
             "checkpoint_dir": Path(settings.checkpoint_dir).name,
         },
@@ -693,16 +693,16 @@ def train(store: FeatureStore, config: TrainConfig | None = None) -> TrainingRep
 
 
 def read_index_rows(index_path: Path | str = INDEX_PATH) -> list[dict]:
-    """Baca data/index.csv menjadi daftar dict.
+    """Read data/index.csv into a list of dicts.
 
     Args:
-        index_path: Lokasi berkas index.
+        index_path: The index file location.
 
     Returns:
-        Daftar baris dengan kunci path, species, species_id, split, dan fold.
+        A list of rows with path, species, species_id, split and fold keys.
 
     Raises:
-        FileNotFoundError: Bila berkas index tidak ada.
+        FileNotFoundError: When the index file does not exist.
     """
     location = Path(index_path)
     if not location.is_file():
@@ -713,13 +713,13 @@ def read_index_rows(index_path: Path | str = INDEX_PATH) -> list[dict]:
 
 
 def main(argv: list[str] | None = None) -> int:
-    """Jalankan feature caching lalu pelatihan dari baris perintah.
+    """Run feature caching then training from the command line.
 
     Args:
-        argv: Daftar argumen. Default-nya sys.argv.
+        argv: The argument list. Defaults to sys.argv.
 
     Returns:
-        Kode keluar, nol bila pelatihan selesai.
+        The exit code, zero when training finished.
     """
     parser = argparse.ArgumentParser(
         description="Latih dua head BacteriaCV pada fitur backbone beku."
@@ -740,8 +740,8 @@ def main(argv: list[str] | None = None) -> int:
     )
     args = parser.parse_args(argv)
 
-    # TIFF DIBaS memakai tag 33560 yang tidak dikenal OpenCV. Peringatan ini
-    # muncul sekali per citra dan tidak memengaruhi hasil baca.
+    # DIBaS TIFF files carry tag 33560 which OpenCV does not know. This warning
+    # appears once per image and does not affect the read result.
     cv2.utils.logging.setLogLevel(cv2.utils.logging.LOG_LEVEL_ERROR)
 
     rows = read_index_rows(args.index)

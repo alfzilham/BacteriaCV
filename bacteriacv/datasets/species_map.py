@@ -1,15 +1,15 @@
-"""Sumber kebenaran untuk pemetaan nama spesies DIBaS.
+"""The source of truth for mapping DIBaS species names.
 
-Nama berkas di dalam arsip DIBaS mengandung beberapa salah ketik. Modul ini
-menyimpan satu tabel yang memetakan nama arsip ke nama spesies kanonik, dipakai
-bersama oleh skrip unduhan, ekstraksi, dan pembangunan index.
+Filenames inside the DIBaS archives contain several misspellings. This module
+holds one table mapping archive names to canonical species names, used
+by the download, extract, and index building scripts alike.
 
-Aturan:
-1. Tabel adalah satu-satunya sumber kebenaran. Jangan menebak nama spesies dari
-   nama berkas di tempat lain.
-2. DIBaS menyediakan dua arsip untuk Lactobacillus johnsonii dengan ejaan
-   berbeda. Keduanya dipertahankan sebagai label spesies terpisah agar jumlah
-   label tetap 33 sesuai SPEC.
+Rules:
+1. The table is the only source of truth. Do not guess species names from
+   filenames anywhere else.
+2. DIBaS provides two archives for Lactobacillus johnsonii with different
+   spellings. Both are kept as separate species labels so the label count
+   stays at 33 as SPEC requires.
 """
 
 from __future__ import annotations
@@ -21,13 +21,13 @@ BASE_URL = "https://doctoral.matinf.uj.edu.pl/database/dibas/"
 
 @dataclass(frozen=True)
 class Species:
-    """Satu spesies DIBaS.
+    """One DIBaS species.
 
     Attributes:
-        species_id: Kunci stabil untuk folder dan kolom index.
-        zip_name: Nama arsip tanpa ekstensi, sama dengan nama berkas di dalam arsip.
-        canonical_name: Nama spesies menurut taksonom baku.
-        variant: Penanda untuk dua arsip johnsonii, None untuk spesies lain.
+        species_id: The stable key for folders and index columns.
+        zip_name: The archive name without extension, same as the filenames inside.
+        canonical_name: The species name per standard taxonomy.
+        variant: The marker for the two johnsonii archives, None for other species.
     """
 
     species_id: str
@@ -37,14 +37,14 @@ class Species:
 
     @property
     def display_name(self) -> str:
-        """Nama untuk ditampilkan, dengan varian bila ada."""
+        """The name to display, including the variant when present."""
         if self.variant is None:
             return self.canonical_name
         return f"{self.canonical_name} ({self.variant})"
 
     @property
     def url(self) -> str:
-        """URL arsip ZIP untuk spesies ini."""
+        """The ZIP archive URL for this species."""
         return f"{BASE_URL}{self.zip_name}.zip"
 
 
@@ -93,8 +93,8 @@ SPECIES_IDS: tuple[str, ...] = tuple(s.species_id for s in _SPECIES)
 
 EXPECTED_SPECIES_COUNT = 33
 
-# Spesies yang ada di dataset tetapi tidak dipakai untuk pelatihan, beserta
-# alasannya. Pengecualian dicatat di sini, bukan dihapus dari SPEC secara diam-diam.
+# Species present in the dataset but not used for training, with the
+# reason. The exclusion is recorded here, not quietly dropped from SPEC.
 EXCLUDED_FROM_TRAINING: dict[str, str] = {
     "candida_albicans": (
         "Candida albicans adalah jamur, bukan bakteri, sehingga tidak memenuhi "
@@ -117,30 +117,30 @@ EXPECTED_TRAINABLE_COUNT = 32
 
 
 def exclusion_reason(species_id: str) -> str | None:
-    """Kembalikan alasan pengecualian spesies, atau None bila tidak dikecualikan."""
+    """Return the reason a species is excluded, or None when it is not."""
     return EXCLUDED_FROM_TRAINING.get(species_id)
 
 
 def is_trainable(species_id: str) -> bool:
-    """Beri tahu apakah spesies dipakai untuk pelatihan."""
+    """Report whether a species is used for training."""
     return species_id not in EXCLUDED_FROM_TRAINING
 
 
 def canonical_name(species_id: str) -> str:
-    """Kembalikan nama spesies kanonik untuk species_id.
+    """Return the canonical species name for a species_id.
 
     Args:
-        species_id: Kunci spesies, misalnya ``escherichia_coli``.
+        species_id: The species key, for example ``escherichia_coli``.
 
     Returns:
-        Nama kanonik, misalnya ``Escherichia coli``.
+        The canonical name, for example ``Escherichia coli``.
 
     Raises:
-        KeyError: Bila species_id tidak dikenal.
+        KeyError: When the species_id is unknown.
     """
     return BY_SPECIES_ID[species_id].canonical_name
 
 
 def display_name(species_id: str) -> str:
-    """Kembalikan nama tampilan, termasuk varian bila ada."""
+    """Return the display name, including the variant when present."""
     return BY_SPECIES_ID[species_id].display_name

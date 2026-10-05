@@ -1,7 +1,7 @@
-"""Konfigurasi terpusat untuk seluruh pipeline BacteriaCV.
+"""Central configuration for the whole BacteriaCV pipeline.
 
-Nilai di sini adalah sumber kebenaran tunggal untuk hyperparameter. Modul lain
-tidak boleh mendefinisikan angka yang sama secara lokal.
+The values here are the single source of truth for hyperparameters. Other modules
+must not define the same numbers locally.
 """
 
 from __future__ import annotations
@@ -9,28 +9,29 @@ from __future__ import annotations
 from .paths import PROJECT_ROOT
 
 # ---------------------------------------------------------------------
-# Citra
+# Image
 # ---------------------------------------------------------------------
 IMAGE_SIZE = 224
 IMAGENET_MEAN = (0.485, 0.456, 0.406)
 IMAGENET_STD = (0.229, 0.224, 0.225)
 
 # ---------------------------------------------------------------------
-# Head A: bentuk sel
+# Head A: cell shape
 # ---------------------------------------------------------------------
-# Keputusan D1: hanya dua kelas yang terisi pada DIBaS. Tidak ada satu pun
-# spesies DIBaS yang berbentuk spiral, sehingga Head A dilatih pada dua kelas.
-# Mempertahankan kelas kosong akan membuat F1-score makro tidak terdefinisi.
+# Decision D1: only two classes are populated on DIBaS. Not a single
+# DIBaS species is spiral shaped, so Head A is trained on two classes.
+# Keeping the empty class would make the macro F1-score undefined.
 N_SHAPE_CLASSES = 2
 SHAPE_LABELS = ("cocci", "bacilli")
 
-# Enum lengkap tetap memuat spiral sebagai penanda kelas yang tidak terisi,
-# agar batas dataset terlihat jelas dalam laporan dan bukan dihapus diam-diam.
+# The full enum still holds spiral as the marker of an unpopulated class,
+# so the dataset boundary stays visible in the report instead of being
+# quietly removed.
 SHAPE_LABELS_FULL = ("cocci", "bacilli", "spiral")
 SHAPE_UNPOPULATED = "spiral"
 
 # ---------------------------------------------------------------------
-# Head B: status Gram
+# Head B: Gram status
 # ---------------------------------------------------------------------
 N_GRAM_CLASSES = 2
 GRAM_LABELS = ("positive", "negative")
@@ -45,10 +46,11 @@ HEAD_A_SIZE = N_SHAPE_CLASSES
 HEAD_B_SIZE = N_GRAM_CLASSES
 
 # ---------------------------------------------------------------------
-# Augmentasi, hanya pada data latih
+# Augmentation, train data only
 # ---------------------------------------------------------------------
-# Keputusan D3. Augmentasi diterapkan pada level citra, sebelum backbone
-# membekukan fitur. Data validasi dan uji memakai citra asli tanpa duplikasi.
+# Decision D3. Augmentation is applied at the image level, before the backbone
+# freezes the features. Validation and test data use original images with no
+# duplication.
 AUGMENT_VARIANTS = 4
 AUGMENT_ROTATION_DEGREES = 15
 AUGMENT_SCALE_RANGE = (0.9, 1.1)
@@ -56,20 +58,20 @@ AUGMENT_SHIFT_FRACTION = 0.05
 AUGMENT_HORIZONTAL_FLIP = True
 
 # ---------------------------------------------------------------------
-# Segmentasi morfologis
+# Morphological segmentation
 # ---------------------------------------------------------------------
-# Keputusan pemilik proyek: segmentasi berjalan pada resolusi asli
-# 2048 x 1532, bukan pada 224 x 224. Alasannya bersifat skala.
+# Project owner decision: segmentation runs at the original resolution
+# 2048 x 1532, not at 224 x 224. The reason is scale dependent.
 #
-# Pada resolusi asli, satu piksel setara sekitar 0,048 mikron, sehingga
-# sel bakteri 1 mikron berdiameter sekitar 21 piksel. Pada 224 x 224, satu
-# piksel setara sekitar 0,43 mikron, sehingga sel yang sama hanya
-# 2,3 piksel. Footprint morfologis bersifat scale-dependent: konstanta yang
-# sama berarti erosi jauh lebih destructive pada citra yang sudah di-resize.
+# At the original resolution one pixel is about 0.048 microns, so a
+# 1 micron bacterial cell is about 21 pixels across. At 224 x 224 one
+# pixel is about 0.43 microns, so the same cell is only
+# 2.3 pixels. A morphological footprint is scale dependent: the same constant
+# makes erosion far more destructive on an already resized image.
 #
-# Nilai di bawah sudah diskalakan untuk resolusi asli. Ukuran objek median
-# dari citra DIBaS sekitar 21 piksel, sehingga jejak 5 sampai 7 piksel masih
-# proporsional terhadap ukuran sel.
+# The values below are already scaled for the original resolution. The median
+# object size in DIBaS images is about 21 pixels, so a 5 to 7 pixel footprint
+# is still proportional to the cell size.
 SEGMENT_SCALE = "full"
 
 SEGMENT_EROSION_DISK = 5
@@ -77,27 +79,27 @@ SEGMENT_DILATION_DISK = 5
 SEGMENT_MIN_PEAK_DISTANCE = 15
 SEGMENT_MIN_OBJECT_AREA = 300
 
-# Perkiraan mikron per piksel pada kedua skala, dipakai untuk menuliskan
-# setara mikron dari konstanta morfologi pada laporan.
+# Approximate microns per pixel at both scales, used to write the
+# micron equivalent of the morphology constants in the report.
 APPROX_MICRONS_PER_PIXEL_FULL = 0.048
 APPROX_MICRONS_PER_PIXEL_RESIZED = 0.43
 
-# Ambang integritas data. Spesies dengan citra kurang dari angka ini dianggap
-# hasil ekstraksi tidak lengkap.
+# Data integrity threshold. A species with fewer images than this figure is
+# treated as an incomplete extraction result.
 MIN_IMAGES_PER_SPECIES = 15
 
 # ---------------------------------------------------------------------
-# Pembagian data
+# Data split
 # ---------------------------------------------------------------------
-# Hanya data latih yang punya nomor lipatan. Data validasi dipakai untuk
-# early stopping, data uji hanya dievaluasi sekali di akhir.
+# Only train data carries a fold number. Validation data is used for
+# early stopping, test data is evaluated only once at the end.
 N_FOLDS = 5
 TRAIN_FRACTION = 0.70
 VAL_FRACTION = 0.20
 INDEX_SEED = 20260203
 
 # ---------------------------------------------------------------------
-# Pelatihan
+# Training
 # ---------------------------------------------------------------------
 TRAIN_SEED = 1337
 BATCH_SIZE = 32
@@ -108,7 +110,7 @@ WEIGHT_DECAY = 1e-4
 MIN_DELTA = 1e-4
 
 # ---------------------------------------------------------------------
-# Lokasi keluaran
+# Output locations
 # ---------------------------------------------------------------------
 FEATURES_DIR = PROJECT_ROOT / "data" / "features"
 CHECKPOINT_DIR = PROJECT_ROOT / "checkpoints"
@@ -116,13 +118,13 @@ APP_DIR = PROJECT_ROOT / "app"
 STATIC_DIR = APP_DIR / "static"
 
 # ---------------------------------------------------------------------
-# Antarmuka web
+# Web interface
 # ---------------------------------------------------------------------
-# DESIGN bagian 7: batas ukuran 20 MB.
+# DESIGN section 7: the 20 MB size limit.
 MAX_UPLOAD_BYTES = 20 * 1024 * 1024
 ALLOWED_SUFFIXES = (".png", ".jpg", ".jpeg", ".tif", ".tiff")
 
-# DESIGN bagian 5: level confidence tinggi, sedang, rendah.
+# DESIGN section 5: the high, medium and low confidence levels.
 CONFIDENCE_HIGH = 0.8
 CONFIDENCE_MEDIUM = 0.6
 

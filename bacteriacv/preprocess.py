@@ -1,21 +1,22 @@
-"""Pipeline pra-pemrosesan untuk citra mikroskopis bakteri.
+"""Preprocessing pipeline for bacterial microscope images.
 
-Modul ini dipakai bersama oleh tahap pelatihan dan tahap inferensi, sesuai
-ARCHITECTURE bagian 1. Kebedaan keduanya hanya augmentasi: augmentasi boleh
-dipanggil hanya lewat augment_train_variants, yang tidak pernah dipanggil
-preprocess. Tidak ada parameter augmentasi pada preprocess, sehingga jalur
-inferensi tidak punya jalan untuk memicunya.
+The training and inference stages share this module, per ARCHITECTURE
+section 1. The only difference is augmentation: augmentation may only be
+triggered through augment_train_variants, which preprocess never calls.
+preprocess has no augmentation parameter, so the inference path has no way
+to trigger it.
 
-Segmentasi berjalan pada resolusi asli, bukan pada 224 x 224. Alasannya
-bersifat skala: pada resolusi asli satu piksel setara sekitar 0,048 mikron,
-sehingga sel bakteri 1 mikron berdiameter sekitar 21 piksel. Pada 224 x 224
-satu piksel setara sekitar 0,43 mikron, sehingga sel yang sama hanya 2,3
-piksel dan footprint morfologis berukuran 5 piksel hampir sama besar dengan
-sel yang hendak dipisahkan. Konsekuensinya ditulis di docs/SPEC.md bagian 8.
+Segmentation runs at the original resolution, not at 224 x 224. The reason
+is scale dependent: at the original resolution one pixel is about
+0.048 microns, so a 1 micron bacterial cell is about 21 pixels across. At
+224 x 224 one pixel is about 0.43 microns, so the same cell is only 2.3
+pixels and a 5 pixel morphological footprint is almost as large as the
+cell it is meant to separate. The consequence is written up in
+docs/SPEC.md section 8.
 
-Kegagalan tahap manapun tidak menghentikan pipeline. Tahap ditandai gagal,
-panelnya kosong, dan tensor untuk model tetap terbentuk, sesuai ARCHITECTURE
-bagian 7.
+A failure in any stage does not stop the pipeline. The stage is marked as
+failed, its panel stays empty, and the model tensor is still produced, per
+ARCHITECTURE section 7.
 """
 
 from __future__ import annotations
@@ -57,15 +58,15 @@ SEGMENTATION_FAILURE_MESSAGE = (
 
 @dataclass(frozen=True)
 class PreprocessResult:
-    """Hasil pipeline pra-pemrosesan.
+    """Result of the preprocessing pipeline.
 
     Attributes:
-        tensor: Tensor 3 x 224 x 224 siap masuk backbone.
-        panels: Lima citra RGB untuk visualisasi, urut sesuai STAGE_NAMES.
-        stage_ok: Status keberhasilan tiap tahap.
-        failed_panels: Nama tahap yang gagal, untuk penandaan di antarmuka.
-        object_count: Jumlah objek hasil segmentasi, nol bila gagal.
-        message: Peringatan yang harus ditampilkan pengguna, None bila tidak ada.
+        tensor: A 3 x 224 x 224 tensor ready for the backbone.
+        panels: Five RGB images for visualisation, ordered per STAGE_NAMES.
+        stage_ok: Success status of each stage.
+        failed_panels: Names of the stages that failed, for marking in the interface.
+        object_count: Number of objects from segmentation, zero when it failed.
+        message: The warning to show the user, None when there is none.
     """
 
     tensor: torch.Tensor
@@ -77,17 +78,17 @@ class PreprocessResult:
 
 
 def load_image(path: Path | str) -> np.ndarray:
-    """Baca citra dari disk sebagai array RGB.
+    """Read an image from disk as an RGB array.
 
     Args:
-        path: Lokasi berkas citra.
+        path: Image file location.
 
     Returns:
         Array RGB bertipe uint8.
 
     Raises:
-        FileNotFoundError: Bila berkas tidak ada.
-        ValueError: Bila berkas tidak dapat dibaca sebagai citra.
+        FileNotFoundError: When the file does not exist.
+        ValueError: When the file cannot be read as an image.
     """
     location = Path(path)
     if not location.is_file():
@@ -101,7 +102,7 @@ def load_image(path: Path | str) -> np.ndarray:
 
 
 def _as_rgb(image: np.ndarray) -> np.ndarray:
-    """Pastikan citra berupa RGB uint8 tanpa mengubah aslinya."""
+    """Ensure the image is uint8 RGB without modifying the original."""
     array = np.asarray(image)
     if array.ndim == 2:
         return cv2.cvtColor(array.astype(np.uint8), cv2.COLOR_GRAY2RGB)
@@ -113,26 +114,26 @@ def _as_rgb(image: np.ndarray) -> np.ndarray:
 
 
 def resize_image(image: np.ndarray, size: int = IMAGE_SIZE) -> np.ndarray:
-    """Resize citra ke ukuran persegi.
+    """Resize the image to a square size.
 
     Args:
-        image: Array citra sumber.
+        image: The source image array.
         size: Sisi target dalam piksel.
 
     Returns:
-        Array RGB dengan sisi size.
+        An RGB array with side length size.
     """
     return cv2.resize(_as_rgb(image), (size, size), interpolation=cv2.INTER_AREA)
 
 
 def normalize(image: np.ndarray) -> np.ndarray:
-    """Normalisasi intensitas dengan statistik ImageNet.
+    """Normalise intensity using the ImageNet statistics.
 
     Args:
         image: Array RGB uint8.
 
     Returns:
-        Array float32 dengan rentang sekitar minus dua sampai dua.
+        A float32 array ranging roughly from minus two to two.
     """
     array = _as_rgb(image).astype(np.float32) / 255.0
     mean = np.array(IMAGENET_MEAN, dtype=np.float32)
@@ -141,14 +142,14 @@ def normalize(image: np.ndarray) -> np.ndarray:
 
 
 def segment_cells(image: np.ndarray) -> tuple[np.ndarray, bool]:
-    """Segmentasi area bakteri dengan opening, watershed, dan filter luas.
+    """Segment bacterial areas with opening, watershed, and an area filter.
 
     Args:
         image: Array RGB pada resolusi asli.
 
     Returns:
-        Pasangan (mask_biner, berhasil). Bila tidak ada objek yang memenuhi
-        ambang luas, mask kosong dan berhasil bernilai False.
+        A (binary_mask, succeeded) tuple. When no object meets the
+        area threshold, the mask is empty and succeeded is False.
     """
     array = _as_rgb(image)
     gray = cv2.cvtColor(array, cv2.COLOR_RGB2GRAY)
@@ -180,10 +181,10 @@ def segment_cells(image: np.ndarray) -> tuple[np.ndarray, bool]:
     labels = watershed(-distance, markers, mask=opened)
 
     # Filter luas tanpa loop regionprops. Versi loop membandingkan seluruh
-    # citra berlabel dengan satu label untuk tiap region, sehingga biayanya
-    # O(jumlah_region x ukuran_citra). Pada citra DIBaS 2048 x 1532 dengan
-    # ratusan region, itu beberapa detik per citra. Penghitungan lewat
-    # np.unique dan np.bincount menghasilkan mask yang sama persis.
+    # labelled image with one label per region, so it costs
+    # O(num_regions x image_size). On a 2048 x 1532 DIBaS image with
+    # hundreds of regions that is several seconds per image. Computing through
+    # np.unique and np.bincount yields exactly the same mask.
     flat = labels.ravel()
     unique_labels, inverse = np.unique(flat, return_inverse=True)
     sizes = np.bincount(inverse, minlength=unique_labels.size)
@@ -195,10 +196,10 @@ def segment_cells(image: np.ndarray) -> tuple[np.ndarray, bool]:
 
 
 def count_objects(mask: np.ndarray | None) -> int:
-    """Hitung komponen terhubung pada mask segmentasi.
+    """Count connected components on the segmentation mask.
 
     Args:
-        mask: Mask biner dari segment_cells, atau None bila segmentasi gagal.
+        mask: The binary mask from segment_cells, or None when segmentation failed.
 
     Returns:
         Jumlah komponen terhubung berlabel.
@@ -210,14 +211,14 @@ def count_objects(mask: np.ndarray | None) -> int:
 
 
 def _mask_panel(mask: np.ndarray | None, size: int = IMAGE_SIZE) -> np.ndarray:
-    """Bentuk citra RGB dari mask biner pada ukuran panel.
+    """Build an RGB image from a binary mask at the panel size.
 
     Args:
-        mask: Mask biner resolusi asli, atau None bila segmentasi gagal.
-        size: Sisi panel yang diinginkan.
+        mask: An original resolution binary mask, or None when segmentation failed.
+        size: The desired panel side length.
 
     Returns:
-        Array RGB ukuran size kali size, atau array kosong bila mask None.
+        An RGB array of size by size, or an empty array when mask is None.
     """
     if mask is None:
         return np.zeros((size, size, 3), dtype=np.uint8)
@@ -230,7 +231,7 @@ def _mask_panel(mask: np.ndarray | None, size: int = IMAGE_SIZE) -> np.ndarray:
 def _boundary_panel(
     mask: np.ndarray | None, base: np.ndarray, size: int = IMAGE_SIZE
 ) -> np.ndarray:
-    """Bentuk citra RGB dengan garis batas mask di atas citra dasar."""
+    """Build an RGB image with the mask outline over the base image."""
     if mask is None:
         return np.zeros((size, size, 3), dtype=np.uint8)
     panel = cv2.resize(base, (size, size), interpolation=cv2.INTER_AREA)
@@ -249,27 +250,27 @@ def _boundary_panel(
 
 
 def _to_tensor(normalized: np.ndarray) -> torch.Tensor:
-    """Ubah array HWC ternormalisasi menjadi tensor CHW float32."""
+    """Convert a normalised HWC array into a float32 CHW tensor."""
     chw = np.ascontiguousarray(normalized.transpose(2, 0, 1))
     return torch.from_numpy(chw).float()
 
 
 def preprocess(image: np.ndarray | Path | str) -> PreprocessResult:
-    """Jalankan pipeline pra-pemrosesan tanpa augmentasi.
+    """Run the preprocessing pipeline without augmentation.
 
-    Fungsi ini tidak punya parameter augmentasi dan tidak memanggil
-    augment_train_variants, sehingga jalur inferensi tidak dapat memicu
-    augmentasi secara tidak sengaja.
+    This function has no augmentation parameter and never calls
+    augment_train_variants, so the inference path cannot trigger
+    augmentation by accident.
 
     Args:
-        image: Array citra RGB, atau path berkas citra.
+        image: An RGB array, or an image file path.
 
     Returns:
-        PreprocessResult berisi tensor, lima panel, dan status tiap tahap.
+        A PreprocessResult holding the tensor, five panels, and the stage status.
 
     Raises:
-        FileNotFoundError: Bila path diberikan tapi berkasnya tidak ada.
-        ValueError: Bila bentuk citra tidak didukung.
+        FileNotFoundError: When a path is given but the file does not exist.
+        ValueError: When the image shape is not supported.
     """
     stage_ok: dict[str, bool] = {}
     failed: list[str] = []
@@ -314,34 +315,34 @@ def preprocess(image: np.ndarray | Path | str) -> PreprocessResult:
 
 
 def preprocess_tensor(image: np.ndarray | Path | str) -> torch.Tensor:
-    """Bangun tensor model saja, tanpa segmentasi dan tanpa panel.
+    """Build only the model tensor, without segmentation and without panels.
 
-    Jalur ini dipakai ekstraksi fitur untuk pelatihan. Segmentasi dilewati
-    karena ARCHITECTURE bagian 3 menyatakan segmentasi tidak dibutuhkan inferensi:
-    klasifikasi bentuk dan status Gram berasal dari citra, bukan dari mask.
-    Segmentasi tetap ada di preprocess untuk kebutuhan panel visualisasi.
+    This path is used by feature extraction for training. Segmentation is skipped
+    because ARCHITECTURE section 3 states segmentation is not needed for inference:
+    shape and Gram status classification comes from the image, not the mask.
+    Segmentation stays in preprocess for the visualisation panels.
 
-    Pada citra DIBaS 2048 x 1532, segmentasi memakan sekitar 2,5 detik.
-    Menjalankannya sekali per citra_augmented membuat ekstraksi fitur untuk
-    2070 baris memakan lebih dari satu jam, tanpa memperbaiki metrik model
-    sedikit pun.
+    On a 2048 x 1532 DIBaS image, segmentation takes about 2.5 seconds.
+    Running it once per augmented image makes feature extraction for
+    2070 rows takes more than an hour without improving the model metrics
+    at all.
 
     Args:
-        image: Array citra RGB, atau path berkas citra.
+        image: An RGB array, or an image file path.
 
     Returns:
-        Tensor 3 x 224 x 224 siap masuk backbone.
+        A 3 x 224 x 224 tensor ready for the backbone.
 
     Raises:
-        FileNotFoundError: Bila path diberikan tapi berkasnya tidak ada.
-        ValueError: Bila bentuk citra tidak didukung.
+        FileNotFoundError: When a path is given but the file does not exist.
+        ValueError: When the image shape is not supported.
     """
     source = load_image(image) if isinstance(image, (str, Path)) else _as_rgb(image)
     return _to_tensor(normalize(resize_image(source)))
 
 
 def _denormalized_panel(normalized: np.ndarray) -> np.ndarray:
-    """Kembalikan citra ternormalisasi ke rentang uint8 untuk ditampilkan."""
+    """Return the normalised image to the uint8 range for display."""
     array = normalized * np.array(IMAGENET_STD, dtype=np.float32)
     array = array + np.array(IMAGENET_MEAN, dtype=np.float32)
     return np.clip(array * 255.0, 0, 255).astype(np.uint8)
@@ -350,22 +351,22 @@ def _denormalized_panel(normalized: np.ndarray) -> np.ndarray:
 def augment_train_variants(
     image: np.ndarray, count: int, seed: int | None = None
 ) -> list[np.ndarray]:
-    """Buat varian augmentasi untuk data latih saja.
+    """Build augmentation variants for the train data only.
 
-    Fungsi ini tidak pernah dipanggil preprocess, sehingga augmentasi tidak
-    dapat bocor ke jalur inferensi.
+    This function is never called by preprocess, so augmentation does not
+    leak into the inference path.
 
     Args:
-        image: Array citra RGB uint8.
-        count: Jumlah varian yang diminta.
-        seed: Seed agar hasil dapat direproduksi.
+        image: A uint8 RGB image array.
+        count: The number of variants requested.
+        seed: A seed so the result is reproducible.
 
     Returns:
-        Daftar varian citra, masing-masing dengan bentuk dan tipe sama seperti
-        citra sumber.
+        A list of image variants, each with the same shape and dtype as the
+        source image.
 
     Raises:
-        ValueError: Bila count negatif.
+        ValueError: When count is negative.
     """
     if count < 0:
         raise ValueError(f"Jumlah varian tidak boleh negatif: {count}")
