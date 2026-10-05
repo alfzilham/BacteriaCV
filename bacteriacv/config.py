@@ -33,7 +33,7 @@ SHAPE_UNPOPULATED = "spiral"
 # Head B: status Gram
 # ---------------------------------------------------------------------
 N_GRAM_CLASSES = 2
-GRAM_LABELS = ("positif", "negatif")
+GRAM_LABELS = ("positive", "negative")
 
 # ---------------------------------------------------------------------
 # Backbone

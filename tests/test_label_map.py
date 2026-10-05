@@ -65,19 +65,19 @@ def test_no_spiral_species_in_lookup() -> None:
 
 def test_bifidobacterium_is_gram_positive() -> None:
     """Bifidobacterium sering salah dianggap Gram negatif karena namanya."""
-    assert LOOKUP["bifidobacterium_spp"][1] == "positif"
+    assert LOOKUP["bifidobacterium_spp"][1] == "positive"
 
 
 def test_actinomyces_is_gram_positive() -> None:
     """Actinomyces adalah Gram positif, bukan negatif."""
-    assert LOOKUP["actinomyces_israelii"][1] == "positif"
+    assert LOOKUP["actinomyces_israelii"][1] == "positive"
 
 
 def test_all_lactobacillus_are_gram_positive() -> None:
     """Seluruh Lactobacillus adalah Gram positif."""
     for species in TRAINABLE_SPECIES:
         if species.species_id.startswith("lactobacillus"):
-            assert LOOKUP[species.species_id][1] == "positif", species.species_id
+            assert LOOKUP[species.species_id][1] == "positive", species.species_id
 
 
 def test_fusobacterium_is_bacillus_not_spiral() -> None:
@@ -105,7 +105,7 @@ def test_gram_negative_species_on_dibas() -> None:
     negative = {
         species_id: shape
         for species_id, (shape, gram) in LOOKUP.items()
-        if gram == "negatif"
+        if gram == "negative"
     }
     assert negative["neisseria_gonorrhoeae"] == "cocci"
     assert negative["veillonella_spp"] == "cocci"
@@ -142,7 +142,7 @@ def test_to_targets_converts_species_ids() -> None:
     """to_targets harus mengubah species_id menjadi indeks numerik."""
     shape, gram = to_targets(["escherichia_coli", "staphylococcus_aureus"])
     assert shape == [SHAPE_TO_INDEX["bacilli"], SHAPE_TO_INDEX["cocci"]]
-    assert gram == [GRAM_TO_INDEX["negatif"], GRAM_TO_INDEX["positif"]]
+    assert gram == [GRAM_TO_INDEX["negative"], GRAM_TO_INDEX["positive"]]
 
 
 def test_to_targets_handles_empty_list() -> None:
@@ -192,8 +192,8 @@ def test_lookup_summary_counts_match_expected() -> None:
     assert summary["total_species"] == 32
     assert summary["shape"]["bacilli"] == 23
     assert summary["shape"]["cocci"] == 9
-    assert summary["gram"]["positif"] == 23
-    assert summary["gram"]["negatif"] == 9
+    assert summary["gram"]["positive"] == 23
+    assert summary["gram"]["negative"] == 9
 
 
 def test_class_weights_upweight_minority_class() -> None:

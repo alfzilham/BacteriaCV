@@ -303,8 +303,8 @@
       "bacilli": 1494
     },
     "gram": {
-      "positif": 1471,
-      "negatif": 599
+      "positive": 1471,
+      "negative": 599
     }
   },
   "config": {
@@ -323,8 +323,8 @@
       "bacilli"
     ],
     "gram": [
-      "positif",
-      "negatif"
+      "positive",
+      "negative"
     ]
   }
 }

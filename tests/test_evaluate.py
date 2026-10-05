@@ -275,11 +275,11 @@ def test_species_breakdown_uses_lookup_labels() -> None:
     cocci = next(row for row in rows if row["species_id"] == COCci)
     bacilli = next(row for row in rows if row["species_id"] == BACILLI)
     assert cocci["expected_shape"] == "cocci"
-    assert cocci["expected_gram"] == "positif"
+    assert cocci["expected_gram"] == "positive"
     assert cocci["n"] == 2
     assert cocci["shape_accuracy"] == 1.0
     assert bacilli["expected_shape"] == "bacilli"
-    assert bacilli["expected_gram"] == "negatif"
+    assert bacilli["expected_gram"] == "negative"
     assert bacilli["shape_accuracy"] == 0.0
     assert bacilli["predicted_shapes"] == ["cocci"]
 
@@ -373,4 +373,4 @@ def test_evaluate_checkpoint_mentions_unpopulated_shape_class(tmp_path: Path) ->
 
     assert "spiral" in report["scope_note"]
     assert SHAPE_LABELS == ("cocci", "bacilli")
-    assert GRAM_LABELS == ("positif", "negatif")
+    assert GRAM_LABELS == ("positive", "negative")

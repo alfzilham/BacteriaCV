@@ -31,7 +31,7 @@ def test_shape_labels_full_keeps_spiral() -> None:
 
 def test_gram_labels_are_positive_and_negative() -> None:
     """Head B tetap dua kelas status Gram."""
-    assert config.GRAM_LABELS == ("positif", "negatif")
+    assert config.GRAM_LABELS == ("positive", "negative")
     assert config.N_GRAM_CLASSES == 2
 
 

@@ -104,7 +104,7 @@ def test_build_visualization_returns_five_panels() -> None:
     """Bundle harus memuat satu panel per tahap pra-pemrosesan."""
     prepared = preprocess(_image())
 
-    bundle = build_visualization(prepared, "cocci", 0.9, "positif", 0.8)
+    bundle = build_visualization(prepared, "cocci", 0.9, "positive", 0.8)
 
     assert len(bundle.panels) == len(STAGE_NAMES) == 5
     assert bundle.stage_names == STAGE_NAMES
@@ -114,7 +114,7 @@ def test_build_visualization_panels_are_different() -> None:
     """Kelima panel harus berbeda isi, bukan salinan satu sama lain."""
     prepared = preprocess(_image())
 
-    bundle = build_visualization(prepared, "cocci", 0.9, "positif", 0.8)
+    bundle = build_visualization(prepared, "cocci", 0.9, "positive", 0.8)
 
     assert len({panel.tobytes() for panel in bundle.panels}) == 5
 
@@ -127,7 +127,7 @@ def test_build_visualization_states_segmentation_is_not_validated() -> None:
     """
     prepared = preprocess(_image())
 
-    bundle = build_visualization(prepared, "cocci", 0.9, "positif", 0.8)
+    bundle = build_visualization(prepared, "cocci", 0.9, "positive", 0.8)
 
     assert SEGMENTATION_LIMITATION in bundle.notes
     assert any("belum tervalidasi" in note for note in bundle.notes)
@@ -143,7 +143,7 @@ def test_build_visualization_lists_failed_stages() -> None:
     """Tahap gagal harus disebut, bukan disembunyikan."""
     prepared = preprocess(_image(success=False))
 
-    bundle = build_visualization(prepared, "bacilli", 0.4, "negatif", 0.3)
+    bundle = build_visualization(prepared, "bacilli", 0.4, "negative", 0.3)
 
     assert bundle.failed_stages
     assert any("gagal" in title for title in bundle.titles)
@@ -154,7 +154,7 @@ def test_build_visualization_keeps_prediction_when_segmentation_fails() -> None:
     """Kegagalan segmentasi tidak boleh menghapus hasil klasifikasi."""
     prepared = preprocess(_image(success=False))
 
-    bundle = build_visualization(prepared, "bacilli", 0.42, "negatif", 0.31)
+    bundle = build_visualization(prepared, "bacilli", 0.42, "negative", 0.31)
 
     assert bundle.object_count == 0
     assert len(bundle.panels) == 5
@@ -164,7 +164,7 @@ def test_build_visualization_marks_low_confidence() -> None:
     """Level confidence harus ikut terbaca pada catatan."""
     prepared = preprocess(_image())
 
-    bundle = build_visualization(prepared, "bacilli", 0.42, "negatif", 0.31)
+    bundle = build_visualization(prepared, "bacilli", 0.42, "negative", 0.31)
 
     assert len(bundle.notes) >= 2
 
@@ -174,7 +174,7 @@ def test_build_visualization_rejects_out_of_range_confidence() -> None:
     prepared = preprocess(_image())
 
     with pytest.raises(ValueError, match="shape_confidence"):
-        build_visualization(prepared, "cocci", 1.4, "positif", 0.8)
+        build_visualization(prepared, "cocci", 1.4, "positive", 0.8)
 
 
 def test_build_visualization_titles_match_stages() -> None:
@@ -186,7 +186,7 @@ def test_panel_sizes_reports_five_panels() -> None:
     """Pemeriksaan ukuran harus mengembalikan satu entri per panel."""
     prepared = preprocess(_image())
 
-    sizes = panel_sizes(build_visualization(prepared, "cocci", 0.9, "positif", 0.8))
+    sizes = panel_sizes(build_visualization(prepared, "cocci", 0.9, "positive", 0.8))
 
     assert len(sizes) == 5
     assert all(len(size) == 2 for size in sizes)

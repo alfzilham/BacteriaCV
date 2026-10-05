@@ -94,7 +94,7 @@ def test_predict_returns_labels_confidence_and_panel(client: TestClient) -> None
     assert response.status_code == 200
     payload = response.json()
     assert payload["prediction"]["shape_label"] == "cocci"
-    assert payload["prediction"]["gram_label"] == "positif"
+    assert payload["prediction"]["gram_label"] == "positive"
     assert 0.0 <= payload["prediction"]["shape_confidence"] <= 1.0
     assert payload["panel"]
     assert payload["stage_index"] == 0
