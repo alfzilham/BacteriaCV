@@ -1,4 +1,4 @@
-"""Tes untuk pipeline pra-pemrosesan."""
+"""Tests for the preprocessing pipeline."""
 
 from __future__ import annotations
 
@@ -16,7 +16,7 @@ from bacteriacv.config import (
 
 
 def _synthetic(height: int = 600, width: int = 800, cells: int = 40, seed: int = 0):
-    """Buat citra mikroskop palsu dengan sel berwarna gelap di latar terang."""
+    """Build a fake microscope image with dark cells on a bright background."""
     rng = np.random.default_rng(seed)
     image = np.full((height, width, 3), 232, dtype=np.uint8)
     for _ in range(cells):
@@ -32,11 +32,11 @@ def _synthetic(height: int = 600, width: int = 800, cells: int = 40, seed: int =
     return image
 
 
-# --- Tahap 1: pemuatan ---
+# --- Stage 1: loading ---
 
 
 def test_load_image_reads_png(tmp_path) -> None:
-    """PNG valid harus terbaca sebagai RGB uint8."""
+    """A valid PNG must be read as RGB uint8."""
     import cv2
 
     path = tmp_path / "citra.png"
@@ -49,7 +49,7 @@ def test_load_image_reads_png(tmp_path) -> None:
 
 
 def test_load_image_reads_tiff(tmp_path) -> None:
-    """TIFF harus terbaca, karena itu format DIBaS."""
+    """A TIFF must be read, because that is the DIBaS format."""
     import cv2
 
     path = tmp_path / "citra.tif"
@@ -59,13 +59,13 @@ def test_load_image_reads_tiff(tmp_path) -> None:
 
 
 def test_load_image_missing_file_raises(tmp_path) -> None:
-    """Berkas hilang harus ditolak dengan pesan jelas."""
+    """A missing file must be rejected with a clear message."""
     with pytest.raises(FileNotFoundError):
         pp.load_image(tmp_path / "hilang.tif")
 
 
 def test_load_image_corrupt_file_raises(tmp_path) -> None:
-    """Berkas rusak harus ditolak, bukan menghasilkan array kosong."""
+    """A damaged file must be rejected, not turned into an empty array."""
     path = tmp_path / "rusak.tif"
     path.write_bytes(b"bukan gambar")
 
@@ -73,34 +73,34 @@ def test_load_image_corrupt_file_raises(tmp_path) -> None:
         pp.load_image(path)
 
 
-# --- Tahap 2: resize ---
+# --- Stage 2: resize ---
 
 
 def test_resize_produces_target_size() -> None:
-    """Resize harus menghasilkan sisi IMAGE_SIZE sesuai ARCHITECTURE C1."""
+    """Resize must produce an IMAGE_SIZE side per ARCHITECTURE C1."""
     resized = pp.resize_image(_synthetic(600, 800))
     assert resized.shape == (IMAGE_SIZE, IMAGE_SIZE, 3)
 
 
 def test_resize_accepts_non_square_input() -> None:
-    """Citra DIBaS tidak persegi, resize harus tetap menghasilkan persegi."""
+    """DIBaS images are not square, resize must still produce a square."""
     resized = pp.resize_image(_synthetic(1532, 2048))
     assert resized.shape[:2] == (IMAGE_SIZE, IMAGE_SIZE)
 
 
 def test_resize_does_not_mutate_input() -> None:
-    """Resize tidak boleh mengubah citra sumber."""
+    """Resize must not modify the source image."""
     original = _synthetic(300, 300)
     before = original.copy()
     pp.resize_image(original)
     assert np.array_equal(original, before)
 
 
-# --- Tahap 3: normalisasi ---
+# --- Stage 3: normalization ---
 
 
 def test_normalize_uses_imagenet_statistics() -> None:
-    """Normalisasi memakai statistik ImageNet."""
+    """Normalisation uses the ImageNet statistics."""
     image = np.full((32, 32, 3), 255, dtype=np.uint8)
 
     normalized = pp.normalize(image)
@@ -111,23 +111,23 @@ def test_normalize_uses_imagenet_statistics() -> None:
 
 
 def test_normalize_zero_maps_to_negative_mean_ratio() -> None:
-    """Piksel hitam harus menghasilkan nilai negatif."""
+    """A black pixel must produce a negative value."""
     black = np.zeros((8, 8, 3), dtype=np.uint8)
     normalized = pp.normalize(black)
     assert (normalized < 0).all()
 
 
 def test_normalize_output_has_no_nan() -> None:
-    """Normalisasi tidak boleh menghasilkan NaN atau inf."""
+    """Normalisation must not produce NaN or inf."""
     normalized = pp.normalize(_synthetic(100, 100))
     assert np.isfinite(normalized).all()
 
 
-# --- Tahap 4 dan 5: segmentasi ---
+# --- Stage 4 and 5: segmentation ---
 
 
 def test_segmentation_finds_objects_in_synthetic_image() -> None:
-    """Citra dengan sel synthesetis harus menghasilkan objek."""
+    """An image with synthetic cells must produce objects."""
     mask, ok = pp.segment_cells(_synthetic(800, 800, cells=60, seed=3))
 
     assert ok is True
@@ -137,7 +137,7 @@ def test_segmentation_finds_objects_in_synthetic_image() -> None:
 
 
 def test_segmentation_returns_false_on_blank_image() -> None:
-    """Citra tanpa sel harus gagal dengan tenang, bukan melempar exception."""
+    """An image without cells must fail quietly, not raise."""
     blank = np.full((400, 400, 3), 250, dtype=np.uint8)
 
     mask, ok = pp.segment_cells(blank)
@@ -147,7 +147,7 @@ def test_segmentation_returns_false_on_blank_image() -> None:
 
 
 def test_segmentation_returns_false_on_uniform_dark_image() -> None:
-    """Citra gelap seragam juga harus dianggap tidak ada sel."""
+    """A uniformly dark image must also count as having no cells."""
     dark = np.full((400, 400, 3), 10, dtype=np.uint8)
 
     _, ok = pp.segment_cells(dark)
@@ -156,7 +156,7 @@ def test_segmentation_returns_false_on_uniform_dark_image() -> None:
 
 
 def test_segmentation_mask_does_not_cover_whole_image() -> None:
-    """Mask tidak boleh menutup seluruh citra, itu tanda ambang terbalik."""
+    """The mask must not cover the whole image, that means an inverted threshold."""
     mask, ok = pp.segment_cells(_synthetic(600, 600, cells=30, seed=7))
 
     if ok:
@@ -164,7 +164,7 @@ def test_segmentation_mask_does_not_cover_whole_image() -> None:
 
 
 def test_segmentation_is_deterministic() -> None:
-    """Segmentasi citra sama harus menghasilkan mask sama."""
+    """Segmenting the same image must produce the same mask."""
     image = _synthetic(600, 600, cells=40, seed=11)
 
     first, _ = pp.segment_cells(image)
@@ -173,11 +173,11 @@ def test_segmentation_is_deterministic() -> None:
     assert np.array_equal(first, second)
 
 
-# --- Pipeline penuh ---
+# --- Full pipeline ---
 
 
 def test_preprocess_returns_tensor_chw() -> None:
-    """Output tensor harus B x 3 x 224 x 224 sesuai ARCHITECTURE C1."""
+    """The output tensor must be B x 3 x 224 x 224 per ARCHITECTURE C1."""
     result = pp.preprocess(_synthetic(600, 800))
 
     assert isinstance(result.tensor, torch.Tensor)
@@ -186,7 +186,7 @@ def test_preprocess_returns_tensor_chw() -> None:
 
 
 def test_preprocess_reports_stage_status() -> None:
-    """Setiap tahap harus punya status yang dilaporkan."""
+    """Every stage must have a reported status."""
     result = pp.preprocess(_synthetic(600, 800))
 
     for stage in ("load", "resize", "normalize", "segment", "watershed"):
@@ -195,7 +195,7 @@ def test_preprocess_reports_stage_status() -> None:
 
 
 def test_preprocess_success_on_valid_image() -> None:
-    """Citra dengan sel harus meluluskan semua tahap."""
+    """An image with cells must pass every stage."""
     result = pp.preprocess(_synthetic(900, 900, cells=70, seed=5))
 
     assert all(result.stage_ok.values())
@@ -203,10 +203,10 @@ def test_preprocess_success_on_valid_image() -> None:
 
 
 def test_preprocess_continues_when_segmentation_fails() -> None:
-    """Kegagalan segmentasi tidak boleh menghentikan pipeline.
+    """A segmentation failure must not stop the pipeline.
 
-    Sesuai ARCHITECTURE bagian 7: lanjutkan dengan citra asli dan catat
-    peringatan. Tensor untuk model harus tetap terbentuk.
+    Per ARCHITECTURE section 7: continue with the original image and record a
+    warning. The tensor for the model must still be produced.
     """
     blank = np.full((500, 500, 3), 250, dtype=np.uint8)
 
@@ -223,14 +223,14 @@ def test_preprocess_continues_when_segmentation_fails() -> None:
 
 
 def test_preprocess_continues_when_only_load_fails() -> None:
-    """Citra tak terbaca harus menghasilkan status gagal, bukan exception."""
+    """An unreadable image must give a failed status, not an exception."""
     result = pp.preprocess(np.full((300, 300, 3), 250, dtype=np.uint8))
 
     assert result.stage_ok["resize"] is True
 
 
 def test_preprocess_accepts_path(tmp_path) -> None:
-    """preprocess harus menerima path berkas, bukan hanya array."""
+    """preprocess must accept a file path, not only an array."""
     import cv2
 
     path = tmp_path / "citra.png"
@@ -242,7 +242,7 @@ def test_preprocess_accepts_path(tmp_path) -> None:
 
 
 def test_preprocess_panels_are_five_stages() -> None:
-    """Panel visualisasi harus lima tahap sesuai urutan pipeline."""
+    """The visualisation panels must be five stages in pipeline order."""
     result = pp.preprocess(_synthetic(600, 600, cells=40, seed=13))
 
     assert len(result.panels) == 5
@@ -250,10 +250,10 @@ def test_preprocess_panels_are_five_stages() -> None:
 
 
 def test_panels_have_consistent_size() -> None:
-    """Empat panel turunan harus 224; panel asli mengikuti ukuran citra sumber.
+    """The four derived panels must be 224; the original follows the source size.
 
-    Panel asli sengaja tidak diperkecil, karena segmentasi berjalan pada
-    resolusi asli dan panel itu dipakai untuk menilai hasil segmentasi.
+    The original panel is deliberately not reduced, because segmentation runs at
+    the original resolution and that panel is used to judge the segmentation.
     """
     result = pp.preprocess(_synthetic(600, 800, cells=40, seed=17))
 
@@ -263,7 +263,7 @@ def test_panels_have_consistent_size() -> None:
 
 
 def test_failing_segmentation_marks_panels() -> None:
-    """Panel tahap yang gagal harus ditandai pada hasil."""
+    """A failed stage panel must be marked in the result."""
     blank = np.full((400, 400, 3), 250, dtype=np.uint8)
 
     result = pp.preprocess(blank)
@@ -271,11 +271,11 @@ def test_failing_segmentation_marks_panels() -> None:
     assert result.failed_panels == ("segment", "watershed")
 
 
-# --- Augmentasi ---
+# --- Augmentation ---
 
 
 def test_augment_returns_requested_count() -> None:
-    """Augmentasi harus menghasilkan jumlah varian yang diminta."""
+    """Augmentation must produce the requested number of variants."""
     image = _synthetic(224, 224)
 
     variants = pp.augment_train_variants(image, count=4, seed=0)
@@ -284,7 +284,7 @@ def test_augment_returns_requested_count() -> None:
 
 
 def test_augment_preserves_shape_and_dtype() -> None:
-    """Varian harus bentuk dan tipe sama agar bisa di-resize dan di-normalisasi."""
+    """Variants must share shape and dtype so they can be resized and normalised."""
     image = _synthetic(300, 300)
 
     variants = pp.augment_train_variants(image, count=3, seed=0)
@@ -295,7 +295,7 @@ def test_augment_preserves_shape_and_dtype() -> None:
 
 
 def test_augment_is_deterministic_with_same_seed() -> None:
-    """Seed sama harus menghasilkan varian sama."""
+    """The same seed must produce the same variants."""
     image = _synthetic(224, 224)
 
     first = pp.augment_train_variants(image, count=2, seed=42)
@@ -306,7 +306,7 @@ def test_augment_is_deterministic_with_same_seed() -> None:
 
 
 def test_augment_differs_with_different_seed() -> None:
-    """Seed berbeda harus menghasilkan varian berbeda."""
+    """A different seed must produce different variants."""
     image = _synthetic(224, 224)
 
     first = pp.augment_train_variants(image, count=2, seed=1)
@@ -316,22 +316,22 @@ def test_augment_differs_with_different_seed() -> None:
 
 
 def test_augment_zero_count_returns_empty() -> None:
-    """Jumlah nol harus daftar kosong, bukan error."""
+    """A count of zero must give an empty list, not an error."""
     assert pp.augment_train_variants(_synthetic(100, 100), count=0) == []
 
 
 def test_augment_rejects_negative_count() -> None:
-    """Jumlah negatif harus ditolak."""
+    """A negative count must be rejected."""
     with pytest.raises(ValueError):
         pp.augment_train_variants(_synthetic(100, 100), count=-1)
 
 
 def test_augment_is_not_reachable_from_preprocess() -> None:
-    """preprocess tidak boleh pernah memicu augmentasi.
+    """preprocess must never trigger augmentation.
 
-    Pemeriksaan memakai bytecode, bukan pencarian teks pada docstring, karena
-    preprocess memang menyebut augment_train_variants di dalam penjelasannya.
-    Yang outlaw adalah pemanggilan fungsi itu, bukan penyebutan namanya.
+    The check uses bytecode rather than a text search in the docstring, because
+    preprocess does mention augment_train_variants in its explanation.
+    What is forbidden is calling that function, not naming it.
     """
     import dis
     import inspect
@@ -347,7 +347,7 @@ def test_augment_is_not_reachable_from_preprocess() -> None:
 
 
 def test_rotation_stays_within_bound() -> None:
-    """Rotasi harus memakai batas dari config, bukan angka di kode."""
+    """Rotation must use the bound from config, not a number in the code."""
     import inspect
 
     source = inspect.getsource(pp.augment_train_variants)

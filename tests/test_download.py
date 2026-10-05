@@ -1,4 +1,4 @@
-"""Tes unit untuk logika unduhan, manifest, dan penanganan error."""
+"""Unit tests for the download logic, the manifest, and error handling."""
 
 from __future__ import annotations
 
@@ -24,21 +24,21 @@ SAMPLE = SPECIES[0]
 
 
 def _write_zip(path: Path, names: list[str], payload: bytes = b"isi") -> None:
-    """Buat arsip ZIP palsu untuk keperluan tes."""
+    """Build a fake ZIP archive for the tests."""
     with zipfile.ZipFile(path, "w") as bundle:
         for name in names:
             bundle.writestr(name, payload)
 
 
 def test_sha256_of_matches_hashlib(tmp_path: Path) -> None:
-    """Hash yang dihitung harus sama dengan hashlib langsung."""
+    """The computed hash must match hashlib directly."""
     target = tmp_path / "berkas.bin"
     target.write_bytes(b"abc" * 5000)
     assert sha256_of(target) == hashlib.sha256(b"abc" * 5000).hexdigest()
 
 
 def test_download_species_skips_existing_file(tmp_path: Path) -> None:
-    """Arsip yang sudah ada tidak boleh diunduh ulang."""
+    """An archive that already exists must not be downloaded again."""
     zips = tmp_path / "zips"
     zips.mkdir()
     _write_zip(zips / f"{SAMPLE.zip_name}.zip", ["a.tif"])
@@ -50,7 +50,7 @@ def test_download_species_skips_existing_file(tmp_path: Path) -> None:
 
 
 def test_download_species_rejects_empty_file(tmp_path: Path) -> None:
-    """Arsip berukuran nol bukan unduhan yang sah dan harus diunduh ulang."""
+    """A zero byte archive is not a valid download and must be fetched again."""
     zips = tmp_path / "zips"
     zips.mkdir()
     (zips / f"{SAMPLE.zip_name}.zip").write_bytes(b"")
@@ -73,7 +73,7 @@ def test_download_species_rejects_empty_file(tmp_path: Path) -> None:
 
 
 def test_download_species_retries_then_succeeds(tmp_path: Path) -> None:
-    """Percobaan pertama gagal, percobaan kedua berhasil."""
+    """The first attempt fails, the second attempt succeeds."""
     zips = tmp_path / "zips"
     zips.mkdir()
     attempts: list[str] = []
@@ -96,7 +96,7 @@ def test_download_species_retries_then_succeeds(tmp_path: Path) -> None:
 
 
 def test_download_species_raises_after_all_retries(tmp_path: Path) -> None:
-    """Kegagalan total harus dilempar sebagai RuntimeError."""
+    """A total failure must be raised as a RuntimeError."""
     zips = tmp_path / "zips"
     zips.mkdir()
     attempts: list[str] = []
@@ -120,7 +120,7 @@ def test_download_species_raises_after_all_retries(tmp_path: Path) -> None:
 
 
 def test_discard_partial_does_not_raise_when_locked(tmp_path: Path) -> None:
-    """Pembersihan sisa unduhan tidak boleh melempar error baru."""
+    """Cleaning up leftover downloads must not raise a new error."""
     partial = tmp_path / f"{SAMPLE.zip_name}.zip.part"
     partial.write_bytes(b"sebagian")
 
@@ -130,15 +130,15 @@ def test_discard_partial_does_not_raise_when_locked(tmp_path: Path) -> None:
 
 
 def test_discard_partial_tolerates_missing_file(tmp_path: Path) -> None:
-    """Tidak ada berkas sementara pun harus tetap aman."""
+    """Having no temporary files at all must still be safe."""
     _discard_partial(tmp_path / "tidak_ada.zip")
 
 
 def test_download_retries_cleanup_never_masks_original_error(tmp_path: Path) -> None:
-    """Error asli harus tetap terlihat meski pembersihan sisa gagal.
+    """The original error must stay visible even when cleanup fails.
 
-    Ini Insulation regression untuk bug sebelumnya, yaitu PermissionError
-    dari unlink menutupi TimeoutError yang sebenarnya.
+    This is a regression guard for an earlier bug, where a PermissionError from
+    unlink masked the real TimeoutError.
     """
     zips = tmp_path / "zips"
     zips.mkdir()
@@ -164,7 +164,7 @@ def test_download_retries_cleanup_never_masks_original_error(tmp_path: Path) -> 
 
 
 def test_write_manifest_columns_and_values(tmp_path: Path) -> None:
-    """Manifest harus memuat semua kolom yang dijanjikan."""
+    """The manifest must carry every column it promises."""
     zips = tmp_path / "zips"
     zips.mkdir()
     archive = zips / f"{SAMPLE.zip_name}.zip"
@@ -186,7 +186,7 @@ def test_write_manifest_columns_and_values(tmp_path: Path) -> None:
 
 
 def test_write_manifest_uses_lf_and_utf8(tmp_path: Path) -> None:
-    """Manifest harus UTF-8 tanpa BOM agar konsisten dengan index.csv."""
+    """The manifest must be UTF-8 without BOM to stay consistent with index.csv."""
     zips = tmp_path / "zips"
     zips.mkdir()
     _write_zip(zips / f"{SAMPLE.zip_name}.zip", ["a.tif"])
@@ -201,14 +201,14 @@ def test_write_manifest_uses_lf_and_utf8(tmp_path: Path) -> None:
 
 
 def test_insecure_context_is_used_only_for_downloads() -> None:
-    """Konteks TLS lax hanya boleh dipakai di jalur unduhan."""
+    """The lax TLS context may only be used on the download path."""
     context = download_module._insecure_context()
     assert context.verify_mode.name == "CERT_NONE"
     assert context.check_hostname is False
 
 
 def test_download_result_fields_are_consistent(tmp_path: Path) -> None:
-    """Nilai DownloadResult harus cocok dengan isi berkas."""
+    """The DownloadResult values must match the file content."""
     zips = tmp_path / "zips"
     zips.mkdir()
     archive = zips / f"{SAMPLE.zip_name}.zip"

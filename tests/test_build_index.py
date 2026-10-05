@@ -1,4 +1,4 @@
-"""Tes unit untuk pembangunan index dan pemeriksaan kebocoran data."""
+"""Unit tests for index building and the data leakage check."""
 
 from __future__ import annotations
 
@@ -28,11 +28,11 @@ from bacteriacv.datasets.build_index import _relative_posix
 from bacteriacv.datasets.extract import IMAGE_SUFFIXES, UnreadableImage, write_unreadable_report
 from bacteriacv.datasets.species_map import SPECIES, TRAINABLE_SPECIES
 
-# Jumlah citra per spesies dari hitungan struktural arsip DIBaS. Angka ini yang
-# dipakai untuk menguji proporsi pada skala data sebenarnya, bukan 660 yang
-# disebut literatur lama dan tidak cocok dengan isi arsip. Candida albicans
-# dikecualikan karena jamur, dan tiga citra rusak dibuang, sehingga total
-# efektif 669 dari 692 berkas.
+# Image counts per species from a structural count of the DIBaS archives. These are the
+# figures used to test the proportions at real dataset scale, not the 660 quoted in the
+# older literature, which does not match the archive contents. Candida albicans
+# is excluded because it is a fungus, and three damaged images are discarded, so the
+# effective total is 669 out of 692 files.
 REAL_SPECIES_COUNTS: dict[str, int] = {
     "acinetobacter_baumannii": 20,
     "actinomyces_israelii": 23,
@@ -70,7 +70,7 @@ REAL_SPECIES_COUNTS: dict[str, int] = {
 
 
 def _fake_images(project_tmp_dir: Path, count: int = 20) -> list[Path]:
-    """Buat berkas citra TIFF valid untuk satu spesies."""
+    """Build a valid TIFF image file for one species."""
     directory = project_tmp_dir / "escherichia_coli"
     directory.mkdir(parents=True, exist_ok=True)
     paths = []
@@ -82,12 +82,12 @@ def _fake_images(project_tmp_dir: Path, count: int = 20) -> list[Path]:
 
 
 def _write_tiff(path: Path) -> None:
-    """Buat TIFF valid yang benar-benar dapat dibuka cv2.imread."""
+    """Build a valid TIFF that cv2.imread can genuinely open."""
     assert cv2.imwrite(str(path), np.full((32, 32, 3), 150, dtype=np.uint8))
 
 
 def _full_fake_dataset(project_tmp_dir: Path) -> dict[str, list[Path]]:
-    """Buat seluruh spesies trainable dengan jumlah citra sesuai data DIBaS."""
+    """Build every trainable species with the image count the DIBaS data has."""
     grouped: dict[str, list[Path]] = {}
     for species in TRAINABLE_SPECIES:
         count = REAL_SPECIES_COUNTS[species.species_id]
@@ -103,12 +103,12 @@ def _full_fake_dataset(project_tmp_dir: Path) -> dict[str, list[Path]]:
 
 
 # --------------------------------------------------------------------------
-# Proporsi split
+# Split proportions
 # --------------------------------------------------------------------------
 
 
 def test_split_counts_respect_70_20_10() -> None:
-    """Jumlah train dan val mengikuti rasio 70:20 dan menyisakan test."""
+    """The train and val counts follow a 70:20 ratio and leave the rest for test."""
     n_train, n_val = _split_counts(20)
     assert n_train == 14
     assert n_val == 4
@@ -116,7 +116,7 @@ def test_split_counts_respect_70_20_10() -> None:
 
 
 def test_split_counts_handle_small_species() -> None:
-    """Spesies dengan sedikit citra tetap menyisakan train, val, dan test."""
+    """A species with few images still keeps train, val, and test."""
     for total in (3, 5, 10, 15, 20, 22, 23):
         n_train, n_val = _split_counts(total)
         assert n_train >= 1, total
@@ -126,7 +126,7 @@ def test_split_counts_handle_small_species() -> None:
 
 @pytest.mark.parametrize("total", [10, 20, 22, 23, 33, 50, 100])
 def test_split_proportions_stay_close_to_target(total: int) -> None:
-    """Proporsi train dan val harus dekat dengan 70:20 pada semua ukuran."""
+    """The train and val proportions must sit close to 70:20 at every size."""
     n_train, n_val = _split_counts(total)
     n_test = total - n_train - n_val
     assert abs(n_train / total - 0.70) <= 0.06
@@ -135,11 +135,11 @@ def test_split_proportions_stay_close_to_target(total: int) -> None:
 
 
 def test_full_dataset_totals_match_expected(project_tmp_dir: Path) -> None:
-    """Dataset efektif harus menghasilkan 467 train, 136 val, 66 test.
+    """The effective dataset must yield 467 train, 136 val, 66 test.
 
-    Candida albicans dikecualikan karena jamur, sehingga total turun dari 692 ke
-    669. Angka 660 dari literatur lama tidak dipakai karena jumlah citra per
-    spesies tidak seragam.
+    Candida albicans is excluded because it is a fungus, so the total drops from
+    692 to 669. The figure 660 from the older literature is not used because the
+    images per species are not uniform.
     """
     grouped = _full_fake_dataset(project_tmp_dir)
     assert sum(len(paths) for paths in grouped.values()) == 669
@@ -154,25 +154,25 @@ def test_full_dataset_totals_match_expected(project_tmp_dir: Path) -> None:
 
 
 def test_full_dataset_has_all_trainable_species(project_tmp_dir: Path) -> None:
-    """Semua 32 spesies trainable harus muncul di index."""
+    """All 32 trainable species must appear in the index."""
     grouped = _full_fake_dataset(project_tmp_dir)
     rows = build_rows(grouped)
     assert len({row.species_id for row in rows}) == len(TRAINABLE_SPECIES) == 32
 
 
 def test_full_dataset_is_leak_free(project_tmp_dir: Path) -> None:
-    """Dataset lengkap harus lolos pemeriksaan kebocoran."""
+    """A complete dataset must pass the leakage check."""
     rows = build_rows(_full_fake_dataset(project_tmp_dir))
     verify_no_leakage(rows)
 
 
 # --------------------------------------------------------------------------
-# Aturan lipatan: hanya data latih
+# Fold rules: train data only
 # --------------------------------------------------------------------------
 
 
 def test_folds_exist_only_on_train_rows(project_tmp_dir: Path) -> None:
-    """Hanya baris train boleh punya nomor lipatan."""
+    """Only train rows may carry a fold number."""
     rows = build_rows(_full_fake_dataset(project_tmp_dir))
     for row in rows:
         if row.split != "train":
@@ -180,7 +180,7 @@ def test_folds_exist_only_on_train_rows(project_tmp_dir: Path) -> None:
 
 
 def test_every_train_row_has_a_fold(project_tmp_dir: Path) -> None:
-    """Setiap baris train harus punya nomor lipatan yang valid."""
+    """Every train row must carry a valid fold number."""
     rows = build_rows(_full_fake_dataset(project_tmp_dir))
     for row in rows:
         if row.split == "train":
@@ -188,7 +188,7 @@ def test_every_train_row_has_a_fold(project_tmp_dir: Path) -> None:
 
 
 def test_val_and_test_never_receive_fold(project_tmp_dir: Path) -> None:
-    """Data validasi dan uji harus selalu fold -1, termasuk pada 20 citra."""
+    """Validation and test rows must always use fold -1, including at 20 images."""
     paths = _fake_images(project_tmp_dir)
     rows = build_rows({SPECIES[8].species_id: list(paths)})
     for row in rows:
@@ -197,7 +197,7 @@ def test_val_and_test_never_receive_fold(project_tmp_dir: Path) -> None:
 
 
 def test_fold_counts_come_only_from_train(project_tmp_dir: Path) -> None:
-    """Jumlah per lipatan harus sama dengan jumlah baris train."""
+    """The counts per fold must add up to the train row count."""
     rows = build_rows(_full_fake_dataset(project_tmp_dir))
     per_fold = Counter(row.fold for row in rows)
     n_train = sum(1 for row in rows if row.split == "train")
@@ -205,10 +205,10 @@ def test_fold_counts_come_only_from_train(project_tmp_dir: Path) -> None:
 
 
 def test_produced_train_folds_are_within_range(project_tmp_dir: Path) -> None:
-    """Lipatan yang dihasilkan build_rows() sendiri harus berada di rentang 0 sampai 4.
+    """The folds build_rows() produces must sit in the range 0 to 4.
 
-    Tes ini memeriksa sisi produksi. Sisi verifikasi, yaitu bahwa nilai di luar
-    rentang ditolak, diuji oleh test_verify_rejects_fold_outside_range.
+    This test checks the production side. The verification side, that an out of
+    range value is rejected, is covered by test_verify_rejects_fold_outside_range.
     """
     paths = _fake_images(project_tmp_dir)
     rows = build_rows({SPECIES[8].species_id: list(paths)})
@@ -220,7 +220,7 @@ def test_produced_train_folds_are_within_range(project_tmp_dir: Path) -> None:
 
 @pytest.mark.parametrize("bad_fold", [N_FOLDS, TEST_FOLD, 99, -3])
 def test_verify_rejects_fold_outside_range(project_tmp_dir: Path, bad_fold: int) -> None:
-    """Nomor lipatan di luar rentang harus ditolak pada baris train."""
+    """A fold number out of range must be rejected on a train row."""
     paths = _fake_images(project_tmp_dir)
     rows = build_rows({SPECIES[8].species_id: list(paths)})
     source = next(row for row in rows if row.split == "train")
@@ -232,7 +232,7 @@ def test_verify_rejects_fold_outside_range(project_tmp_dir: Path, bad_fold: int)
 def test_verify_error_message_names_the_offending_fold(
     project_tmp_dir: Path,
 ) -> None:
-    """Pesan error harus menyebut nilai lipatan yang ditemukan."""
+    """The error message must name the fold value it found."""
     paths = _fake_images(project_tmp_dir)
     rows = build_rows({SPECIES[8].species_id: list(paths)})
     source = next(row for row in rows if row.split == "train")
@@ -242,7 +242,7 @@ def test_verify_error_message_names_the_offending_fold(
 
 
 def test_folds_are_balanced(project_tmp_dir: Path) -> None:
-    """Lipatan harus terdistribusi merata pada satu spesies."""
+    """Folds must be distributed evenly within one species."""
     paths = _fake_images(project_tmp_dir)
     rows = build_rows({SPECIES[8].species_id: list(paths)})
     counts = {fold: 0 for fold in range(N_FOLDS)}
@@ -253,7 +253,7 @@ def test_folds_are_balanced(project_tmp_dir: Path) -> None:
 
 
 def test_verify_rejects_fold_on_val(project_tmp_dir: Path) -> None:
-    """Lipatan pada data validasi harus ditolak."""
+    """A fold on validation data must be rejected."""
     paths = _fake_images(project_tmp_dir)
     rows = build_rows({SPECIES[8].species_id: list(paths)})
     val_row = next(row for row in rows if row.split == "val")
@@ -265,7 +265,7 @@ def test_verify_rejects_fold_on_val(project_tmp_dir: Path) -> None:
 
 
 def test_verify_rejects_fold_on_test(project_tmp_dir: Path) -> None:
-    """Lipatan pada data uji harus ditolak."""
+    """A fold on test data must be rejected."""
     paths = _fake_images(project_tmp_dir)
     rows = build_rows({SPECIES[8].species_id: list(paths)})
     test_row = next(row for row in rows if row.split == "test")
@@ -277,15 +277,15 @@ def test_verify_rejects_fold_on_test(project_tmp_dir: Path) -> None:
 
 
 # --------------------------------------------------------------------------
-# Pemeriksaan kebocoran
+# Leakage check
 # --------------------------------------------------------------------------
 
 
 def test_build_rows_verifies_itself(project_tmp_dir: Path) -> None:
-    """build_rows harus menjalankan pemeriksaan kebocoran sebelum mengembalikan.
+    """build_rows must run the leakage check before returning.
 
-    Pemanggil yang mengimpor build_rows langsung tidak boleh melewatkan gerbang
-    yang di main().
+    A caller that imports build_rows directly must not be able to skip the gate
+    that main() applies.
     """
     import inspect
 
@@ -294,16 +294,16 @@ def test_build_rows_verifies_itself(project_tmp_dir: Path) -> None:
 
 
 def test_verify_no_leakage_accepts_valid_rows(project_tmp_dir: Path) -> None:
-    """Index yang benar harus lolos pemeriksaan kebocoran."""
+    """A correct index must pass the leakage check."""
     paths = _fake_images(project_tmp_dir)
     rows = build_rows({SPECIES[8].species_id: sorted(paths)})
     verify_no_leakage(rows)
 
 
 def test_verify_no_leakage_detects_duplicate_path(project_tmp_dir: Path) -> None:
-    """Citra yang sama di dua split harus dianggap kebocoran.
+    """The same image in two splits must count as leakage.
 
-    Pesan error harus menyebut citra berulang, bukan overlap antar lipatan.
+    The error message must name the repeated image, not cross fold overlap.
     """
     paths = _fake_images(project_tmp_dir)
     rows = build_rows({SPECIES[8].species_id: sorted(paths)})
@@ -312,13 +312,13 @@ def test_verify_no_leakage_detects_duplicate_path(project_tmp_dir: Path) -> None
 
 
 def test_verify_no_leakage_detects_shared_fold(project_tmp_dir: Path) -> None:
-    """Citra yang sama pada dua lipatan harus dianggap kebocoran antar lipatan.
+    """The same image in two folds must count as cross fold leakage.
 
-    Satu-satunya cara satu path masuk dua lipatan adalah path itu muncul dua
-    kali dengan nomor lipatan berbeda, jadi duplikasi path memang prasyarat
-    overlap. Yang dibedakan di sini adalah pesan error: pemeriksaan antar
-    lipatan dijalankan lebih dulu, jadi Rules ini harus gagal pada aturan
-    overlap, bukan pada aturan duplikasi path.
+    The only way one path lands in two folds is for that path to appear twice with
+    different fold numbers, so path duplication is a prerequisite for overlap.
+    What is distinguished here is the error message: the cross fold check runs
+    first, so these tests must fail on the overlap rule, not on the path
+    duplication rule.
     """
     paths = _fake_images(project_tmp_dir)
     rows = build_rows({SPECIES[8].species_id: sorted(paths)})
@@ -332,7 +332,7 @@ def test_verify_no_leakage_detects_shared_fold(project_tmp_dir: Path) -> None:
 def test_duplicate_path_in_same_fold_is_caught_by_path_rule(
     project_tmp_dir: Path,
 ) -> None:
-    """Citra yang sama pada lipatan sama harus kena aturan citra berulang."""
+    """The same image in the same fold must hit the repeated image rule."""
     paths = _fake_images(project_tmp_dir)
     rows = build_rows({SPECIES[8].species_id: sorted(paths)})
     source = next(row for row in rows if row.split == "train")
@@ -342,12 +342,12 @@ def test_duplicate_path_in_same_fold_is_caught_by_path_rule(
 
 
 # --------------------------------------------------------------------------
-# Path relatif dan path di luar root
+# Relative paths and paths outside the root
 # --------------------------------------------------------------------------
 
 
 def test_relative_posix_strips_project_root(project_tmp_dir: Path) -> None:
-    """Path di dalam root proyek jadi relatif dengan garis miring maju."""
+    """A path inside the project root becomes relative with forward slashes."""
     from bacteriacv.paths import PROJECT_ROOT
 
     target = PROJECT_ROOT / "data" / "raw" / "images" / "x" / "y.tif"
@@ -355,21 +355,21 @@ def test_relative_posix_strips_project_root(project_tmp_dir: Path) -> None:
 
 
 def test_relative_posix_rejects_path_outside_root() -> None:
-    """Citra di luar root proyek harus ditolak, bukan ditulis sebagai path absolut."""
+    """An image outside the project root must be rejected, not written as an absolute path."""
     outside = Path(tempfile.gettempdir()) / "bacteriacv_probe" / "citra.tif"
     with pytest.raises(ValueError, match="di luar root proyek"):
         _relative_posix(outside)
 
 
 def test_build_rows_rejects_images_outside_root() -> None:
-    """build_rows harus gagal bila diberi citra di luar root proyek."""
+    """build_rows must fail when given an image outside the project root."""
     grouped = {"escherichia_coli": [Path(tempfile.gettempdir()) / "keluar" / "a.tif"]}
     with pytest.raises(ValueError, match="di luar root proyek"):
         build_rows(grouped)
 
 
 def test_main_writes_index_when_record_is_in_sync(project_tmp_dir: Path) -> None:
-    """main harus menulis index bila unreadable.csv sinkron dengan disk."""
+    """main must write the index when unreadable.csv matches the disk."""
     from bacteriacv.datasets import build_index as build_index_module
     from bacteriacv.datasets.build_index import main
 
@@ -409,7 +409,7 @@ def test_main_writes_index_when_record_is_in_sync(project_tmp_dir: Path) -> None
 
 
 def test_main_refuses_when_record_is_out_of_sync(project_tmp_dir: Path) -> None:
-    """main harus menolak menulis index bila ada kerusakan yang belum dicatat."""
+    """main must refuse to write the index when there is unrecorded damage."""
     from bacteriacv.datasets.build_index import main
 
     images = project_tmp_dir / "images"
@@ -434,7 +434,7 @@ def test_main_refuses_when_record_is_out_of_sync(project_tmp_dir: Path) -> None:
 
 
 def test_main_keeps_existing_index_when_refused(project_tmp_dir: Path) -> None:
-    """Index yang sudah ada tidak boleh tertimpa saat rekonsiliasi gagal."""
+    """An existing index must not be overwritten when reconciliation fails."""
     from bacteriacv.datasets.build_index import main
 
     images = project_tmp_dir / "images"
@@ -460,7 +460,7 @@ def test_main_keeps_existing_index_when_refused(project_tmp_dir: Path) -> None:
 
 
 def test_index_never_contains_absolute_path(project_tmp_dir: Path) -> None:
-    """Tidak ada baris index yang boleh memuat drive absolut."""
+    """No index row may carry an absolute drive."""
     rows = build_rows(_full_fake_dataset(project_tmp_dir))
     for row in rows:
         assert not row.path.startswith("C:")
@@ -470,12 +470,12 @@ def test_index_never_contains_absolute_path(project_tmp_dir: Path) -> None:
 
 
 # --------------------------------------------------------------------------
-# Determinisme
+# Determinism
 # --------------------------------------------------------------------------
 
 
 def test_build_rows_is_deterministic(project_tmp_dir: Path) -> None:
-    """Seed tetap harus menghasilkan index identik."""
+    """A fixed seed must produce an identical index."""
     grouped = _full_fake_dataset(project_tmp_dir)
     first = build_rows(grouped)
     second = build_rows(grouped)
@@ -483,7 +483,7 @@ def test_build_rows_is_deterministic(project_tmp_dir: Path) -> None:
 
 
 def test_different_seed_changes_assignment(project_tmp_dir: Path) -> None:
-    """Seed berbeda harus menghasilkan pembagian berbeda, kalau tidak seed tidak dipakai."""
+    """A different seed must produce a different split, otherwise the seed is unused."""
     grouped = _full_fake_dataset(project_tmp_dir)
     first = build_rows(grouped, seed=INDEX_SEED)
     second = build_rows(grouped, seed=INDEX_SEED + 1)
@@ -493,7 +493,7 @@ def test_different_seed_changes_assignment(project_tmp_dir: Path) -> None:
 
 
 def test_index_seed_is_pinned() -> None:
-    """Seed harus berasal dari config.py agar dapat direproduksi."""
+    """The seed must come from config.py so the result is reproducible."""
     from bacteriacv.config import INDEX_SEED
 
     assert isinstance(INDEX_SEED, int)
@@ -501,12 +501,12 @@ def test_index_seed_is_pinned() -> None:
 
 
 # --------------------------------------------------------------------------
-# Pengumpulan citra dan keluaran berkas
+# Image collection and file output
 # --------------------------------------------------------------------------
 
 
 def test_collect_images_ignores_non_images(project_tmp_dir: Path) -> None:
-    """Berkas non-gambar di folder spesies harus diabaikan."""
+    """Non image files in a species folder must be ignored."""
     paths = _fake_images(project_tmp_dir, count=3)
     (project_tmp_dir / "escherichia_coli" / "catatan.txt").write_text(
         "bukan citra", encoding="utf-8"
@@ -520,7 +520,7 @@ def test_collect_images_ignores_non_images(project_tmp_dir: Path) -> None:
 
 
 def test_collect_images_skips_unreadable_files(project_tmp_dir: Path) -> None:
-    """Berkas yang tidak dapat dibuka harus dilewati, bukan menggagalkan."""
+    """A file that cannot be opened must be skipped, not fail the run."""
     paths = _fake_images(project_tmp_dir, count=5)
     broken = project_tmp_dir / "escherichia_coli" / "rusak_9999.tif"
     broken.write_bytes(b"bukan tiff" * 100)
@@ -535,7 +535,7 @@ def test_collect_images_skips_unreadable_files(project_tmp_dir: Path) -> None:
 
 
 def test_collect_images_keeps_unreadable_when_asked(project_tmp_dir: Path) -> None:
-    """Bila skip_unreadable=False, semua berkas dikembalikan."""
+    """With skip_unreadable=False every file is returned."""
     _fake_images(project_tmp_dir, count=5)
     broken = project_tmp_dir / "escherichia_coli" / "rusak_9998.tif"
     broken.write_bytes(b"")
@@ -547,7 +547,7 @@ def test_collect_images_keeps_unreadable_when_asked(project_tmp_dir: Path) -> No
 
 
 def test_index_roundtrip_keeps_columns(project_tmp_dir: Path) -> None:
-    """index.csv harus memuat semua kolom yang diminta."""
+    """index.csv must carry every requested column."""
     _fake_images(project_tmp_dir)
     rows = build_rows({SPECIES[8].species_id: sorted(_fake_images(project_tmp_dir))})
     index_path = project_tmp_dir / "index.csv"
@@ -561,7 +561,7 @@ def test_index_roundtrip_keeps_columns(project_tmp_dir: Path) -> None:
 
 
 def test_index_is_utf8_without_bom_and_uses_lf(project_tmp_dir: Path) -> None:
-    """index.csv harus UTF-8 tanpa BOM dan akhir baris LF."""
+    """index.csv must be UTF-8 without BOM and LF line endings."""
     _fake_images(project_tmp_dir)
     rows = build_rows({SPECIES[8].species_id: sorted(_fake_images(project_tmp_dir))})
     index_path = project_tmp_dir / "index.csv"
@@ -573,7 +573,7 @@ def test_index_is_utf8_without_bom_and_uses_lf(project_tmp_dir: Path) -> None:
 
 
 def test_report_runs_without_error(project_tmp_dir: Path, capsys: pytest.CaptureFixture[str]) -> None:
-    """Laporan ringkasan harus tercetak tanpa exception."""
+    """The summary report must print without raising."""
     rows = build_rows(_full_fake_dataset(project_tmp_dir))
     report(rows)
     captured = capsys.readouterr()
@@ -582,7 +582,7 @@ def test_report_runs_without_error(project_tmp_dir: Path, capsys: pytest.Capture
 
 
 def test_index_row_fields_are_stable(project_tmp_dir: Path) -> None:
-    """IndexRow harus menyimpan kelima field sesuai urutan deklarasi."""
+    """IndexRow must store all five fields in declaration order."""
     row = IndexRow(
         path="data/raw/images/x/a.tif",
         species="Escherichia coli",

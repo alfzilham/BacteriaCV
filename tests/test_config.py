@@ -1,4 +1,4 @@
-"""Tes untuk konfigurasi terpusat."""
+"""Tests for the centralised configuration."""
 
 from __future__ import annotations
 
@@ -8,72 +8,72 @@ import bacteriacv.config as config
 
 
 def test_image_size_is_224() -> None:
-    """SPEC bagian C1 menetapkan resize ke 224."""
+    """ARCHITECTURE C1 sets the resize to 224."""
     assert config.IMAGE_SIZE == 224
 
 
 def test_n_shape_classes_is_two() -> None:
-    """Keputusan D1: kelas spiral tidak memiliki spesies di DIBaS."""
+    """Decision D1: the spiral class has no species on DIBaS."""
     assert config.N_SHAPE_CLASSES == 2
 
 
 def test_shape_labels_exclude_spiral() -> None:
-    """Label aktif hanya cocci dan bacilli."""
+    """The populated labels are only cocci and bacilli."""
     assert config.SHAPE_LABELS == ("cocci", "bacilli")
 
 
 def test_shape_labels_full_keeps_spiral() -> None:
-    """Enum lengkap tetap memuat spiral sebagai penanda kelas kosong."""
+    """The full enum still holds spiral as the marker of an empty class."""
     assert config.SHAPE_LABELS_FULL == ("cocci", "bacilli", "spiral")
     assert config.SHAPE_UNPOPULATED == "spiral"
     assert config.SHAPE_UNPOPULATED not in config.SHAPE_LABELS
 
 
 def test_gram_labels_are_positive_and_negative() -> None:
-    """Head B tetap dua kelas status Gram."""
+    """Head B stays at two Gram status classes."""
     assert config.GRAM_LABELS == ("positive", "negative")
     assert config.N_GRAM_CLASSES == 2
 
 
 def test_feature_dim_is_2048() -> None:
-    """ResNet-50 menghasilkan 2048-d setelah global average pooling."""
+    """ResNet-50 yields 2048-d after global average pooling."""
     assert config.FEATURE_DIM == 2048
 
 
 def test_head_sizes_match_class_count() -> None:
-    """Ukuran head mengikuti jumlah kelas."""
+    """The head size follows the class count."""
     assert config.HEAD_A_SIZE == config.N_SHAPE_CLASSES
     assert config.HEAD_B_SIZE == config.N_GRAM_CLASSES
 
 
 def test_augment_variants_is_four() -> None:
-    """Keputusan D3: empat varian augmentasi pada data latih."""
+    """Decision D3: four augmentation variants on the train data."""
     assert config.AUGMENT_VARIANTS == 4
 
 
 def test_imagenet_stats_are_standard() -> None:
-    """Normalisasi harus memakai statistik ImageNet yang dipakai torchvision."""
+    """Normalisation must use the ImageNet statistics torchvision uses."""
     assert config.IMAGENET_MEAN == (0.485, 0.456, 0.406)
     assert config.IMAGENET_STD == (0.229, 0.224, 0.225)
 
 
 def test_seeds_are_pinned_and_distinct() -> None:
-    """Seed harus deterministik dan berbeda antar tahap."""
+    """Seeds must be deterministic and different per stage."""
     assert config.INDEX_SEED == 20260203
     assert config.TRAIN_SEED == 1337
     assert config.TRAIN_SEED != config.INDEX_SEED
 
 
 def test_no_stale_random_seed_alias() -> None:
-    """RANDOM_SEED sudah dihapus, hanya INDEX_SEED yang dipakai."""
+    """RANDOM_SEED is gone, only INDEX_SEED is used."""
     assert not hasattr(config, "RANDOM_SEED")
 
 
 def test_training_hyperparameters_are_sane() -> None:
-    """Nilai pelatihan harus berada di rentang yang bermakna.
+    """The training figures must sit in a meaningful range.
 
-    Batas longgar seperti 0 < LR < 1 tidak menangkap perubahan learning rate
-    dari 1e-3 ke 0,9 yang akan merusak pelatihan.
+    A loose bound such as 0 < LR < 1 does not catch a learning rate change
+    from 1e-3 to 0.9, which would break training.
     """
     assert 1e-5 <= config.LEARNING_RATE <= 1e-2, config.LEARNING_RATE
     assert 1e-6 <= config.WEIGHT_DECAY <= 1e-2, config.WEIGHT_DECAY
@@ -85,7 +85,7 @@ def test_training_hyperparameters_are_sane() -> None:
 
 
 def test_head_sizes_relate_to_feature_dim() -> None:
-    """Ukuran head mengikuti jumlah kelas, bukan dimensi fitur."""
+    """The head size follows the class count, not the feature dimension."""
     assert config.HEAD_A_SIZE == config.N_SHAPE_CLASSES == 2
     assert config.HEAD_B_SIZE == config.N_GRAM_CLASSES == 2
     assert config.FEATURE_DIM == 2048
@@ -93,7 +93,7 @@ def test_head_sizes_relate_to_feature_dim() -> None:
 
 
 def test_paths_are_inside_project() -> None:
-    """Semua folder keluaran harus di dalam root proyek."""
+    """Every output folder must sit inside the project root."""
     from bacteriacv.paths import PROJECT_ROOT
 
     for path in (config.FEATURES_DIR, config.CHECKPOINT_DIR, config.APP_DIR, config.STATIC_DIR):
@@ -101,12 +101,12 @@ def test_paths_are_inside_project() -> None:
 
 
 def test_max_upload_is_20_megabytes() -> None:
-    """DESIGN bagian 7 menetapkan batas 20 MB."""
+    """DESIGN section 7 sets the 20 MB limit."""
     assert config.MAX_UPLOAD_BYTES == 20 * 1024 * 1024
 
 
 def _config_constant_names() -> set[str]:
-    """Kumpulkan nama konstanta yang benar-benar dideklarasikan di config.py."""
+    """Collect the constant names actually declared in config.py."""
     import ast
 
     from bacteriacv.paths import PROJECT_ROOT
@@ -123,11 +123,11 @@ def _config_constant_names() -> set[str]:
 
 
 def _scanned_source_files() -> list[Path]:
-    """Daftar berkas yang wajib bebas duplikasi konstanta config.
+    """The files that must be free of duplicated config constants.
 
-    Cakupannya bukan hanya paket bacteriacv. Backend app/ juga mengimpor
-    konstanta yang sama, jadi MAX_UPLOAD_BYTES atau ALLOWED_SUFFIXES yang
-    ditulis ulang di sana harus tertangkap.
+    The scope is not only the bacteriacv package. The app/ backend imports the
+    same constants, so a rewritten MAX_UPLOAD_BYTES or ALLOWED_SUFFIXES there
+    must be caught.
     """
     from bacteriacv.paths import PROJECT_ROOT
 
@@ -139,11 +139,11 @@ def _scanned_source_files() -> list[Path]:
 
 
 def test_no_hyperparameter_duplicated_outside_config() -> None:
-    """Konstanta config.py tidak boleh dideklarasikan ulang di modul lain.
+    """config.py constants must not be redeclared in another module.
 
-    config.py menyatakan dirinya sebagai sumber kebenaran tunggal. Tanpa tes ini,
-    mengubah config.INDEX_SEED tidak akan mengubah index.csv karena modul lain
-    masih memakai salinan lokal.
+    config.py declares itself the single source of truth. Without this test,
+    changing config.INDEX_SEED would not change index.csv because another module
+    would still use a local copy.
     """
     import ast
 
@@ -164,7 +164,7 @@ def test_no_hyperparameter_duplicated_outside_config() -> None:
 
 
 def test_guard_covers_app_package_when_it_exists() -> None:
-    """Penjaga duplikasi harus ikut memindai app/ begitu backend dibuat."""
+    """The duplicate guard must scan app/ too now that the backend exists."""
     from bacteriacv.paths import PROJECT_ROOT
 
     scanned = {path.relative_to(PROJECT_ROOT).as_posix() for path in _scanned_source_files()}
@@ -175,7 +175,7 @@ def test_guard_covers_app_package_when_it_exists() -> None:
 
 
 def test_build_index_imports_from_config() -> None:
-    """build_index harus mengambil hyperparameter dari config, bukan menyalin."""
+    """build_index must read its hyperparameters from config, not copy them."""
     from bacteriacv.datasets import build_index
 
     assert build_index.INDEX_SEED == config.INDEX_SEED
@@ -185,7 +185,7 @@ def test_build_index_imports_from_config() -> None:
 
 
 def test_min_images_threshold_lives_in_config() -> None:
-    """Ambang integritas data harus terpusat di config.py."""
+    """The data integrity threshold must be centralised in config.py."""
     from bacteriacv.datasets import extract
 
     assert extract.MIN_IMAGES_PER_SPECIES == config.MIN_IMAGES_PER_SPECIES
@@ -193,6 +193,6 @@ def test_min_images_threshold_lives_in_config() -> None:
 
 
 def test_allowed_suffixes_cover_design_formats() -> None:
-    """DESIGN bagian 5 menyebut PNG, JPG, dan TIFF."""
+    """DESIGN section 5 names PNG, JPG, and TIFF."""
     for suffix in (".png", ".jpg", ".jpeg", ".tif", ".tiff"):
         assert suffix in config.ALLOWED_SUFFIXES

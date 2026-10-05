@@ -1,7 +1,7 @@
-"""Tes unit untuk lokasi folder proyek.
+"""Unit tests for the project folder locations.
 
-Fungsi ini penting karena satu bug index parent membuat unduhan mendarat di
-luar folder proyek. Tes di bawah mengunci posisi root yang benar.
+This matters because an earlier off-by-one in the parent index made downloads land
+outside the project folder. The tests below lock the correct root position.
 """
 
 from __future__ import annotations
@@ -26,27 +26,27 @@ from bacteriacv.paths import (
 
 
 def test_project_root_is_repository_folder() -> None:
-    """Root proyek harus folder yang memuat folder bacteriacv dan data."""
+    """The project root must be the folder holding bacteriacv and data."""
     assert PROJECT_ROOT.name == "BacteriaCV"
     assert (PROJECT_ROOT / "bacteriacv").is_dir()
     assert (PROJECT_ROOT / "docs").is_dir()
 
 
 def test_paths_stay_inside_project_root() -> None:
-    """Semua folder data harus berada di dalam root proyek."""
+    """Every data folder must sit inside the project root."""
     for path in (DATA_DIR, RAW_DIR, ZIPS_DIR, IMAGES_DIR, MANIFEST_PATH, INDEX_PATH):
         assert path.is_relative_to(PROJECT_ROOT), path
 
 
 def test_expected_path_layout() -> None:
-    """Struktur folder harus sesuai dengan yang dipakai modul lain."""
+    """The folder structure must match what the other modules use."""
     assert ZIPS_DIR == PROJECT_ROOT / "data" / "raw" / "zips"
     assert IMAGES_DIR == PROJECT_ROOT / "data" / "raw" / "images"
     assert INDEX_PATH == PROJECT_ROOT / "data" / "index.csv"
 
 
 def test_ensure_data_dirs_is_idempotent() -> None:
-    """Pemanggilan berulang tidak boleh gagal dan tidak boleh menghapus isi."""
+    """Repeated calls must not fail and must not delete existing content."""
     ensure_data_dirs()
     marker = ZIPS_DIR / "_probe.txt"
     marker.write_text("probe", encoding="utf-8")
@@ -59,15 +59,15 @@ def test_ensure_data_dirs_is_idempotent() -> None:
     assert IMAGES_DIR.is_dir()
 
 
-# Drive letter hanya dianggap path bila berada di awal string atau setelah
-# separator. Tanpa syarat ini, "https://example.com/D:/a" dan "%s:/backup"
-# ikut dianggap path mesin lokal karena huruf di dalamnya kebetulan diikuti
-# tanda titik dua dan garis miring.
+# A drive letter counts as a path only at the start of the string or after a
+# separator. Without that rule, "https://example.com/D:/a" and "%s:/backup"
+# would count as local machine paths because their letters happen to be followed
+# by a colon and a slash.
 _WINDOWS_DRIVE = re.compile(r"(?:^|[\s\"'\(\[=,;:>])[A-Za-z]:[\\/]")
 
 
 def _docstring_nodes(tree: ast.AST) -> set[int]:
-    """Kumpulkan id node string yang berfungsi sebagai docstring."""
+    """Collect the string node ids that act as docstrings."""
     docstrings: set[int] = set()
     owners = (ast.Module, ast.ClassDef, ast.FunctionDef, ast.AsyncFunctionDef)
     for node in ast.walk(tree):
@@ -81,12 +81,12 @@ def _docstring_nodes(tree: ast.AST) -> set[int]:
 
 
 def _concat_parts(node: ast.AST, constants: dict[str, str] | None = None) -> str | None:
-    """Rakit string statis dari ekspresi konstan.
+    """Fold static strings built from constant expressions.
 
-    Menutup FALSE NEGATIVE dari penyederhanaan literal. Python menyatukan
-    ``"D:" + "\\data"`` menjadi satu konstanta saat kompilasi, tapi penyusun
-    kode yang lain atau penulisan eksplisit lewat ``join`` tidak selalu
-    demikian. Ekspresi yang tidak bisa dinilai statis mengembalikan None.
+    This closes a FALSE NEGATIVE from the literal simplification. Python folds
+    ``"D:" + "\\data"`` into one constant at compile time, but another parser or an
+    explicit ``join`` does not always do so. An expression that cannot be evaluated
+    statically returns None.
     """
     constants = constants or {}
     if isinstance(node, ast.Constant):
@@ -133,21 +133,21 @@ def _concat_parts(node: ast.AST, constants: dict[str, str] | None = None) -> str
 
 _DRIVE_ONLY = re.compile(r"\b[A-Za-z]:\s*$")
 _POSIX_ABSOLUTE = re.compile(r"^/(?!$)")
-# Folder terlarang Windows di awal string atau setelah separator. Dicocokkan
-# tanpa drive letter karena path mesin lokal bisa ditulis sebagai "Users\LENOVO"
-# setelah drive dirangkai terpisah.
+# Forbidden Windows folders at the start of the string or after a separator. Matched
+# without a drive letter because a local machine path can read "Users\LENOVO"
+# once the drive has been assembled separately.
 _WINDOWS_RESERVED = re.compile(r"(?:^|[\\/])(Users|Windows|Program Files|WindowsApps)")
 
 
 def _looks_like_absolute_path(literal: str) -> bool:
-    """Perksa apakah literal membentuk path absolut mesin lokal.
+    """Check whether a literal forms an absolute local machine path.
 
-    Menangkap empat pola:
-    1. Path lengkap, misalnya ``D:/2026/Backup``.
-    2. Drive letter terminated, misalnya ``"D:"`` lalu dirangkai.
-    3. Path UNC, misalnya ``\\\\server\\share``.
-    4. Folder terlarang Windows yang menandakan drive absolut, misalnya
-       ``Users\\LENOVO`` tanpa drive tapi tetap path mesin lokal.
+    It catches four patterns:
+    1. A full path, for example ``D:/2026/Backup``.
+    2. A terminated drive letter, for example ``"D:"`` then assembled.
+    3. A UNC path, for example ``\\\\server\\share``.
+    4. A forbidden Windows folder that marks an absolute drive, for example
+       ``Users\LENOVO`` with no drive but still a local machine path.
     """
     if _WINDOWS_DRIVE.search(literal):
         return True
@@ -161,11 +161,11 @@ def _looks_like_absolute_path(literal: str) -> bool:
 
 
 def _iter_code_strings(tree: ast.AST) -> Iterator[str]:
-    """Ambil literal string di kode aktif, termasuk yang dirakit dari beberapa literal.
+    """Take the string literals in live code, including ones assembled from several literals.
 
-    Parser AST dipakai, bukan pembacaan baris, supaya path absolut yang ditulis
-    di kode aktif terdeteksi. Docstring dikecualikan karena hanya penjelasan
-    dan tidak memengaruhi perilaku.
+    An AST parser is used rather than line reading, so an absolute path written in
+    live code is still detected. Docstrings are excluded because they are only
+    explanation and do not affect behaviour.
     """
     docstrings = _docstring_nodes(tree)
     constants: dict[str, str] = {}
@@ -195,10 +195,10 @@ def _iter_code_strings(tree: ast.AST) -> Iterator[str]:
 
 
 def test_no_absolute_paths_in_active_code() -> None:
-    """Kode aktif tidak boleh memuat path absolut mesin lokal.
+    """Live code must not contain an absolute local machine path.
 
-    String di dalam docstring dikecualikan karena hanya penjelasan.
-    Nama path yang muncul di string aktif akan dilaporkan bersama nama berkas.
+    Strings inside docstrings are excluded because they are only explanation.
+    A path name appearing in a live string is reported with its filename.
     """
     offenders: list[str] = []
     package = PROJECT_ROOT / "bacteriacv"
@@ -228,7 +228,7 @@ def test_no_absolute_paths_in_active_code() -> None:
     ],
 )
 def test_detector_flags_absolute_paths(literal: str) -> None:
-    """Penyaring harus menangkap path absolut, termasuk yang dirakit."""
+    """The filter must catch absolute paths, including assembled ones."""
     assert _looks_like_absolute_path(literal), literal
 
 
@@ -250,20 +250,20 @@ def test_detector_flags_absolute_paths(literal: str) -> None:
     ],
 )
 def test_detector_accepts_relative_and_url(literal: str) -> None:
-    """Path relatif dan URL tidak boleh dianggap path absolut mesin lokal.
+    """Relative paths and URLs must not count as absolute local machine paths.
 
-    Kasus `https://example.com/D:/a` dan `%s:/backup` sengaja dimasukkan sebagai
-    negatif. Huruf di dalam keduanya diikuti titik dua dan garis miring, jadi
-    pola sederhana akan salah menandai keduanya sebagai drive letter.
+    The cases `https://example.com/D:/a` and `%s:/backup` are deliberately included as
+    negatives. The letters in both are followed by a colon and a slash, so a
+    simple pattern would wrongly flag both as drive letters.
     """
     assert not _looks_like_absolute_path(literal), literal
 
 
 def test_detector_catches_bytes_literal_path() -> None:
-    """Path absolut dalam literal bytes harus terdeteksi.
+    """Absolute paths inside bytes literals must be detected.
 
-    Literal bytes sering muncul pada pemrosesan berkas biner, dan isinya bisa
-    memuat path absolut mesin lokal.
+    Bytes literals often show up in binary file handling, and their content can
+    hold an absolute local machine path.
     """
     snippet = 'JALUR = b"D:/data/raw"\n'
     tree = ast.parse(snippet)
@@ -272,11 +272,11 @@ def test_detector_catches_bytes_literal_path() -> None:
 
 
 def test_detector_catches_path_assembled_from_two_literals() -> None:
-    """Path absolut yang dirakit dari beberapa literal harus terdeteksi.
+    """An absolute path assembled from several literals must be detected.
 
-    Ini kelemahan yang ditemukan audit sebelumnya. Python menyatukan
-    ``"D:" + "\\data"`` saat kompilasi, tapi penyusun lain tidak, dan
-    penulisan eksplisit lewat ``join`` juga harus tertangkap.
+    This is a weakness an earlier audit found. Python folds
+    ``"D:" + "\\data"`` at compile time, but other parsers do not, and an
+    explicit ``join`` must be caught too.
     """
     snippet = 'JALUR = "D:" + "\\\\data" + "/raw"\n'
     tree = ast.parse(snippet)
@@ -288,7 +288,7 @@ def test_detector_catches_path_assembled_from_two_literals() -> None:
 
 
 def test_detector_catches_path_assembled_by_join() -> None:
-    """Path absolut yang dirakit lewat join harus terdeteksi."""
+    """An absolute path assembled through join must be detected."""
     snippet = 'JALUR = "".join(["D:/", "2026", "/Backup"])\n'
     tree = ast.parse(snippet)
     literals = list(_iter_code_strings(tree))
@@ -296,7 +296,7 @@ def test_detector_catches_path_assembled_by_join() -> None:
 
 
 def test_detector_catches_path_via_path_construction() -> None:
-    """Path absolut pada konstruksi Path harus terdeteksi."""
+    """An absolute path in a Path construction must be detected."""
     snippet = 'from pathlib import Path\nJALUR = Path("D:/Backup") / "data"\n'
     tree = ast.parse(snippet)
     literals = list(_iter_code_strings(tree))
@@ -304,7 +304,7 @@ def test_detector_catches_path_via_path_construction() -> None:
 
 
 def test_detector_catches_path_assembled_with_fstring() -> None:
-    """Path absolut di dalam f-string harus terdeteksi bila semua bagian statis."""
+    """An absolute path in an f-string must be detected when every part is static."""
     snippet = 'DRIVE = "D:"\nJALUR = f"{DRIVE}/data/raw"\n'
     tree = ast.parse(snippet)
     literals = list(_iter_code_strings(tree))
@@ -322,14 +322,14 @@ def test_detector_catches_path_assembled_with_fstring() -> None:
     ],
 )
 def test_detector_catches_indirect_and_posix_absolute_paths(snippet: str) -> None:
-    """Path absolut tetap terdeteksi saat dirakit atau memakai sintaks POSIX."""
+    """Absolute paths are still detected when assembled or written POSIX style."""
     tree = ast.parse(snippet)
     literals = list(_iter_code_strings(tree))
     assert any(_looks_like_absolute_path(item) for item in literals)
 
 
 def test_concat_parts_rejects_non_static_expressions() -> None:
-    """Ekspresi yang tidak bisa dinilai statis harus mengembalikan None."""
+    """An expression that cannot be evaluated statically must return None."""
     tree = ast.parse('X = some_function("D:/data")\nY = "a" + variable\n')
     nodes = [n for n in ast.walk(tree) if isinstance(n, ast.BinOp)]
     assert nodes
@@ -339,7 +339,7 @@ def test_concat_parts_rejects_non_static_expressions() -> None:
 
 
 def test_string_scanner_ignores_docstrings() -> None:
-    """Docstring dengan path absolut tidak boleh dilaporkan."""
+    """A docstring holding an absolute path must not be reported."""
     snippet = '''"""Docstring yang menyebut D:/jalur/mesin lokal."""
 
 from pathlib import Path
@@ -355,7 +355,7 @@ JALUR_RELATIF = "data/raw/images"
 
 
 def test_function_docstrings_are_also_ignored() -> None:
-    """Docstring fungsi dan kelas juga harus dikecualikan."""
+    """Function and class docstrings must be excluded too."""
     snippet = '''def contoh():
     """Docstring fungsi yang menyebut C:/Users/mesin."""
     return "data/raw"
@@ -375,7 +375,7 @@ class Contoh:
 
 
 def test_detector_ignores_docstrings_in_real_source() -> None:
-    """Pemindaian paket nyata tidak boleh salah menandai docstring sebagai pelanggaran."""
+    """Scanning the real package must not flag docstrings as violations."""
     package = PROJECT_ROOT / "bacteriacv"
     flagged_in_docstrings: list[str] = []
     for source in sorted(package.rglob("*.py")):

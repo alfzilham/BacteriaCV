@@ -1,4 +1,4 @@
-"""Tes untuk penyusun panel visualisasi."""
+"""Tests for the visualisation panel builder."""
 
 from __future__ import annotations
 
@@ -24,7 +24,7 @@ from bacteriacv.visualize import (
 
 
 def _image(success: bool = True) -> np.ndarray:
-    """Buat citra uji sederhana dengan atau tanpa area gelap."""
+    """Build a simple test image with or without a dark area."""
     array = np.full((240, 320, 3), 210, dtype=np.uint8)
     if success:
         array[80:180, 90:230] = (20, 20, 220)
@@ -37,14 +37,14 @@ def _image(success: bool = True) -> np.ndarray:
 
 
 def test_confidence_level_boundaries() -> None:
-    """Level harus memakai ambang dari config, bukan angka duplikat."""
+    """The level must use the threshold from config, not a duplicated number."""
     assert confidence_level(CONFIDENCE_HIGH) == "high"
     assert confidence_level(CONFIDENCE_MEDIUM) == "medium"
     assert confidence_level(0.0) == "low"
 
 
 def test_confidence_level_is_exhaustive() -> None:
-    """Setiap nilai harus jatuh pada tepat satu level."""
+    """Every value must fall into exactly one level."""
     levels = {confidence_level(value / 20) for value in range(21)}
     assert levels == {"high", "medium", "low"}
 
@@ -53,7 +53,7 @@ def test_confidence_level_is_exhaustive() -> None:
 
 
 def test_annotate_changes_pixels() -> None:
-    """Annotate harus mengubah citra, bukan mengembalikan salinan."""
+    """Annotate must modify the image, not return a copy."""
     panel = np.full((224, 224, 3), 255, dtype=np.uint8)
 
     result = annotate(panel, ["baris satu", "baris dua"])
@@ -64,7 +64,7 @@ def test_annotate_changes_pixels() -> None:
 
 
 def test_annotate_does_not_mutate_input() -> None:
-    """Panel asal harus tetap utuh supaya bisa dipakai ulang."""
+    """The original panel must stay intact so it can be reused."""
     panel = np.full((224, 224, 3), 255, dtype=np.uint8)
 
     annotate(panel, ["teks"])
@@ -73,23 +73,23 @@ def test_annotate_does_not_mutate_input() -> None:
 
 
 def test_annotate_rejects_empty_lines() -> None:
-    """Tanpa baris teks, annotate tidak punya gunanya."""
+    """With no text lines, annotate has nothing to do."""
     with pytest.raises(ValueError, match="baris"):
         annotate(np.zeros((10, 10, 3), dtype=np.uint8), [])
 
 
-# --- Enkode PNG ---
+# --- PNG encoding ---
 
 
 def test_encode_png_produces_png_signature() -> None:
-    """Hasil enkode harus benar-benar PNG."""
+    """The encoding result must really be a PNG."""
     payload = encode_png(np.zeros((32, 32, 3), dtype=np.uint8))
 
     assert payload[:8] == b"\x89PNG\r\n\x1a\n"
 
 
 def test_encode_png_base64_decodes_to_png() -> None:
-    """Basis64 harus dapat dikembalikan menjadi PNG yang sama."""
+    """Base64 must decode back into the same PNG."""
     panel = _image()
 
     text = encode_png_base64(panel)
@@ -101,7 +101,7 @@ def test_encode_png_base64_decodes_to_png() -> None:
 
 
 def test_build_visualization_returns_five_panels() -> None:
-    """Bundle harus memuat satu panel per tahap pra-pemrosesan."""
+    """The bundle must hold one panel per preprocessing stage."""
     prepared = preprocess(_image())
 
     bundle = build_visualization(prepared, "cocci", 0.9, "positive", 0.8)
@@ -111,7 +111,7 @@ def test_build_visualization_returns_five_panels() -> None:
 
 
 def test_build_visualization_panels_are_different() -> None:
-    """Kelima panel harus berbeda isi, bukan salinan satu sama lain."""
+    """The five panels must differ in content, not be copies of each other."""
     prepared = preprocess(_image())
 
     bundle = build_visualization(prepared, "cocci", 0.9, "positive", 0.8)
@@ -120,10 +120,10 @@ def test_build_visualization_panels_are_different() -> None:
 
 
 def test_build_visualization_states_segmentation_is_not_validated() -> None:
-    """Panel harus menulis bahwa bentuk belum tervalidasi dari segmentasi.
+    """The panel must state that shape is not yet validated from segmentation.
 
-    Ini aturan yang diminta pemilik proyek. Menyingkirkan catatan ini membuat
-    panel menampilkan mask seolah-olah mask itu bukti bentuk sel.
+    This is a rule the project owner asked for. Dropping this note makes the
+    panel show the mask as if it were evidence of cell shape.
     """
     prepared = preprocess(_image())
 
@@ -134,13 +134,13 @@ def test_build_visualization_states_segmentation_is_not_validated() -> None:
 
 
 def test_segmentation_limitation_uses_measured_numbers() -> None:
-    """Angka pada catatan harus angka hasil eksperimen, bukan placeholder."""
+    """The figures in the note must come from the experiment, not be placeholders."""
     for number in ("1.30-1.43", "1.64-1.76", "1.03-4.19", "0.068"):
         assert number in SEGMENTATION_LIMITATION
 
 
 def test_build_visualization_lists_failed_stages() -> None:
-    """Tahap gagal harus disebut, bukan disembunyikan."""
+    """A failed stage must be named, not hidden."""
     prepared = preprocess(_image(success=False))
 
     bundle = build_visualization(prepared, "bacilli", 0.4, "negative", 0.3)
@@ -151,7 +151,7 @@ def test_build_visualization_lists_failed_stages() -> None:
 
 
 def test_build_visualization_keeps_prediction_when_segmentation_fails() -> None:
-    """Kegagalan segmentasi tidak boleh menghapus hasil klasifikasi."""
+    """A segmentation failure must not delete the classification result."""
     prepared = preprocess(_image(success=False))
 
     bundle = build_visualization(prepared, "bacilli", 0.42, "negative", 0.31)
@@ -161,7 +161,7 @@ def test_build_visualization_keeps_prediction_when_segmentation_fails() -> None:
 
 
 def test_build_visualization_marks_low_confidence() -> None:
-    """Level confidence harus ikut terbaca pada catatan."""
+    """The confidence level must also be readable in the note."""
     prepared = preprocess(_image())
 
     bundle = build_visualization(prepared, "bacilli", 0.42, "negative", 0.31)
@@ -170,7 +170,7 @@ def test_build_visualization_marks_low_confidence() -> None:
 
 
 def test_build_visualization_rejects_out_of_range_confidence() -> None:
-    """Confidence di luar 0 sampai 1 harus ditolak."""
+    """A confidence outside 0 to 1 must be rejected."""
     prepared = preprocess(_image())
 
     with pytest.raises(ValueError, match="shape_confidence"):
@@ -178,12 +178,12 @@ def test_build_visualization_rejects_out_of_range_confidence() -> None:
 
 
 def test_build_visualization_titles_match_stages() -> None:
-    """Setiap tahap harus punya judul."""
+    """Every stage must have a title."""
     assert set(STAGE_NAMES) == set(STAGE_TITLES)
 
 
 def test_panel_sizes_reports_five_panels() -> None:
-    """Pemeriksaan ukuran harus mengembalikan satu entri per panel."""
+    """The size check must return one entry per panel."""
     prepared = preprocess(_image())
 
     sizes = panel_sizes(build_visualization(prepared, "cocci", 0.9, "positive", 0.8))
@@ -193,7 +193,7 @@ def test_panel_sizes_reports_five_panels() -> None:
 
 
 def test_shape_label_text_falls_back_on_invalid_index() -> None:
-    """Indeks di luar rentang tidak boleh membuat crash."""
+    """An index out of range must not crash."""
     assert shape_label_text(0) == "cocci"
     assert shape_label_text(9) == "tidak_diketahui"
     assert shape_label_text(-1) == "tidak_diketahui"

@@ -1,9 +1,9 @@
-"""Fixture bersama untuk tes BacteriaCV.
+"""Shared fixtures for the BacteriaCV tests.
 
-Folder sementara dibuat di dalam root proyek, bukan di folder temp sistem.
-Alasannya,``_relative_posix`` sengaja menolak citra di luar root proyek agar
-index.csv tidak pernah memuat path absolut. Folder temp sistem berada di drive
-C:, sehingga tidak bisa dipakai untuk membuat citra palsu.
+The temporary folder is created inside the project root, not in the system temp folder.
+The reason is that ``_relative_posix`` deliberately rejects images outside the project root so
+index.csv can never hold an absolute path. The system temp folder is on the C: drive,
+so it cannot be used to build fake images.
 """
 
 from __future__ import annotations
@@ -21,7 +21,7 @@ TEMP_DIR_NAME = ".pytest_tmp"
 
 @pytest.fixture()
 def project_tmp_dir() -> Iterator[Path]:
-    """Folder sementara di dalam root proyek, dibersihkan setelah tes."""
+    """A temporary folder inside the project root, cleaned up after the tests."""
     target = PROJECT_ROOT / TEMP_DIR_NAME
     if target.exists():
         shutil.rmtree(target, ignore_errors=True)
@@ -34,7 +34,7 @@ def project_tmp_dir() -> Iterator[Path]:
 
 @pytest.fixture(autouse=True)
 def _cleanup_stray_temp_dir() -> Iterator[None]:
-    """Pastikan folder sementara tidak tertinggal bila tes gagal mendadak."""
+    """Make sure no temporary folder is left behind if a test dies unexpectedly."""
     yield
     stray = PROJECT_ROOT / TEMP_DIR_NAME
     if stray.is_dir():

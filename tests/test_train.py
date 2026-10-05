@@ -1,8 +1,8 @@
-"""Tes untuk ekstraksi fitur dan loop pelatihan dengan feature caching.
+"""Tests for feature extraction and the training loop with feature caching.
 
-Karena backbone dibekukan, vektor fitur sebuah citra tidak berubah antar epoch.
-Fitur diekstrak sekali lalu dipakai berulang, sehingga epoch berikutnya hanya
-menjalankan dua head berukuran Linear(2048, 2).
+Because the backbone is frozen, the feature vector of an image does not change between epochs.
+The features are extracted once and reused, so later epochs only run the two
+Linear(2048, 2) heads.
 """
 
 from __future__ import annotations
@@ -24,14 +24,14 @@ from bacteriacv.train import (
     train,
 )
 
-# Dua species_id yang berbeda pada kedua head sekaligus: satu cocci positif,
-# satu bacilli negatif.
+# Two different species_id values on both heads at once: one Gram positive cocci,
+# one Gram negative bacillus.
 COCci = "staphylococcus_aureus"
 BACILLI = "escherichia_coli"
 
 
 def _fake_rows(project_tmp_dir: Path, species_ids: list[str]) -> list[dict[str, str]]:
-    """Buat berkas citra palsu dan baris index yang menunjuknya."""
+    """Build fake image files and index rows pointing at them."""
     import cv2
 
     rows = []
@@ -55,7 +55,7 @@ def _fake_rows(project_tmp_dir: Path, species_ids: list[str]) -> list[dict[str, 
 
 
 def _fake_rows_with_split(project_tmp_dir: Path, species_ids: list[str]) -> list[dict[str, str]]:
-    """Baris index dengan pembagian train, val, dan test."""
+    """Index rows with a train, val, and test split."""
     rows = []
     for species_id in species_ids:
         split_rows = _fake_rows(project_tmp_dir, [species_id])
@@ -70,7 +70,7 @@ def _fake_rows_with_split(project_tmp_dir: Path, species_ids: list[str]) -> list
 
 
 def test_feature_store_roundtrip(tmp_path) -> None:
-    """Matriks fitur dan label harus pulih persis setelah disimpan."""
+    """The feature matrix and labels must come back exactly after saving."""
     matrix = np.arange(12 * FEATURE_DIM, dtype=np.float32).reshape(12, FEATURE_DIM)
     species = [f"s{i % 3}" for i in range(12)]
     splits = ["train"] * 8 + ["val"] * 2 + ["test"] * 2
@@ -86,7 +86,7 @@ def test_feature_store_roundtrip(tmp_path) -> None:
 
 
 def test_feature_store_validates_dimension(tmp_path) -> None:
-    """Dimensi fitur yang salah harus ditolak."""
+    """A wrong feature dimension must be rejected."""
     store = FeatureStore(np.zeros((3, 7), dtype=np.float32), ["a", "b", "c"], [], [])
     save_feature_store(store, tmp_path / "store")
 
@@ -95,7 +95,7 @@ def test_feature_store_validates_dimension(tmp_path) -> None:
 
 
 def test_feature_store_validates_length_mismatch(tmp_path) -> None:
-    """Jumlah label harus sama dengan jumlah baris fitur."""
+    """The label count must equal the feature row count."""
     store = FeatureStore(np.zeros((3, FEATURE_DIM), dtype=np.float32), ["a"], [], [])
     save_feature_store(store, tmp_path / "store")
 
@@ -104,13 +104,13 @@ def test_feature_store_validates_length_mismatch(tmp_path) -> None:
 
 
 def test_feature_store_missing_raises(tmp_path) -> None:
-    """Feature store yang belum ada harus ditolak dengan pesan jelas."""
+    """A missing feature store must be rejected with a clear message."""
     with pytest.raises(FileNotFoundError):
         load_feature_store(tmp_path / "belum_ada")
 
 
 def test_extract_features_dimension(project_tmp_dir: Path) -> None:
-    """Ekstraksi harus menghasilkan vektor 2048-d per citra."""
+    """Extraction must produce a 2048-d vector per image."""
     from bacteriacv.model import build_model
 
     rows = _fake_rows(project_tmp_dir, ["escherichia_coli"])
@@ -123,7 +123,7 @@ def test_extract_features_dimension(project_tmp_dir: Path) -> None:
 
 
 def test_extract_features_with_augment_multiplies_train_rows(project_tmp_dir: Path) -> None:
-    """Augmentasi menambah baris hanya untuk data latih."""
+    """Augmentation adds rows only for the train data."""
     from bacteriacv.model import build_model
 
     rows = _fake_rows_with_split(project_tmp_dir, ["escherichia_coli"])
@@ -138,7 +138,7 @@ def test_extract_features_with_augment_multiplies_train_rows(project_tmp_dir: Pa
 
 
 def test_extract_features_skips_val_and_test(project_tmp_dir: Path) -> None:
-    """Validasi dan uji harus diekstrak tepat satu kali tanpa augmentasi."""
+    """Validation and test must be extracted exactly once, without augmentation."""
     from bacteriacv.model import build_model
 
     rows = _fake_rows_with_split(project_tmp_dir, ["escherichia_coli"])
@@ -156,11 +156,11 @@ def test_extract_features_skips_val_and_test(project_tmp_dir: Path) -> None:
 
 
 def test_extract_features_is_deterministic_without_augment(project_tmp_dir: Path) -> None:
-    """Tanpa augmentasi, ekstraksi dua kali atas model sama harus identik.
+    """Without augmentation, extracting twice with the same model must be identical.
 
-    Model yang sama dipakai dua kali, bukan dua model berbeda. Dengan
-    pretrained=False bobot backbone diacak, sehingga dua model terpisah
-    memberi fitur berbeda meski citra dan pipeline-nya sama.
+    The same model is used twice, not two different models. With
+    pretrained=False the backbone weights are random, so two separate models
+    give different features even for the same image and pipeline.
     """
     from bacteriacv.model import build_model
 
@@ -173,11 +173,11 @@ def test_extract_features_is_deterministic_without_augment(project_tmp_dir: Path
     assert np.array_equal(first.matrix, second.matrix)
 
 
-# --- Cache fitur ---
+# --- Feature cache ---
 
 
 def test_cache_signature_is_stable(project_tmp_dir: Path) -> None:
-    """Sidik jari cache tidak berubah tanpa perubahan pada citra."""
+    """The cache fingerprint must not change without a change to the image."""
     from bacteriacv.train import cache_signature
 
     rows = _fake_rows(project_tmp_dir, ["escherichia_coli"])
@@ -188,7 +188,7 @@ def test_cache_signature_is_stable(project_tmp_dir: Path) -> None:
 
 
 def test_cache_signature_changes_with_augment_flag(project_tmp_dir: Path) -> None:
-    """Bendera augmentasi harus masuk sidik jari cache."""
+    """The augmentation flag must enter the cache fingerprint."""
     from bacteriacv.train import cache_signature
 
     rows = _fake_rows(project_tmp_dir, ["escherichia_coli"])
@@ -199,7 +199,7 @@ def test_cache_signature_changes_with_augment_flag(project_tmp_dir: Path) -> Non
 
 
 def test_cache_signature_changes_when_image_is_touched(project_tmp_dir: Path) -> None:
-    """Mengubah isi citra harus membatalkan cache."""
+    """Changing the image content must invalidate the cache."""
     import cv2
 
     from bacteriacv.train import cache_signature
@@ -216,11 +216,11 @@ def test_cache_signature_changes_when_image_is_touched(project_tmp_dir: Path) ->
 
 
 def test_build_or_load_features_reuses_cache(project_tmp_dir: Path, tmp_path: Path) -> None:
-    """Panggilan kedua harus membaca cache, bukan ekstrak ulang.
+    """The second call must read the cache, not extract again.
 
-    Cara membuktikannya adalah mengganti bobot backbone di antara dua
-    panggilan. Bila ekstraksi diulang, fitur berubah; bila cache dipakai,
-    fitur tetap sama.
+    The way to prove it is to swap the backbone weights between the two calls.
+    If the extraction re-runs the features change; if the cache is used they
+    stay the same.
     """
     from bacteriacv.model import build_model
     from bacteriacv.train import build_or_load_features
@@ -244,11 +244,11 @@ def test_build_or_load_features_reuses_cache(project_tmp_dir: Path, tmp_path: Pa
     assert first.paths == second.paths
 
 
-# --- Loop pelatihan ---
+# --- Training loop ---
 
 
 def test_train_config_defaults_are_sane() -> None:
-    """Konfigurasi pelatihan harus berada di rentang bermakna."""
+    """The training configuration must sit in a meaningful range."""
     config = TrainConfig()
 
     assert config.epochs > 0
@@ -259,16 +259,16 @@ def test_train_config_defaults_are_sane() -> None:
 
 
 def _separable_store(n_train: int = 40, n_eval: int = 20) -> FeatureStore:
-    """Feature store yang mudah dipisah kedua head.
+    """A feature store the two heads can separate cleanly.
 
-    Spesies memakai species_id sungguhan dari lookup table, karena label kedua
-    head diturunkan dari tabel itu dan bukan dari nama kelas buatan.
-    staphylococcus_aureus adalah cocci positif, escherichia_coli adalah
-    bacilli negatif, sehingga kedua head punya signal yang mudah dipisah.
+    The species use real species_id values from the lookup table, because the
+    second head labels come from that table rather than from invented class names.
+    staphylococcus_aureus is a Gram positive cocci and escherichia_coli is a
+    Gram negative bacillus, so both heads get a signal that separates cleanly.
 
-    Setiap split harus memuat kedua kelas. Split satu kelas membuat F1 makro
-    tidak pernah melewati 0,5 apa pun hasil belajarnya, karena kelas yang
-    absen di sebenarnya maupun prediksi diberi skor nol.
+    Every split must hold both classes. A single class split makes the macro F1
+    never rise above 0.5 whatever the training does, because a class absent from
+    both truth and prediction scores zero.
     """
     rng = np.random.default_rng(11)
     half_train = n_train // 2
@@ -308,7 +308,7 @@ def _separable_store(n_train: int = 40, n_eval: int = 20) -> FeatureStore:
 
 
 def test_train_learns_separable_data(tmp_path: Path) -> None:
-    """Data yang mudah dipisah harus menghasilkan F1 validasi tinggi."""
+    """Easily separable data must give a high validation F1."""
     store = _separable_store()
 
     report = train(store, TrainConfig(epochs=40, patience=10, seed=0, checkpoint_dir=tmp_path))
@@ -318,7 +318,7 @@ def test_train_learns_separable_data(tmp_path: Path) -> None:
 
 
 def test_train_reports_shape_and_gram_metrics(tmp_path: Path) -> None:
-    """Laporan harus memuat metrik untuk kedua head."""
+    """The report must carry the metrics of both heads."""
     report = train(_separable_store(), TrainConfig(epochs=5, patience=3, seed=0, checkpoint_dir=tmp_path))
 
     assert 0.0 <= report.test_f1_shape[0] <= 1.0
@@ -328,7 +328,7 @@ def test_train_reports_shape_and_gram_metrics(tmp_path: Path) -> None:
 
 
 def test_train_evaluates_test_once(tmp_path: Path) -> None:
-    """Data uji hanya boleh dievaluasi sekali, yaitu di akhir."""
+    """The test data may only be evaluated once, at the end."""
     report = train(_separable_store(), TrainConfig(epochs=5, patience=3, seed=0, checkpoint_dir=tmp_path))
 
     assert len(report.test_f1_shape) == 1
@@ -336,7 +336,7 @@ def test_train_evaluates_test_once(tmp_path: Path) -> None:
 
 
 def test_train_uses_early_stopping(tmp_path: Path) -> None:
-    """Pelatihan harus berhenti sebelum batas epoch bila validasi membaik."""
+    """Training must stop before the epoch limit when validation improves."""
     report = train(_separable_store(), TrainConfig(epochs=200, patience=5, seed=0, checkpoint_dir=tmp_path))
 
     assert report.epochs_run < 200
@@ -344,7 +344,7 @@ def test_train_uses_early_stopping(tmp_path: Path) -> None:
 
 
 def test_train_records_history(tmp_path: Path) -> None:
-    """Riwayat per epoch harus tercatat."""
+    """The per epoch history must be recorded."""
     report = train(_separable_store(), TrainConfig(epochs=5, patience=3, seed=0, checkpoint_dir=tmp_path))
 
     assert len(report.history) == report.epochs_run
@@ -354,16 +354,16 @@ def test_train_records_history(tmp_path: Path) -> None:
 
 
 def test_report_dict_has_no_absolute_paths(tmp_path: Path) -> None:
-    """Laporan pelatihan hanya boleh memuat nama berkas dan nama folder.
+    """The training report may only carry filenames and folder names.
 
-    training_report.json ikut ter-deploy karena tercantum di baris negasi
-    .gitignore. Path absolut di dalamnya membocorkan struktur folder mesin
-    pembangun dan melanggar AGENT.md bagian 3 aturan 5. Kedua key ini tidak
-    pernah diuji sebelumnya karena seluruh assertion bekerja pada objek
-    TrainingReport di memori, bukan pada hasil serialisasi.
+    training_report.json is deployed because it is listed in a negation line
+    in .gitignore. An absolute path inside it leaks the folder structure of the
+    build machine and breaks AGENT.md section 3 rule 5. Neither key was tested
+    before, because every assertion worked on the TrainingReport object in
+    memory rather than on the serialised result.
 
-    tmp_path dipakai sebagai checkpoint_dir supaya tes membuktikan direktori
-    dibuang, bukan kebetulan nama foldernya memang tanpa direktori.
+    tmp_path is used as the checkpoint_dir so the test proves the directory is
+    stripped, rather than the folder name happening to have none.
     """
     target = tmp_path / "checkpoints"
     report = train(
@@ -378,11 +378,11 @@ def test_report_dict_has_no_absolute_paths(tmp_path: Path) -> None:
 
 
 def test_report_dict_paths_have_no_path_syntax(tmp_path: Path) -> None:
-    """Nilai path pada laporan tidak boleh memuat sisa sintaks path.
+    """The path values in the report must carry no leftover path syntax.
 
-    Pemeriksaan dipisah agar setiap kelas kesalahan ditangkap oleh assertion
-    sendiri: pemisah POSIX, pemisah Windows, dan huruf drive. Path di bawah
-    sengaja berlapis supaya tes tidak lulus karena kebetulan.
+    The checks are split so each error class is caught by its own assertion:
+    POSIX separators, Windows separators, and a drive letter. The path below
+    is deliberately nested so the test cannot pass by accident.
     """
     nested = tmp_path / "a" / "b" / "checkpoints"
     nested.mkdir(parents=True)
@@ -404,11 +404,11 @@ def test_report_dict_paths_have_no_path_syntax(tmp_path: Path) -> None:
 
 
 def test_report_dict_is_json_serializable_without_paths(tmp_path: Path) -> None:
-    """Hasil to_dict harus tetap bisa diserialisasi ke JSON seperti biasa.
+    """The to_dict result must still serialise to JSON as usual.
 
-    to_dict mengganti objek Path menjadi teks karena JSON tidak punya tipe Path.
-    Tes ini memastikan penggantian itu tidak merusak bentuk JSON, sekaligus
-    memeriksa tidak ada path absolut yang ikut terbawa ke teks.
+    to_dict replaces Path objects with text because JSON has no Path type.
+    This test makes sure that substitution does not break the JSON shape and
+    also checks that no absolute path is carried into the text.
     """
     report = train(
         _separable_store(),
@@ -428,7 +428,7 @@ def test_report_dict_is_json_serializable_without_paths(tmp_path: Path) -> None:
 
 
 def test_train_rejects_missing_split() -> None:
-    """Split kosong harus ditolak sebelum pelatihan dimulai."""
+    """An empty split must be rejected before training starts."""
     store = FeatureStore(
         np.zeros((10, FEATURE_DIM), dtype=np.float32),
         [BACILLI] * 10,
@@ -441,10 +441,10 @@ def test_train_rejects_missing_split() -> None:
 
 
 def test_train_rejects_missing_species() -> None:
-    """Spesies di luar lookup harus ditolak.
+    """A species outside the lookup must be rejected.
 
-    Split sengaja dibuat lengkap supaya kegagalan benar-benar berasal dari
-    species_id, bukan dari pemeriksaan(split) yang berjalan lebih dulu.
+    The split is deliberately made complete so the failure really comes from the
+    species_id and not from the earlier check(split) call.
     """
     store = FeatureStore(
         np.zeros((3, FEATURE_DIM), dtype=np.float32),
@@ -458,7 +458,7 @@ def test_train_rejects_missing_species() -> None:
 
 
 def test_train_does_not_use_test_for_early_stopping(tmp_path: Path) -> None:
-    """Skor test tidak boleh memengaruhi epoch terbaik."""
+    """The test score must not influence the best epoch."""
     store = _separable_store()
 
     report = train(store, TrainConfig(epochs=8, patience=4, seed=0, checkpoint_dir=tmp_path))
@@ -469,7 +469,7 @@ def test_train_does_not_use_test_for_early_stopping(tmp_path: Path) -> None:
 
 
 def test_train_is_reproducible_with_same_seed(tmp_path: Path) -> None:
-    """Seed sama harus menghasilkan riwayat sama."""
+    """The same seed must produce the same history."""
     store = _separable_store()
 
     first = train(store, TrainConfig(epochs=5, patience=3, seed=7, checkpoint_dir=tmp_path))
@@ -481,10 +481,10 @@ def test_train_is_reproducible_with_same_seed(tmp_path: Path) -> None:
 
 
 def test_train_handles_class_imbalance_with_weights(tmp_path: Path) -> None:
-    """Data tidak seimbang harus tetap terklasifikasi.
+    """Unbalanced data must still be classified.
 
-    Rasio kelas 3 banding 1. Setiap split memuat kedua kelas supaya F1 makro
-    terdefinisi, dan posisi kelas minor disebar agar tidak cuma berada di uji.
+    A class ratio of 3 to 1. Every split holds both classes so the macro F1 is
+    defined, and the minority positions are spread so they sit partly in test.
     """
     rng = np.random.default_rng(5)
     blocks = [(75, 25, 0), (10, 3, 50), (5, 2, 63)]
@@ -519,7 +519,7 @@ def test_train_handles_class_imbalance_with_weights(tmp_path: Path) -> None:
 
 
 def test_train_checkpoint_can_be_reloaded(tmp_path: Path) -> None:
-    """Checkpoint hasil pelatihan harus dapat dimuat kembali."""
+    """The trained checkpoint must be loadable again."""
     from bacteriacv.model import build_model, load_checkpoint
 
     report = train(_separable_store(), TrainConfig(epochs=3, patience=2, seed=0, checkpoint_dir=tmp_path))
@@ -530,7 +530,7 @@ def test_train_checkpoint_can_be_reloaded(tmp_path: Path) -> None:
 
 
 def test_train_report_is_serializable(tmp_path: Path) -> None:
-    """Laporan harus dapat diubah menjadi JSON untuk disimpan."""
+    """The report must be convertible to JSON for saving."""
     import json
 
     report = train(_separable_store(), TrainConfig(epochs=3, patience=2, seed=0, checkpoint_dir=tmp_path))

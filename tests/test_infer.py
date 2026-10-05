@@ -1,4 +1,4 @@
-"""Tes untuk inferensi satu citra."""
+"""Tests for single image inference."""
 
 from __future__ import annotations
 
@@ -23,7 +23,7 @@ BAD_IMAGE = "catatan.txt"
 
 
 def _image(dark: bool = True) -> np.ndarray:
-    """Buat citra uji RGB."""
+    """Build a test RGB image."""
     array = np.full((240, 320, 3), 215, dtype=np.uint8)
     if dark:
         array[80:180, 90:230] = (20, 20, 220)
@@ -32,7 +32,7 @@ def _image(dark: bool = True) -> np.ndarray:
 
 @pytest.fixture()
 def checkpoint(tmp_path: Path) -> Path:
-    """Checkpoint head yang selalu terklasifikasi sebagai bacilli negatif."""
+    """A head checkpoint that always classifies as Gram negative bacilli."""
     model = build_model(pretrained=False)
     with torch.no_grad():
         model.head_a.weight.zero_()
@@ -46,42 +46,42 @@ def checkpoint(tmp_path: Path) -> Path:
 
 @pytest.fixture()
 def predictor(checkpoint: Path) -> Predictor:
-    """Predictor dengan bobot head yang sudah ditentukan."""
+    """A Predictor with predetermined head weights."""
     return Predictor(checkpoint)
 
 
 
-# --- Pemeriksaan suffix ---
+# --- Suffix check ---
 
 
 def test_check_suffix_accepts_allowed_suffixes() -> None:
-    """Semua ekstensi yang diizinkan harus diterima."""
+    """Every allowed extension must be accepted."""
     for suffix in ALLOWED_SUFFIXES:
         check_suffix(f"citra{suffix}")
 
 
 def test_check_suffix_is_case_insensitive() -> None:
-    """Ekstensi huruf besar harus tetap diterima."""
+    """An uppercase extension must still be accepted."""
     check_suffix("CITRA.PNG")
 
 
 def test_check_suffix_rejects_other_files() -> None:
-    """Berkas noncitra harus ditolak."""
+    """A non image file must be rejected."""
     with pytest.raises(ValueError, match="not supported"):
         check_suffix(BAD_IMAGE)
 
 
 def test_check_suffix_rejects_missing_suffix() -> None:
-    """Berkas tanpa ekstensi harus ditolak dengan pesan jelas."""
+    """A file without an extension must be rejected with a clear message."""
     with pytest.raises(ValueError, match="without extension"):
         check_suffix("namaberkas")
 
 
-# --- Prediksi ---
+# --- Prediction ---
 
 
 def test_predict_returns_labels_from_lookup(predictor: Predictor) -> None:
-    """Label harus memakai nama dari config, bukan angka indeks."""
+    """Labels must use the names from config, not index numbers."""
     prediction = predictor.predict(_image()).prediction
 
     assert prediction.shape_label in SHAPE_LABELS
@@ -89,7 +89,7 @@ def test_predict_returns_labels_from_lookup(predictor: Predictor) -> None:
 
 
 def test_predict_reports_confidence_in_range(predictor: Predictor) -> None:
-    """Confidence harus berada di rentang nol sampai satu."""
+    """Confidence must sit between zero and one."""
     prediction = predictor.predict(_image()).prediction
 
     assert 0.0 <= prediction.shape_confidence <= 1.0
@@ -99,10 +99,10 @@ def test_predict_reports_confidence_in_range(predictor: Predictor) -> None:
 def test_predict_confidence_is_probability_of_chosen_class(
     predictor: Predictor,
 ) -> None:
-    """Confidence Gram harus probabilitas kelas yang dipilih.
+    """Gram confidence must be the probability of the chosen class.
 
-    Kalau confidence dihitung dari ambang 0,5 tanpa membalik untuk kelas negatif,
-    nilai yang tampil ke pengguna bukan keyakinan model.
+    If the confidence were computed straight from the 0.5 threshold, without inverting
+    for the negative class, the figure shown to the user would not be the model's certainty.
     """
     prediction = predictor.predict(_image()).prediction
 
@@ -113,14 +113,14 @@ def test_predict_confidence_is_probability_of_chosen_class(
 
 
 def test_predict_shape_index_matches_label(predictor: Predictor) -> None:
-    """Indeks dan label bentuk harus konsisten."""
+    """The shape index and label must agree."""
     prediction = predictor.predict(_image()).prediction
 
     assert SHAPE_LABELS[prediction.shape_index] == prediction.shape_label
 
 
 def test_predict_marks_segmentation_as_not_validated(predictor: Predictor) -> None:
-    """Segmentasi tidak tervalidasi dan itu harus tercatat di hasil."""
+    """Segmentation is not validated and that must be recorded in the result."""
     prediction = predictor.predict(_image()).prediction
 
     assert prediction.segmentation_validated is False
@@ -128,7 +128,7 @@ def test_predict_marks_segmentation_as_not_validated(predictor: Predictor) -> No
 
 
 def test_predict_keeps_result_when_segmentation_fails(predictor: Predictor) -> None:
-    """Citra tanpa area gelap membuat segmentasi gagal, prediksi tetap ada."""
+    """An image without a dark area makes segmentation fail, prediction stays."""
     prediction = predictor.predict(_image(dark=False)).prediction
 
     assert prediction.segmentation_ok is False
@@ -137,14 +137,14 @@ def test_predict_keeps_result_when_segmentation_fails(predictor: Predictor) -> N
 
 
 def test_predict_attaches_five_panels(predictor: Predictor) -> None:
-    """Setiap prediksi harus membawa lima panel."""
+    """Every prediction must carry five panels."""
     result = predictor.predict(_image())
 
     assert len(result.visualization.panels) == 5
 
 
 def test_predict_records_stage_status(predictor: Predictor) -> None:
-    """Status tiap tahap harus ikut tersimpan."""
+    """The status of each stage must also be stored."""
     prediction = predictor.predict(_image()).prediction
 
     assert prediction.stages_ok["load"] is True
@@ -152,7 +152,7 @@ def test_predict_records_stage_status(predictor: Predictor) -> None:
 
 
 def test_predict_accepts_path(predictor: Predictor, tmp_path: Path) -> None:
-    """Praproses harus menerima path, bukan hanya array."""
+    """Preprocessing must accept a path, not only an array."""
     import cv2
 
     location = tmp_path / GOOD_IMAGE
@@ -164,13 +164,13 @@ def test_predict_accepts_path(predictor: Predictor, tmp_path: Path) -> None:
 
 
 def test_predict_rejects_missing_path(predictor: Predictor, tmp_path: Path) -> None:
-    """Path yang tidak ada harus ditolak dengan pesan jelas."""
+    """A path that does not exist must be rejected with a clear message."""
     with pytest.raises(FileNotFoundError):
         predictor.predict(tmp_path / "tidak_ada.png")
 
 
 def test_predict_many_returns_one_result_each(predictor: Predictor) -> None:
-    """predict_many harus mengembalikan satu hasil per citra."""
+    """predict_many must return one result per image."""
     results = predictor.predict_many([_image(), _image(dark=False), _image()])
 
     assert len(results) == 3
@@ -178,7 +178,7 @@ def test_predict_many_returns_one_result_each(predictor: Predictor) -> None:
 
 
 def test_predict_is_deterministic(predictor: Predictor) -> None:
-    """Citra sama harus menghasilkan prediksi sama."""
+    """The same image must produce the same prediction."""
     first = predictor.predict(_image()).prediction
     second = predictor.predict(_image()).prediction
 
@@ -187,13 +187,13 @@ def test_predict_is_deterministic(predictor: Predictor) -> None:
 
 
 def test_predictor_requires_existing_checkpoint(tmp_path: Path) -> None:
-    """Checkpoint yang tidak ada harus ditolak saat Predictor dibangun."""
+    """A missing checkpoint must be rejected when the Predictor is built."""
     with pytest.raises(FileNotFoundError):
         Predictor(tmp_path / "tidak_ada.pt")
 
 
 def test_prediction_is_json_serializable(predictor: Predictor) -> None:
-    """Prediksi harus dapat dikirim sebagai JSON ke antarmuka."""
+    """The prediction must be serialisable as JSON for the interface."""
     payload = predictor.predict(_image()).prediction.to_dict()
 
     restored = json.loads(json.dumps(payload))
@@ -203,7 +203,7 @@ def test_prediction_is_json_serializable(predictor: Predictor) -> None:
 
 
 def test_prediction_notes_never_claim_diagnosis(predictor: Predictor) -> None:
-    """Hasil harus selalu menyebut sifat alat bantu, bukan diagnosis."""
+    """The result must always state that this is an aid, not a diagnosis."""
     prediction = predictor.predict(_image()).prediction
 
     assert any("not a diagnosis" in note for note in prediction.notes)

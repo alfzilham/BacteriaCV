@@ -1,4 +1,4 @@
-"""Tes untuk model dua head dengan backbone beku."""
+"""Tests for the two head model with a frozen backbone."""
 
 from __future__ import annotations
 
@@ -17,7 +17,7 @@ from bacteriacv.model import BacteriaNet, build_model, load_state_dicts, predict
 
 
 def test_backbone_is_frozen() -> None:
-    """ARCHITECTURE C2: seluruh parameter backbone dibekukan."""
+    """ARCHITECTURE C2: every backbone parameter is frozen."""
     model = build_model(pretrained=False)
 
     backbone_parameters = list(model.backbone.parameters())
@@ -26,7 +26,7 @@ def test_backbone_is_frozen() -> None:
 
 
 def test_only_heads_are_trainable() -> None:
-    """Hanya head yang boleh diperbarui saat pelatihan."""
+    """Only the heads may be updated during training."""
     model = build_model(pretrained=False)
 
     trainable = [n for n, p in model.named_parameters() if p.requires_grad]
@@ -35,7 +35,7 @@ def test_only_heads_are_trainable() -> None:
 
 
 def test_head_a_output_dimension() -> None:
-    """Keputusan D1: Head A dua kelas bentuk."""
+    """Decision D1: Head A has two shape classes."""
     model = build_model(pretrained=False)
     features = torch.randn(8, FEATURE_DIM)
 
@@ -43,7 +43,7 @@ def test_head_a_output_dimension() -> None:
 
 
 def test_head_b_output_dimension() -> None:
-    """Head B dua kelas status Gram."""
+    """Head B has two Gram status classes."""
     model = build_model(pretrained=False)
     features = torch.randn(8, FEATURE_DIM)
 
@@ -51,7 +51,7 @@ def test_head_b_output_dimension() -> None:
 
 
 def test_head_a_softmax_sums_to_one() -> None:
-    """Head A memakai softmax, jadi probabilitasnya berjumlah satu."""
+    """Head A uses softmax, so its probabilities sum to one."""
     model = build_model(pretrained=False).eval()
     features = torch.randn(16, FEATURE_DIM)
 
@@ -63,7 +63,7 @@ def test_head_a_softmax_sums_to_one() -> None:
 
 
 def test_head_b_sigmoid_stays_in_range() -> None:
-    """Head B memakai sigmoid, jadi probabilitasnya di rentang 0 sampai 1."""
+    """Head B uses sigmoid, so its probabilities sit between 0 and 1."""
     model = build_model(pretrained=False).eval()
     features = torch.randn(16, FEATURE_DIM)
 
@@ -74,7 +74,7 @@ def test_head_b_sigmoid_stays_in_range() -> None:
 
 
 def test_heads_do_not_share_parameters() -> None:
-    """Dua head harus punya parameter terpisah."""
+    """The two heads must have separate parameters."""
     model = build_model(pretrained=False)
 
     a_ids = {id(p) for p in model.head_a.parameters()}
@@ -84,10 +84,10 @@ def test_heads_do_not_share_parameters() -> None:
 
 
 def test_backbone_stays_in_eval_mode_after_train() -> None:
-    """Memanggil train() tidak boleh mengubah backbone ke mode training.
+    """Calling train() must not put the backbone into training mode.
 
-    BatchNorm dan Dropout pada backbone akan mengubah statistik fitur bila
-    dibiarkan aktif.
+    BatchNorm and Dropout in the backbone would change the feature statistics if
+    they were left active.
     """
     model = build_model(pretrained=False)
 
@@ -98,7 +98,7 @@ def test_backbone_stays_in_eval_mode_after_train() -> None:
 
 
 def test_extract_features_dimension() -> None:
-    """Backbone menghasilkan vektor 2048-d sesuai ARCHITECTURE bagian 2."""
+    """The backbone yields a 2048-d vector per ARCHITECTURE section 2."""
     model = build_model(pretrained=False).eval()
     batch = torch.randn(2, 3, 224, 224)
 
@@ -109,7 +109,7 @@ def test_extract_features_dimension() -> None:
 
 
 def test_extract_features_does_not_build_graph() -> None:
-    """Ekstraksi fitur tidak boleh menyimpan graph komputasi."""
+    """Feature extraction must not keep the computation graph."""
     model = build_model(pretrained=False).eval()
     batch = torch.randn(2, 3, 224, 224)
 
@@ -119,7 +119,7 @@ def test_extract_features_does_not_build_graph() -> None:
 
 
 def test_predict_batch_returns_labels_and_confidence() -> None:
-    """predict_batch harus mengembalikan label dan confidence kedua head."""
+    """predict_batch must return the label and confidence of both heads."""
     model = build_model(pretrained=False).eval()
     features = torch.randn(6, FEATURE_DIM)
 
@@ -132,7 +132,7 @@ def test_predict_batch_returns_labels_and_confidence() -> None:
 
 
 def test_predict_batch_confidence_in_range() -> None:
-    """Confidence harus berada di rentang 0 sampai 1."""
+    """Confidence must sit between 0 and 1."""
     model = build_model(pretrained=False).eval()
     features = torch.randn(6, FEATURE_DIM)
 
@@ -143,7 +143,7 @@ def test_predict_batch_confidence_in_range() -> None:
 
 
 def test_predict_batch_shape_indices_are_valid() -> None:
-    """Indeks prediksi harus berada di dalam daftar label."""
+    """The predicted index must be inside the label list."""
     model = build_model(pretrained=False).eval()
     features = torch.randn(32, FEATURE_DIM)
 
@@ -154,7 +154,7 @@ def test_predict_batch_shape_indices_are_valid() -> None:
 
 
 def test_gram_confidence_matches_predicted_class() -> None:
-    """Confidence Head B harus sesuai probabilitas kelas yang dipilih."""
+    """Head B confidence must match the probability of the chosen class."""
     model = build_model(pretrained=False).eval()
     features = torch.randn(16, FEATURE_DIM)
 
@@ -166,7 +166,7 @@ def test_gram_confidence_matches_predicted_class() -> None:
 
 
 def test_shape_confidence_is_max_probability() -> None:
-    """Confidence Head A harus probabilitas terbesar."""
+    """Head A confidence must be the largest probability."""
     model = build_model(pretrained=False).eval()
     features = torch.randn(16, FEATURE_DIM)
 
@@ -178,10 +178,10 @@ def test_shape_confidence_is_max_probability() -> None:
 
 
 def test_state_dict_contains_only_heads() -> None:
-    """Checkpoint hanya menyimpan head, bukan backbone.
+    """The checkpoint stores only the heads, not the backbone.
 
-    Backbone diambil ulang dari torchvision, jadi menyimpannya membuat
-    checkpoint besar tanpa manfaat.
+    The backbone is reloaded from torchvision, so storing it would make the
+    checkpoint large for no benefit.
     """
     model = build_model(pretrained=False)
 
@@ -192,7 +192,7 @@ def test_state_dict_contains_only_heads() -> None:
 
 
 def test_state_dict_roundtrip_preserves_weights() -> None:
-    """Bobot harus pulih persis setelah disimpan dan dimuat."""
+    """The weights must come back exactly after saving and loading."""
     source = build_model(pretrained=False)
     state = source.head_state_dict()
 
@@ -206,7 +206,7 @@ def test_state_dict_roundtrip_preserves_weights() -> None:
 
 
 def test_load_state_dicts_rejects_missing_key() -> None:
-    """Checkpoint yang tidak lengkap harus ditolak."""
+    """An incomplete checkpoint must be rejected."""
     model = build_model(pretrained=False)
 
     with pytest.raises(RuntimeError):
@@ -214,12 +214,12 @@ def test_load_state_dicts_rejects_missing_key() -> None:
 
 
 def test_model_is_module() -> None:
-    """BacteriaNet harus berupa nn.Module agar bisa dilatih PyTorch."""
+    """BacteriaNet must be an nn.Module so PyTorch can train it."""
     assert issubclass(BacteriaNet, nn.Module)
 
 
 def test_pretrained_flag_changes_backbone_weights() -> None:
-    """Bendera pretrained harus benar-benar memuat bobot ImageNet."""
+    """The pretrained flag must genuinely load the ImageNet weights."""
     without = build_model(pretrained=False)
     with_weights = build_model(pretrained=True)
 

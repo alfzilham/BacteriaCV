@@ -1,4 +1,4 @@
-"""Tes untuk lookup table spesies ke bentuk sel dan status Gram."""
+"""Tests for the species lookup table of cell shape and Gram status."""
 
 from __future__ import annotations
 
@@ -27,19 +27,19 @@ from bacteriacv.label_map import (
 
 
 def test_lookup_covers_every_trainable_species() -> None:
-    """Semua spesies yang dilatih harus punya entri lookup."""
+    """Every trained species must have a lookup entry."""
     assert set(LOOKUP) == set(TRAINABLE_SPECIES_IDS)
     assert len(LOOKUP) == EXPECTED_TRAINABLE_COUNT == 32
 
 
 def test_lookup_excludes_candida() -> None:
-    """Candida albicans dikeluarkan dari pelatihan, jadi tidak ada di lookup."""
+    """Candida albicans is excluded from training, so it is not in the lookup."""
     assert "candida_albicans" not in LOOKUP
     assert not is_trainable("candida_albicans")
 
 
 def test_exclusion_reason_is_documented() -> None:
-    """Setiap spesies yang dikecualikan harus punya alasan tertulis."""
+    """Every excluded species must carry a written reason."""
     assert EXCLUDED_FROM_TRAINING
     for species_id in EXCLUDED_FROM_TRAINING:
         reason = exclusion_reason(species_id)
@@ -47,14 +47,14 @@ def test_exclusion_reason_is_documented() -> None:
 
 
 def test_lookup_values_are_valid() -> None:
-    """Nilai lookup harus berada di dalam label yang sah."""
+    """Lookup values must sit inside the valid labels."""
     for species_id, (shape, gram) in LOOKUP.items():
         assert shape in SHAPE_LABELS, f"{species_id}: {shape}"
         assert gram in GRAM_LABELS, f"{species_id}: {gram}"
 
 
 def test_no_spiral_species_in_lookup() -> None:
-    """DIBaS tidak punya spesies spiral, apa pun definisi SHAPE_LABELS."""
+    """DIBaS has no spiral species, whatever SHAPE_LABELS says."""
     from bacteriacv.config import SHAPE_LABELS_FULL, SHAPE_UNPOPULATED
 
     shapes = {shape for shape, _ in LOOKUP.values()}
@@ -64,43 +64,43 @@ def test_no_spiral_species_in_lookup() -> None:
 
 
 def test_bifidobacterium_is_gram_positive() -> None:
-    """Bifidobacterium sering salah dianggap Gram negatif karena namanya."""
+    """Bifidobacterium is often wrongly taken as Gram negative because of its name."""
     assert LOOKUP["bifidobacterium_spp"][1] == "positive"
 
 
 def test_actinomyces_is_gram_positive() -> None:
-    """Actinomyces adalah Gram positif, bukan negatif."""
+    """Actinomyces is Gram positive, not Gram negative."""
     assert LOOKUP["actinomyces_israelii"][1] == "positive"
 
 
 def test_all_lactobacillus_are_gram_positive() -> None:
-    """Seluruh Lactobacillus adalah Gram positif."""
+    """All Lactobacillus are Gram positive."""
     for species in TRAINABLE_SPECIES:
         if species.species_id.startswith("lactobacillus"):
             assert LOOKUP[species.species_id][1] == "positive", species.species_id
 
 
 def test_fusobacterium_is_bacillus_not_spiral() -> None:
-    """Fusobacterium fusiform, bukan spiral."""
+    """Fusobacterium is fusiform, not spiral."""
     assert LOOKUP["fusobacterium_spp"][0] == "bacilli"
 
 
 def test_neisseria_is_coccus_not_spiral() -> None:
-    """Neisseria diplococci, bukan spiral."""
+    """Neisseria is diplococci, not spiral."""
     assert LOOKUP["neisseria_gonorrhoeae"][0] == "cocci"
 
 
 def test_coccobacillus_mapped_to_bacilli() -> None:
-    """Acinetobacter dan Porphyromonas adalah coccobacillus, dipetakan ke bacilli."""
+    """Acinetobacter and Porphyromonas are coccobacilli, mapped to bacilli."""
     assert LOOKUP["acinetobacter_baumannii"][0] == "bacilli"
     assert LOOKUP["porphyromonas_gingivalis"][0] == "bacilli"
 
 
 def test_gram_negative_species_on_dibas() -> None:
-    """Spesies Gram negatif pada DIBaS mencakup kokus dan batang.
+    """The Gram negative species on DIBaS include both cocci and bacilli.
 
-    Neisseria gonorrhoeae dan Veillonella adalah kokus Gram negatif, sisanya
-    batang. Ini penting untuk laporan: tidak semua kokus adalah Gram positif.
+    Neisseria gonorrhoeae and Veillonella are Gram negative cocci, the rest are
+    bacilli. This matters for the report: not every cocci is Gram positive.
     """
     negative = {
         species_id: shape
@@ -114,24 +114,24 @@ def test_gram_negative_species_on_dibas() -> None:
 
 
 def test_johnsonii_variants_have_same_labels() -> None:
-    """Dua arsip johnsonii adalah spesies taksonom sama."""
+    """The two johnsonii archives are the same taxonomic species."""
     assert LOOKUP["lactobacillus_johnsonii_a"] == LOOKUP["lactobacillus_johnsonii_b"]
 
 
 def test_both_shape_classes_are_populated() -> None:
-    """Kedua kelas bentuk harus punya spesies, kalau tidak F1 makro tidak bermakna."""
+    """Both shape classes must have species, otherwise macro F1 means nothing."""
     shapes = {shape for shape, _ in LOOKUP.values()}
     assert shapes == set(SHAPE_LABELS), shapes
 
 
 def test_both_gram_classes_are_populated() -> None:
-    """Kedua kelas Gram harus punya spesies."""
+    """Both Gram classes must have species."""
     grams = {gram for _, gram in LOOKUP.values()}
     assert grams == set(GRAM_LABELS), grams
 
 
 def test_index_maps_are_reversible() -> None:
-    """Peta indeks ke label harus bisa dikembalikan ke label."""
+    """The index to label map must be reversible back to a label."""
     for label, index in SHAPE_TO_INDEX.items():
         assert SHAPE_LABELS[index] == label
     for label, index in GRAM_TO_INDEX.items():
@@ -139,55 +139,55 @@ def test_index_maps_are_reversible() -> None:
 
 
 def test_to_targets_converts_species_ids() -> None:
-    """to_targets harus mengubah species_id menjadi indeks numerik."""
+    """to_targets must turn species_id values into numeric indices."""
     shape, gram = to_targets(["escherichia_coli", "staphylococcus_aureus"])
     assert shape == [SHAPE_TO_INDEX["bacilli"], SHAPE_TO_INDEX["cocci"]]
     assert gram == [GRAM_TO_INDEX["negative"], GRAM_TO_INDEX["positive"]]
 
 
 def test_to_targets_handles_empty_list() -> None:
-    """Daftar kosong menghasilkan dua daftar kosong, bukan error."""
+    """An empty list yields two empty lists, not an error."""
     shape, gram = to_targets([])
     assert shape == []
     assert gram == []
 
 
 def test_to_targets_rejects_unknown_species() -> None:
-    """Spesies di luar tabel harus ditolak, bukan diam-diam dilewati."""
+    """Species outside the table must be rejected, not silently skipped."""
     with pytest.raises(KeyError):
         to_targets(["spesies_yang_tidak_ada"])
 
 
 def test_to_targets_rejects_candida() -> None:
-    """Candida tidak punya entri lookup, jadi harus ditolak."""
+    """Candida has no lookup entry, so it must be rejected."""
     with pytest.raises(KeyError):
         to_targets(["candida_albicans"])
 
 
 def test_unmapped_species_lists_unknowns() -> None:
-    """Spesies tak terpetakan harus bisa dilaporkan tanpa exception."""
+    """Unmapped species must be reportable without raising."""
     assert unmapped_species(["escherichia_coli", "bakteri_misterius"]) == [
         "bakteri_misterius"
     ]
 
 
 def test_unmapped_species_deduplicates() -> None:
-    """Spesies tak terpetaman yang sama tidak boleh diulang."""
+    """The same unmapped species must not be listed twice."""
     assert unmapped_species(["x", "x", "y"]) == ["x", "y"]
 
 
 def test_unmapped_species_on_full_dataset_returns_empty() -> None:
-    """Seluruh spesies trainable harus terpetakan."""
+    """Every trainable species must be mapped."""
     assert unmapped_species(list(TRAINABLE_SPECIES_IDS)) == []
 
 
 def test_excluded_from_lookup_reports_candida() -> None:
-    """Spesies yang dieksklusi harus dilaporkan sebagai tak terpetakan."""
+    """An excluded species must be reported as unmapped."""
     assert "candida_albicans" in excluded_from_lookup()
 
 
 def test_lookup_summary_counts_match_expected() -> None:
-    """Distribusi label harus cocok dengan hasil verifikasi manual."""
+    """The label distribution must match the manual verification result."""
     summary = lookup_summary()
     assert summary["total_species"] == 32
     assert summary["shape"]["bacilli"] == 23
@@ -197,11 +197,11 @@ def test_lookup_summary_counts_match_expected() -> None:
 
 
 def test_class_weights_upweight_minority_class() -> None:
-    """Kelas minor harus berbobot lebih besar daripada kelas majoritas.
+    """A minority class must get a larger weight than the majority.
 
-    Jaminan bahwa bobot hanya dihitung dari data latih tidak dapat diuji pada
-    level fungsi ini karena class_weights tidak menerima argumen split. Jaminan
-    itu diuji di level pemanggil, yaitu train.compute_class_weights.
+    That the weights come from train data only cannot be tested at this
+    function level because class_weights takes no split argument. That guarantee
+    is tested at the caller level, in train.compute_class_weights.
     """
     weights = class_weights([0, 0, 0, 0, 1, 1])
     assert len(weights) == N_SHAPE_CLASSES
@@ -210,7 +210,7 @@ def test_class_weights_upweight_minority_class() -> None:
 
 
 def test_class_weights_follow_sklearn_formula() -> None:
-    """Bobot mengikuti rumus sklearn: jumlah sampel dibagi (kelas x frekuensi)."""
+    """The weights follow the sklearn formula: samples divided by (class x frequency)."""
     targets = [0] * 8 + [1] * 2
     weights = class_weights(targets)
     expected = [len(targets) / (2 * 8), len(targets) / (2 * 2)]
@@ -219,33 +219,33 @@ def test_class_weights_follow_sklearn_formula() -> None:
 
 
 def test_class_weights_equal_for_balanced_data() -> None:
-    """Data seimbang memberi bobot sama untuk tiap kelas."""
+    """Balanced data gives every class the same weight."""
     weights = class_weights([0, 1, 0, 1])
     assert float(weights[0]) == pytest.approx(1.0)
     assert float(weights[1]) == pytest.approx(1.0)
 
 
 def test_class_weights_rejects_empty() -> None:
-    """Daftar target kosong tidak menghasilkan bobot yang masuk akal."""
+    """An empty target list yields no sensible weights."""
     with pytest.raises(ValueError):
         class_weights([])
 
 
 def test_class_weights_rejects_single_class() -> None:
-    """Hanya satu kelas tidak cukup untuk menghitung bobot tidak seimbang."""
+    """A single class is not enough to compute unbalanced weights."""
     with pytest.raises(ValueError):
         class_weights([0, 0, 0])
 
 
 def test_class_weights_respects_n_classes() -> None:
-    """Panjang bobot harus sama dengan jumlah kelas yang diminta."""
+    """The weight length must equal the requested class count."""
     weights = class_weights([0, 0, 1], n_classes=N_GRAM_CLASSES)
     assert weights.shape == (N_GRAM_CLASSES,)
     assert isinstance(weights, torch.Tensor)
 
 
 def test_class_weights_handles_missing_class() -> None:
-    """Kelas yang tidak muncul diberi bobot satu, bukan nol."""
+    """A class that does not appear gets a weight of one, not zero."""
     weights = class_weights([0, 0, 1], n_classes=3)
     assert weights.shape == (3,)
     assert float(weights[2]) == 1.0

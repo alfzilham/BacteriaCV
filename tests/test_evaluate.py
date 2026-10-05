@@ -1,4 +1,4 @@
-"""Tes untuk evaluasi checkpoint pada data uji."""
+"""Tests for checkpoint evaluation on the test data."""
 
 from __future__ import annotations
 
@@ -26,7 +26,7 @@ COCci = "staphylococcus_aureus"
 
 
 def _store_with_split(splits: list[str], species: list[str]) -> FeatureStore:
-    """Buat feature store dengan fitur yang mudah dipisah per spesies."""
+    """Build a feature store with features that separate cleanly per species."""
     matrix = np.zeros((len(splits), FEATURE_DIM), dtype=np.float32)
     for index, species_id in enumerate(species):
         matrix[index, :] = 1.0 if species_id == COCci else -1.0
@@ -34,10 +34,10 @@ def _store_with_split(splits: list[str], species: list[str]) -> FeatureStore:
 
 
 def _checkpoint(path: Path) -> Path:
-    """Buat checkpoint head yang memisahkan kedua kelas pada sumbu nol.
+    """Build a head checkpoint that separates both classes on the zero axis.
 
-    Bobot head dibuat manual supaya hasil evaluasi tidak bergantung pada
-    inisialisasi acak.
+    The head weights are set by hand so the evaluation result does not depend on
+    random initialisation.
     """
     model = build_model(pretrained=False)
     with torch.no_grad():
@@ -54,11 +54,11 @@ def _checkpoint(path: Path) -> Path:
 
 
 def test_confidence_is_reported_per_head(tmp_path: Path) -> None:
-    """Confidence harus dilaporkan terpisah untuk setiap head.
+    """Confidence must be reported separately for each head.
 
-    Confidence bentuk dan confidence Gram tidak bisa dijumlahkan. Keduanya
-    memakai skala dan basiskalibrasi yang berbeda, dan tidak ada kelas yang
-    menyatukan keduanya. Angka gabungan pernah menyesatkan sehingga tidak
+    The shape confidence and the Gram confidence cannot be added up. They use
+    different scales and different calibrations, and no class unifies them. A
+    combined figure has misled before, so it is gone from the report.
     lagi ada di laporan.
     """
     store = _store_with_split(
@@ -74,11 +74,11 @@ def test_confidence_is_reported_per_head(tmp_path: Path) -> None:
 
 
 def test_gram_confidence_is_probability_of_chosen_class(tmp_path: Path) -> None:
-    """Confidence Gram harus sesuai probabilitas kelas yang dipilih.
+    """Gram confidence must match the probability of the chosen class.
 
-    Untuk kelas negatif confidence harus 1 dikurangi probabilitas positif.
-    kalau confidence diambil dari probabilitas mentah tanpa membalik,
-    citra Gram negatif akan tampil sangat yakin secara salah.
+    For the negative class the confidence must be 1 minus the positive probability.
+    If the confidence were taken straight from the raw probability without
+    inverting it, a Gram negative image would look wrongly certain.
     """
     store = _store_with_split(["test", "test"], [COCci, BACILLI])
     checkpoint = _checkpoint(tmp_path / "heads.pt")
@@ -92,12 +92,12 @@ def test_gram_confidence_is_probability_of_chosen_class(tmp_path: Path) -> None:
 
 
 def test_gram_uses_sigmoid_not_softmax_over_both_columns(tmp_path: Path) -> None:
-    """Head B adalah klasifier satu logit, bukan dua kelas softmax.
+    """Head B is a single logit classifier, not a two class softmax.
 
-    Kolom keluaran pertama tidak pernah masuk loss BCEWithLogitsLoss, jadi
-    tidak membawa informasi yang dipelajari. Softmax atas dua kolom akan
-    mencampur logit yang dilatih dengan logit yang hanya mengalami weight
-    decay. Tes ini mengunci pilihan sigmoid pada kolom kedua.
+    The first output column never enters the BCEWithLogitsLoss, so it carries no
+    learned information. A softmax over two columns would mix the trained logit
+    with one that only experiences weight decay. This test locks the choice of
+    sigmoid on the second column.
     """
     store = _store_with_split(["test", "test"], [COCci, BACILLI])
     checkpoint = _checkpoint(tmp_path / "heads.pt")
@@ -111,15 +111,15 @@ def test_gram_uses_sigmoid_not_softmax_over_both_columns(tmp_path: Path) -> None
 
 
 def test_report_checkpoint_contains_only_file_name(tmp_path: Path) -> None:
-    """Laporan hanya boleh memuat nama berkas checkpoint, bukan path.
+    """The report may only carry the checkpoint filename, not a path.
 
-    evaluation.json ikut ter-deploy dan dibaca siapa pun lewat /api/report.
-    Path absolut di dalamnya membocorkan struktur folder mesin pembangun, dan
-    melanggar AGENT.md bagian 3 aturan 5. Field ini pernah ditulis tanpa satu pun assertion yang membacanya, sehingga
-    kebocorannya lolos seluruh audit sebelumnya.
+    evaluation.json is deployed and read by anyone through /api/report. An
+    absolute path inside it leaks the folder structure of the build machine and
+    breaks AGENT.md section 3 rule 5. This field was once written without a single
+    assertion reading it, so the leak passed every earlier audit.
 
-    Path di bawah sengaja punya subdirektori supaya tes membuktikan direktori
-    dibuang, bukan kebetulan nama berkasnya memang tanpa direktori.
+    The path below deliberately has a subdirectory so the test proves the
+    directory is stripped, rather than the filename happening to have none.
     """
     nested = tmp_path / "sub"
     nested.mkdir()
@@ -132,11 +132,11 @@ def test_report_checkpoint_contains_only_file_name(tmp_path: Path) -> None:
 
 
 def test_report_checkpoint_has_no_path_syntax(tmp_path: Path) -> None:
-    """Nama berkas checkpoint tidak boleh memuat sisa sintaks path.
+    """The checkpoint filename must not carry leftover path syntax.
 
-    Empat pemeriksaan terpisah karena masing-masing mewakili kelas kesalahan
-    yang berbeda: separator POSIX, pemisah Windows, huruf drive, dan bentuk
-    path relatif maupun absolut yang menyamar.
+    Four separate checks, because each covers a different error class: POSIX
+    separators, Windows separators, a drive letter, and disguised relative or
+    absolute path shapes.
     """
     nested = tmp_path / "sub"
     nested.mkdir()
@@ -156,10 +156,10 @@ def test_report_checkpoint_has_no_path_syntax(tmp_path: Path) -> None:
 
 
 def test_confidence_does_not_change_accuracy(tmp_path: Path) -> None:
-    """Perubahan cara menghitung confidence tidak boleh mengubah label.
+    """Changing how the confidence is computed must not change the labels.
 
-    Confidence dan akurasi dihitung dari logit yang sama, jadi akurasi harus
-    tetap sama persis setelah confidence dipisah per head.
+    The confidence and the accuracy come from the same logit, so the accuracy
+    must stay exactly the same once the confidence is split per head.
     """
     store = _store_with_split(
         ["train", "test", "test", "test"], [BACILLI, COCci, BACILLI, BACILLI]
@@ -173,11 +173,11 @@ def test_confidence_does_not_change_accuracy(tmp_path: Path) -> None:
     assert report["mean_confidence_shape"] >= report["mean_confidence_gram"]
 
 
-# --- Metrik dasar ---
+# --- Basic metrics ---
 
 
 def test_confusion_matrix_counts_pairs() -> None:
-    """Matriks kebingungan harus menghitung pasangan benar dan salah."""
+    """The confusion matrix must count the correct and incorrect pairs."""
     truth = np.array([0, 0, 1, 1])
     prediction = np.array([0, 1, 1, 1])
 
@@ -185,7 +185,7 @@ def test_confusion_matrix_counts_pairs() -> None:
 
 
 def test_confusion_matrix_handles_three_classes() -> None:
-    """Kelas yang tidak muncul harus tetap punya baris dan kolom nol."""
+    """A class that does not appear must still get a zero row and column."""
     truth = np.array([0, 2, 2])
     prediction = np.array([0, 2, 0])
 
@@ -193,7 +193,7 @@ def test_confusion_matrix_handles_three_classes() -> None:
 
 
 def test_per_class_metrics_reports_perfect_prediction() -> None:
-    """Prediksi sempurna harus memberi F1 satu untuk tiap kelas."""
+    """A perfect prediction must give an F1 of one for every class."""
     truth = np.array([0, 0, 1, 1])
     prediction = np.array([0, 0, 1, 1])
 
@@ -206,10 +206,10 @@ def test_per_class_metrics_reports_perfect_prediction() -> None:
 
 
 def test_per_class_metrics_marks_missing_class_as_zero() -> None:
-    """Kelas yang absen di sebenarnya dan prediksi harus dapat skor nol.
+    """A class absent from both truth and prediction must be able to score zero.
 
-    Kalau kelas kosong diberi F1 satu, F1 makro pada split satu kelas akan
-    selalu maximal dan tidak bisa dipakai sebagai sinyal early stopping.
+    If the empty class were given an F1 of one, the macro F1 on a single class
+    split would always be maximal and useless as an early stopping signal.
     """
     truth = np.array([0, 0])
     prediction = np.array([0, 0])
@@ -222,10 +222,10 @@ def test_per_class_metrics_marks_missing_class_as_zero() -> None:
 
 
 def test_evaluate_head_aggregates() -> None:
-    """evaluate_head harus merangkum F1 makro, akurasi, dan support.
+    """evaluate_head must summarise macro F1, accuracy, and support.
 
-    Seribu satu baris data uji: tiga kelas 0, tiga kelas 1, satu salah klas
-    di masing-masing arah. Kelas 0 F1 4/5, kelas 1 F1 6/7.
+    One thousand one row of test data: three class 0, three class 1, and one
+    misclassification in each direction. Class 0 F1 4/5, class 1 F1 6/7.
     """
     truth = np.array([0, 0, 0, 1, 1, 1])
     prediction = np.array([0, 0, 1, 1, 1, 1])
@@ -239,11 +239,11 @@ def test_evaluate_head_aggregates() -> None:
     assert metrics.confusion == [[2, 1], [0, 3]]
 
 
-# --- Pemilihan split ---
+# --- Split selection ---
 
 
 def test_select_split_returns_positions() -> None:
-    """select_split harus mengembalikan indeks baris split tersebut."""
+    """select_split must return the row indices of that split."""
     store = _store_with_split(
         ["train", "train", "val", "test", "test"], [BACILLI, BACILLI, BACILLI, COCci, BACILLI]
     )
@@ -253,18 +253,18 @@ def test_select_split_returns_positions() -> None:
 
 
 def test_select_split_rejects_empty_split() -> None:
-    """Split tanpa baris harus ditolak."""
+    """A split with no rows must be rejected."""
     store = _store_with_split(["train", "train"], [BACILLI, COCci])
 
     with pytest.raises(ValueError, match="test"):
         select_split(store, "test")
 
 
-# --- Ringkasan per spesies ---
+# --- Per species summary ---
 
 
 def test_species_breakdown_uses_lookup_labels() -> None:
-    """Baris per spesies harus memakai label dari lookup table."""
+    """The per species rows must use the labels from the lookup table."""
     species = [COCci, COCci, BACILLI]
     correct = np.array([True, True, False])
     predictions = np.array([0, 0, 0])
@@ -285,7 +285,7 @@ def test_species_breakdown_uses_lookup_labels() -> None:
 
 
 def test_species_breakdown_counts_both_shapes_under_one_species() -> None:
-    """Satu spesies boleh punya dua predisi berbeda."""
+    """One species may have two different predictions."""
     species = [BACILLI, BACILLI, BACILLI]
     correct = np.array([True, False, False])
     predictions = np.array([1, 0, 0])
@@ -299,7 +299,7 @@ def test_species_breakdown_counts_both_shapes_under_one_species() -> None:
 
 
 def test_evaluate_checkpoint_perfect_model(tmp_path: Path) -> None:
-    """Checkpoint yang memisahkan kelas harus mendapat F1 dan akurasi satu."""
+    """A checkpoint that separates the classes must get an F1 and accuracy of one."""
     store = _store_with_split(
         ["train", "train", "test", "test"], [BACILLI, BACILLI, COCci, BACILLI]
     )
@@ -317,7 +317,7 @@ def test_evaluate_checkpoint_perfect_model(tmp_path: Path) -> None:
 
 
 def test_evaluate_checkpoint_only_touches_requested_split(tmp_path: Path) -> None:
-    """Baris di luar split tidak boleh memengaruhi hasil."""
+    """Rows outside the split must not affect the result."""
     store = _store_with_split(
         ["test", "test", "train"], [COCci, BACILLI, COCci]
     )
@@ -330,7 +330,7 @@ def test_evaluate_checkpoint_only_touches_requested_split(tmp_path: Path) -> Non
 
 
 def test_evaluate_checkpoint_reports_missing_checkpoint(tmp_path: Path) -> None:
-    """Checkpoint yang tidak ada harus ditolak."""
+    """A checkpoint that does not exist must be rejected."""
     store = _store_with_split(["test", "test"], [COCci, BACILLI])
 
     with pytest.raises(FileNotFoundError):
@@ -338,7 +338,7 @@ def test_evaluate_checkpoint_reports_missing_checkpoint(tmp_path: Path) -> None:
 
 
 def test_evaluate_checkpoint_rejects_empty_split(tmp_path: Path) -> None:
-    """Split kosong harus ditolak sebelum memuat checkpoint."""
+    """An empty split must be rejected before the checkpoint is loaded."""
     store = _store_with_split(["train"], [BACILLI])
     checkpoint = _checkpoint(tmp_path / "heads.pt")
 
@@ -347,7 +347,7 @@ def test_evaluate_checkpoint_rejects_empty_split(tmp_path: Path) -> None:
 
 
 def test_evaluate_checkpoint_is_json_serializable(tmp_path: Path) -> None:
-    """Laporan harus bisa ditulis sebagai JSON apa adanya."""
+    """The report must be writable as JSON as it stands."""
     store = _store_with_split(
         ["train", "test", "test", "test"], [BACILLI, COCci, BACILLI, BACILLI]
     )
@@ -361,10 +361,10 @@ def test_evaluate_checkpoint_is_json_serializable(tmp_path: Path) -> None:
 
 
 def test_evaluate_checkpoint_mentions_unpopulated_shape_class(tmp_path: Path) -> None:
-    """Laporan harus menyebut kelas bentuk yang tidak terisi.
+    """The report must name the shape class that is unpopulated.
 
-    DIBaS tidak punya spesies spiral. Kalau kelas itu tidak disebut, pembaca
-    laporan bisa mengira evaluasi dijalankan pada tiga kelas.
+    DIBaS has no spiral species. If that class were not named, a reader of the
+    report could assume the evaluation ran on three classes.
     """
     store = _store_with_split(["test", "test"], [COCci, BACILLI])
     checkpoint = _checkpoint(tmp_path / "heads.pt")

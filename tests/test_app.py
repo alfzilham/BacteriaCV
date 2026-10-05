@@ -1,8 +1,8 @@
-"""Tes untuk antarmuka web BacteriaCV.
+"""Tests for the BacteriaCV web interface.
 
-Tes memakai TestClient FastAPI dengan checkpoint sementara. Checkpoint sengaja
-dibuat dengan bobot head yang ditentukan, bukan acak, supaya hasil prediksi
-dapat diassert tanpa bergantung pada inisialisasi.
+The tests use the FastAPI TestClient with a temporary checkpoint. The checkpoint is
+deliberately built with fixed head weights rather than random ones, so a prediction
+result can be asserted without depending on initialisation.
 """
 
 from __future__ import annotations
@@ -28,7 +28,7 @@ STATIC_DIR = REPO_ROOT / "app" / "static"
 
 
 def _png_bytes(dark: bool = True) -> bytes:
-    """Buat citra PNG di memori."""
+    """Build a PNG image in memory."""
     import cv2
 
     array = np.full((240, 320, 3), 215, dtype=np.uint8)
@@ -41,7 +41,7 @@ def _png_bytes(dark: bool = True) -> bytes:
 
 @pytest.fixture()
 def checkpoint(tmp_path: Path) -> Path:
-    """Checkpoint head yang terklasifikasi sebagai cocci positif."""
+    """A head checkpoint that always classifies as Gram positive cocci."""
     model = build_model(pretrained=False)
     with torch.no_grad():
         model.head_a.weight.zero_()
@@ -55,7 +55,7 @@ def checkpoint(tmp_path: Path) -> Path:
 
 @pytest.fixture()
 def client(checkpoint: Path):
-    """Klien uji dengan checkpoint sementara."""
+    """A test client with a temporary checkpoint."""
     import app.main as app_module
 
     application = app_module.create_app(checkpoint)
@@ -63,11 +63,11 @@ def client(checkpoint: Path):
         yield test_client
 
 
-# --- Halaman dan status ---
+# --- Page and status ---
 
 
 def test_index_page_is_served(client: TestClient) -> None:
-    """Halaman utama harus dapat dibuka."""
+    """The main page must open."""
     response = client.get("/")
 
     assert response.status_code == 200
@@ -75,7 +75,7 @@ def test_index_page_is_served(client: TestClient) -> None:
 
 
 def test_health_reports_checkpoint(client: TestClient) -> None:
-    """Endpoint status harus menyebut nama checkpoint yang dimuat."""
+    """The status endpoint must name the checkpoint that is loaded."""
     response = client.get("/api/health")
 
     assert response.status_code == 200
@@ -84,11 +84,11 @@ def test_health_reports_checkpoint(client: TestClient) -> None:
     assert response.json()["max_upload_bytes"] == MAX_UPLOAD_BYTES
 
 
-# --- Prediksi ---
+# --- Prediction ---
 
 
 def test_predict_returns_labels_confidence_and_panel(client: TestClient) -> None:
-    """Respons harus memuat prediksi, panel, dan catatan."""
+    """The response must carry the prediction, the panel, and the notes."""
     response = client.post(
         "/api/predict",
         files={"file": (GOOD_IMAGE, _png_bytes(), "image/png")},
@@ -104,7 +104,7 @@ def test_predict_returns_labels_confidence_and_panel(client: TestClient) -> None
 
 
 def test_predict_sends_five_panels_and_five_tabs(client: TestClient) -> None:
-    """Tombol alih tahap membutuhkan kelima panel dan judulnya."""
+    """The stage toggle needs all five panels and their titles."""
     response = client.post(
         "/api/predict",
         files={"file": (GOOD_IMAGE, _png_bytes(), "image/png")},
@@ -119,7 +119,7 @@ def test_predict_sends_five_panels_and_five_tabs(client: TestClient) -> None:
 
 
 def test_predict_honours_stage_query_parameter(client: TestClient) -> None:
-    """Parameter stage menentukan panel yang dikirim."""
+    """The stage parameter decides which panel is sent."""
     response = client.post(
         "/api/predict?stage=3",
         files={"file": (GOOD_IMAGE, _png_bytes(), "image/png")},
@@ -132,7 +132,7 @@ def test_predict_honours_stage_query_parameter(client: TestClient) -> None:
 
 
 def test_predict_always_states_segmentation_not_validated(client: TestClient) -> None:
-    """Catatan keterbatasan segmentasi harus ikut pada respons."""
+    """The segmentation limitation note must be in the response."""
     response = client.post(
         "/api/predict",
         files={"file": (GOOD_IMAGE, _png_bytes(), "image/png")},
@@ -146,7 +146,7 @@ def test_predict_always_states_segmentation_not_validated(client: TestClient) ->
 
 
 def test_predict_keeps_result_when_segmentation_fails(client: TestClient) -> None:
-    """Citra tanpa area gelap harus tetap terjawab."""
+    """An image without a dark area must still get an answer."""
     response = client.post(
         "/api/predict",
         files={"file": (GOOD_IMAGE, _png_bytes(dark=False), "image/png")},
@@ -160,7 +160,7 @@ def test_predict_keeps_result_when_segmentation_fails(client: TestClient) -> Non
 
 
 def test_predict_rejects_non_image_suffix(client: TestClient) -> None:
-    """Berkas noncitra harus ditolak dengan kode 415."""
+    """A non image file must be rejected with code 415."""
     response = client.post(
         "/api/predict",
         files={"file": (BAD_SUFFIX, b"bukan citra", "text/plain")},
@@ -171,7 +171,7 @@ def test_predict_rejects_non_image_suffix(client: TestClient) -> None:
 
 
 def test_predict_rejects_empty_file(client: TestClient) -> None:
-    """Berkas kosong harus ditolak dengan kode 400."""
+    """An empty file must be rejected with code 400."""
     response = client.post(
         "/api/predict",
         files={"file": (GOOD_IMAGE, b"", "image/png")},
@@ -181,7 +181,7 @@ def test_predict_rejects_empty_file(client: TestClient) -> None:
 
 
 def test_predict_rejects_unreadable_image(client: TestClient) -> None:
-    """Payload PNG rusak harus ditolak dengan kode 400."""
+    """A broken PNG payload must be rejected with code 400."""
     response = client.post(
         "/api/predict",
         files={"file": (GOOD_IMAGE, b"bukan png sama sekali", "image/png")},
@@ -192,7 +192,7 @@ def test_predict_rejects_unreadable_image(client: TestClient) -> None:
 
 
 def test_predict_rejects_oversized_file(client: TestClient) -> None:
-    """Berkas melebihi batas harus ditolak dengan kode 413."""
+    """A file over the limit must be rejected with code 413."""
     oversized = b"\x00" * (MAX_UPLOAD_BYTES + 1024)
 
     response = client.post(
@@ -204,7 +204,7 @@ def test_predict_rejects_oversized_file(client: TestClient) -> None:
 
 
 def test_predict_rejects_out_of_range_stage(client: TestClient) -> None:
-    """Stage di luar rentang harus ditolak."""
+    """A stage out of range must be rejected."""
     response = client.post(
         "/api/predict?stage=99",
         files={"file": (GOOD_IMAGE, _png_bytes(), "image/png")},
@@ -215,7 +215,7 @@ def test_predict_rejects_out_of_range_stage(client: TestClient) -> None:
 
 
 def test_predict_rejects_non_numeric_stage(client: TestClient) -> None:
-    """Stage bukan angka harus ditolak."""
+    """A stage that is not a number must be rejected."""
     response = client.post(
         "/api/predict?stage=abc",
         files={"file": (GOOD_IMAGE, _png_bytes(), "image/png")},
@@ -225,7 +225,7 @@ def test_predict_rejects_non_numeric_stage(client: TestClient) -> None:
 
 
 def test_predict_is_deterministic(client: TestClient) -> None:
-    """Citra sama harus menghasilkan prediksi sama."""
+    """The same image must produce the same prediction."""
     payload = _png_bytes()
 
     first = client.post(
@@ -239,11 +239,11 @@ def test_predict_is_deterministic(client: TestClient) -> None:
     assert first["shape_confidence"] == second["shape_confidence"]
 
 
-# --- Laporan evaluasi ---
+# --- Evaluation report ---
 
 
 def test_report_returns_404_before_evaluation(client: TestClient, monkeypatch) -> None:
-    """Laporan belum ada harus memberi 404, bukan error server."""
+    """A missing report must give 404, not a server error."""
     import app.main as app_module
 
     monkeypatch.setattr(app_module, "CHECKPOINT_DIR", REPO_ROOT / "tidak_ada")
@@ -256,7 +256,7 @@ def test_report_returns_404_before_evaluation(client: TestClient, monkeypatch) -
 def test_report_returns_evaluation_file(
     client: TestClient, tmp_path: Path, monkeypatch
 ) -> None:
-    """Laporan evaluasi harus disajikan apa adanya."""
+    """The evaluation report must be served as it stands."""
     import json
 
     import app.main as app_module
@@ -272,24 +272,24 @@ def test_report_returns_evaluation_file(
     assert response.json()["shape"]["f1_macro"] == 0.9
 
 
-# --- Kekhususan proyek ---
+# --- Project specifics ---
 
 
 def test_index_html_has_one_panel_with_toggle() -> None:
-    """DESIGN bagian 3: satu panel dengan tombol alih, bukan lima panel.
+    """DESIGN section 3: one panel with a toggle, not five panels.
 
-    Berkas harus punya tepat satu elemen img untuk panel dan satu wadah tombol
-    alih. Lima elemen img berarti desain satu-panel dilanggar.
+    The file must have exactly one img element for the panel and one toggle
+    container. Five img elements would break the one panel design.
     """
     page = (REPO_ROOT / "app" / "static" / "index.html").read_text(encoding="utf-8")
 
-    # Logo merek juga memakai <img> dan itu bukan panel, jadi yang dihitung
-    # adalah img selain logo. Jumlahnya tetap harus tepat satu.
+    # The brand logo also uses <img> and is not a panel, so what is counted
+    # is the img elements other than the logo. The count must still be one.
     images = re.findall(r"<img\b[^>]*>", page)
     panels = [tag for tag in images if 'class="brand-logo"' not in tag]
     assert len(panels) == 1, f"harus ada tepat satu img panel, ada {len(panels)}"
 
-    # Tanpa ini, dua img logo ikut tersaring dan hitungan panel tetap satu.
+    # Without this, two logo images are filtered out and the panel count stays one.
     logos = [tag for tag in images if 'class="brand-logo"' in tag]
     assert len(logos) == 1, f"harus ada tepat satu img logo, ada {len(logos)}"
 
@@ -298,16 +298,16 @@ def test_index_html_has_one_panel_with_toggle() -> None:
 
 
 def test_static_css_and_js_are_external_files() -> None:
-    """CSS dan JavaScript harus berada di berkas statis sendiri.
+    """CSS and JavaScript must live in their own static files.
 
-    Berkas main.css dan main.js wajib ada dan tidak kosong, index.html harus
-    merujuk keduanya lewat path absolut /static, dan tidak boleh ada blok
-    <style> atau <script> inline yang tertinggal.
+    The main.css and main.js files must exist and be non empty, index.html must
+    reference both through the absolute /static path, and no leftover inline
+    <style> or <script> block may remain.
 
-    Path absolut itu wajib: FastAPI memasang static di /static, sehingga
-    rujukan relatif seperti href="main.css" akan menghasilkan 404. Halaman
-    lalu tampil tanpa gaya dan tanpa interaksi, dan tidak ada tes lama yang
-    akan gagal karena itu.
+    The absolute path is required: FastAPI mounts static at /static, so a
+    relative reference such as href="main.css" returns 404. The page then
+    renders with no styling and no interaction, and no existing test would
+    fail because of it.
     """
     static_dir = REPO_ROOT / "app" / "static"
     css = static_dir / "main.css"
@@ -323,22 +323,22 @@ def test_static_css_and_js_are_external_files() -> None:
     assert '<link rel="stylesheet" href="/static/main.css">' in page
     assert '<script src="/static/main.js" defer></script>' in page
 
-    # Tidak ada blok inline. Satu-satunya tag script adalah rujukan eksternal,
-    # sehingga blok <script>...</script> yang berisi kode mustahil ada.
+    # No inline blocks. The only script tag is the external reference, so a
+    # <script>...</script> block holding code cannot exist.
     assert "<style" not in page
     assert page.count("<script") == 1
     assert "</script>" in page and "main.js" in page
 
 
-# Ambang kontras untuk komponen UI non-teks, bukan teks. Lihat DESIGN.md
-# bagian 2.1: scrollbar adalah komponen UI, jadi yang berlaku adalah
-# WCAG 1.4.11 Non-text Contrast dengan ambang 3:1, bukan WCAG 1.4.3 yang
-# 4,5:1 dan hanya berlaku untuk teks.
+# The contrast threshold for non text UI components, not for text. See
+# DESIGN.md section 2.1: the scrollbar is a UI component, so what applies
+# is WCAG 1.4.11 Non-text Contrast at a 3:1 threshold, not WCAG 1.4.3 which
+# is 4.5:1 and applies to text only.
 SCROLLBAR_MIN_CONTRAST = 3.0
 
 
 def _srgb_to_linear(channel: int) -> float:
-    """Linearisasi satu kanal sRGB 0-255, rumus WCAG 2.1."""
+    """Linearise one sRGB channel 0-255, the WCAG 2.1 formula."""
     c = channel / 255
     if c <= 0.03928:
         return c / 12.92
@@ -346,7 +346,7 @@ def _srgb_to_linear(channel: int) -> float:
 
 
 def _relative_luminance(hex_colour: str) -> float:
-    """Luminositas relatif WCAG dari warna hexRRGGBB."""
+    """The WCAG relative luminance of a #RRGGBB colour."""
     value = hex_colour.lstrip("#")
     r, g, b = (int(value[i:i + 2], 16) for i in (0, 2, 4))
     return (0.2126 * _srgb_to_linear(r)
@@ -355,7 +355,7 @@ def _relative_luminance(hex_colour: str) -> float:
 
 
 def _contrast_ratio(first: str, second: str) -> float:
-    """Rasio kontras WCAG (hi + 0.05) / (lo + 0.05)."""
+    """The WCAG contrast ratio (hi + 0.05) / (lo + 0.05)."""
     a = _relative_luminance(first)
     b = _relative_luminance(second)
     lighter, darker = max(a, b), min(a, b)
@@ -363,7 +363,7 @@ def _contrast_ratio(first: str, second: str) -> float:
 
 
 def _design_tokens(css: str) -> dict[str, str]:
-    """Kumpulkan setiap definisi --nama: nilai dari blok :root."""
+    """Collect every --name: value definition from the :root block."""
     root = re.search(r":root\s*\{([^}]*)\}", css)
     assert root, "blok :root tidak ditemukan di main.css"
     tokens = dict(re.findall(r"(--[a-z0-9-]+)\s*:\s*([^;]+);", root.group(1)))
@@ -372,9 +372,9 @@ def _design_tokens(css: str) -> dict[str, str]:
 
 
 def _resolve(value: str, tokens: dict[str, str], limit: int = 10) -> str:
-    """Ganti setiap var(--nama) dengan nilainya, berulang sampai tidak ada var().
+    """Replace every var(--name) with its value, repeating until no var() is left.
 
-    limit membatasi iterasi supaya token yang saling menunjuk tidak looping.
+    limit caps the iterations so tokens that point at each other cannot loop.
     """
     for _ in range(limit):
         if "var(" not in value:
@@ -388,9 +388,9 @@ def _resolve(value: str, tokens: dict[str, str], limit: int = 10) -> str:
 
 
 def _declared_value(css: str, selector: str, prop: str) -> str:
-    """Baca satu properti dari satu blok CSS, lalu resolve tokennya.
+    """Read one property from one CSS block, then resolve its tokens.
 
-    Lookbehind mencegah properti_background cocok dengan background-color.
+    The lookbehind stops property_background from matching background-color.
     """
     match = re.search(re.escape(selector) + r"\s*\{([^}]*)\}", css)
     assert match, f"blok {selector} tidak ditemukan di main.css"
@@ -400,7 +400,7 @@ def _declared_value(css: str, selector: str, prop: str) -> str:
 
 
 def _declared_background(css: str, selector: str) -> str:
-    """Nilai background dari satu blok CSS, setelah token var(--) di-resolve."""
+    """The background value of one CSS block, after var(--) resolution."""
     value = _declared_value(css, selector, "background")
     assert re.fullmatch(r"#[0-9A-Fa-f]{6}", value), (
         f"{selector} tidak menghasilkan warna hex, dapat {value!r}"
@@ -408,29 +408,29 @@ def _declared_background(css: str, selector: str) -> str:
     return value
 
 
-# Track #EAE8E3 hanya 1,11:1 terhadap latar halaman #F4F4F0, jadi tanpa
-# pembatas dia praktis tidak terlihat. Ambang pembatas memakai standar yang
-# sama seperti ambang thumb, yaitu 3:1.
+# The #EAE8E3 track is only 1.11:1 against the #F4F4F0 page background, so
+# without a delimiter it is practically invisible. The delimiter threshold
+# uses the same standard as the thumb threshold, namely 3:1.
 SCROLLBAR_TRACK_MIN_CONTRAST = 3.0
 
 
 def _colour_in_shorthand(shorthand: str) -> str:
-    """Ambil warna hex dari satu shorthand, misalnya "2px solid #050505"."""
+    """Take the hex colour out of one shorthand, for example "2px solid #050505"."""
     found = re.search(r"#[0-9A-Fa-f]{6}", shorthand)
     assert found, f"shorthand tidak memuat warna hex, dapat {shorthand!r}"
     return found.group(0)
 
 
 def test_scrollbar_track_has_visible_delimiter() -> None:
-    """Track scrollbar wajib punya pembatas yang kontrasnya minimal 3:1.
+    """The scrollbar track must have a delimiter of at least 3:1 contrast.
 
-    Track #EAE8E3 hanya 1,11:1 terhadap latar halaman #F4F4F0. Tanpa
-    pembatas, track menyatu dengan halaman dan hilang. Tes ini menuntut
-    adanya pembatas dan warnanya harus kontras minimal 3:1 terhadap track.
-
-    Tes ini sengaja tidak mengunci nilai pembatas. Kalau nanti track
-    digelapkan sebagai alternatif yang sah, cukup ganti pembatasnya; yang
-    tetap wajib adalah track itu punya pembatas yang terlihat.
+    The #EAE8E3 track is only 1.11:1 against the #F4F4F0 page background.
+    Without a delimiter the track merges into the page and disappears. This
+    test demands the delimiter exists and that its colour contrasts at least
+    3:1 against the track.
+    This test deliberately does not lock the delimiter value. If the track is
+    darkened later as a legitimate alternative, only the delimiter changes;
+    what stays required is that the track has a visible delimiter.
     """
     css = (REPO_ROOT / "app" / "static" / "main.css").read_text(encoding="utf-8")
 
@@ -463,22 +463,22 @@ def test_scrollbar_track_has_visible_delimiter() -> None:
 
 
 def test_webkit_scrollbar_contrast_is_enforced() -> None:
-    """Kontras scrollbar harus tetap di atas ambang 3:1.
+    """The scrollbar contrast must stay above the 3:1 threshold.
 
-    DESIGN.md bagian 2.1 menetapkan ambang 3:1 karena scrollbar adalah
-    komponen UI, bukan teks. Tes ini menghitung ulang rasionya dari
-    main.css supaya revisi UI berikutnya tidak bisa menurunkannya tanpa
+    DESIGN.md section 2.1 sets the 3:1 threshold because the scrollbar is a
+    UI component, not text. This test recomputes the ratio from
+    main.css so the next UI revision cannot lower it unnoticed.
     ketahuan.
 
-    Warna scrollbar ditulis sebagai var(--token), jadi nilainya dibaca lewat
-    resolver token, bukan hex mentah. Nilai yang harus terbaca setelah
-    di-resolve:
+    The scrollbar colours are written as var(--token), so the values are read
+    through the token resolver rather than as raw hex. The values that must
+    be readable after resolution:
       scrollbar-color #050505 #EAE8E3, track #EAE8E3, thumb #050505,
       hover #D31515.
     """
     css = (REPO_ROOT / "app" / "static" / "main.css").read_text(encoding="utf-8")
 
-    # 1. properti scrollbar-color pada blok html
+    # 1. the scrollbar-color property on the html block
     html_block = re.search(r"\bhtml\s*\{([^}]*)\}", css)
     assert html_block, "blok html tidak ditemukan di main.css"
     tokens = _design_tokens(css)
@@ -492,17 +492,17 @@ def test_webkit_scrollbar_contrast_is_enforced() -> None:
             f"scrollbar-color tidak menghasilkan warna hex, dapat {colour!r}"
         )
 
-    # 2. background track, thumb, dan hover
+    # 2. the background of track, thumb, and hover
     track = _declared_background(css, "::-webkit-scrollbar-track")
     thumb = _declared_background(css, "::-webkit-scrollbar-thumb")
     hover = _declared_background(css, "::-webkit-scrollbar-thumb:hover")
 
-    # 3. hitung rasio tiap pasangan
+    # 3. compute the ratio for each pair
     thumb_vs_track = _contrast_ratio(thumb, track)
     hover_vs_track = _contrast_ratio(hover, track)
     shorthand_vs_track = _contrast_ratio(shorthand_thumb, shorthand_track)
 
-    # 4. tegakkan ambang 3:1
+    # 4. enforce the 3:1 threshold
     for label, ratio in (
         (f"thumb {thumb} di track {track}", thumb_vs_track),
         (f"hover {hover} di track {track}", hover_vs_track),
@@ -513,8 +513,8 @@ def test_webkit_scrollbar_contrast_is_enforced() -> None:
             f"{SCROLLBAR_MIN_CONTRAST}:1"
         )
 
-    # Firefox dan WebKit harus memakai pasangan warna yang sama, kalau tidak
-    # scrollbar akan berubah tampilan antarperamban.
+    # Firefox and WebKit must use the same colour pair, otherwise the
+    # scrollbar would look different across browsers.
     assert shorthand_thumb.lower() == thumb.lower(), (
         f"scrollbar-color {shorthand_thumb} tidak sama dengan thumb WebKit {thumb}"
     )
@@ -531,15 +531,15 @@ def test_webkit_scrollbar_contrast_is_enforced() -> None:
 
 
 def test_hidden_attribute_beats_dialog_backdrop_display() -> None:
-    """Atribut hidden harus menang atas display yang ditulis .dialog-backdrop.
+    """The hidden attribute must win over a display written by .dialog-backdrop.
 
-    .dialog-backdrop mendeklarasikan display: flex, dan deklarasi display di
-    level penulis selalu menang atas [hidden] dari stylesheet bawaan browser.
-    Akibatnya atasan hidden mati total, kedua dialog tampil sejak halaman
-    dimuat, dan tidak ada yang bisa menutupnya.
+    .dialog-backdrop declares display: flex, and an author level display
+    declaration always beats the browser default [hidden] rule.
+    That kills the hidden instruction completely, both dialogs show from
+    page load, and nothing can close them.
 
-    Karena itu main.css wajib punya aturan global [hidden] dengan
-    display: none !important, dan aturan itu harus muncul sebelum
+    So main.css must carry a global [hidden] rule with
+    display: none !important, and that rule must appear before
     .dialog-backdrop.
     """
     css = (REPO_ROOT / "app" / "static" / "main.css").read_text(encoding="utf-8")
@@ -555,7 +555,7 @@ def test_hidden_attribute_beats_dialog_backdrop_display() -> None:
     assert css.index("[hidden]") < css.index(".dialog-backdrop"), \
         "aturan [hidden] harus muncul sebelum .dialog-backdrop"
 
-    # Inilah alasan aturan itu perlu: backdrop benar-benar menulis display.
+    # This is why the rule is needed: the backdrop really does write display.
     backdrop = re.search(r"\.dialog-backdrop\s*\{([^}]*)\}", css)
     assert backdrop, "aturan .dialog-backdrop tidak ditemukan di main.css"
     assert re.search(r"display\s*:\s*(?!none)", backdrop.group(1)), (
@@ -565,10 +565,10 @@ def test_hidden_attribute_beats_dialog_backdrop_display() -> None:
 
 
 def test_index_html_has_no_hardcoded_metric_claims() -> None:
-    """Halaman tidak boleh menjanjikan angka sebelum evaluasi.
+    """The page must not promise figures before the evaluation.
 
-    Angka di halaman harus berasal dari respons server, bukan ditulis di
-    markup, supaya perubahan model tidak meninggalkan klaim basi.
+    The figures on the page must come from the server response, not be written
+    into the markup, so a model change cannot leave a stale claim behind.
     """
     page = (REPO_ROOT / "app" / "static" / "index.html").read_text(encoding="utf-8")
 
@@ -577,10 +577,10 @@ def test_index_html_has_no_hardcoded_metric_claims() -> None:
 
 
 def test_app_module_does_not_import_label_map() -> None:
-    """Label spesies tidak boleh bocor ke antarmuka.
+    """Species labels must not leak into the interface.
 
-    Pada inferensi spesies tidak diketahui. Kalau app mengimpor lookup table,
-    developer bisa menambahkan tebakan spesies pada respons tanpa disengaja.
+    At inference the species is not known. If the app imported the lookup
+    table, a developer could add a species guess to the response by accident.
     """
     source = (REPO_ROOT / "app" / "main.py").read_text(encoding="utf-8")
 
@@ -588,15 +588,15 @@ def test_app_module_does_not_import_label_map() -> None:
     assert "LOOKUP" not in source
 
 # ===========================================================================
-# Dua bahasa dan data kanonik
+# Two languages and canonical data
 #
-# Sifat yang menopang bagian ini: server tidak pernah mengubah data mengikuti
-# bahasa pemanggil. Kalau iya, evaluation.json dan seluruh laporan bisa
-# menampilkan angka berbeda tergantung siapa yang membuka, dan itu tidak bisa
-# diterima untuk dokumen rujukan laporan studi kasus.
+# The property that holds this section up: the server never changes its data
+# following the caller's language. If it did, evaluation.json and the whole
+# report could show different numbers depending on who opened it, and that
+# is unacceptable for a document that serves as a case study reference.
 #
-# Kamus dibaca dengan pembaca kecil sendiri, bukan mesin JavaScript, supaya tes
-# ini tidak butuh dependensi baru dan tidak butuh runtime.
+# The dictionary is read by a small reader of its own, not a JavaScript
+# engine, so these tests need no new dependency and no runtime.
 # ===========================================================================
 
 I18N_PATH = STATIC_DIR / "i18n.js"
@@ -616,10 +616,10 @@ def _i18n_object(source: str, name: str) -> dict:
     assert match, f"{name} tidak ditemukan di i18n.js"
     body = match.group(1).rstrip(";")
 
-    # Komentar JavaScript tidak valid di Python, jadi dibuang dulu. Hanya ada
-    # komentar satu baris penuh di kamus, jadi ini tidak pernah menyentuh nilai.
+    # JavaScript comments are not valid Python, so they are dropped first. Only
+    # whole line comments occur in the dictionary, so this cannot touch a value.
     body = re.sub(r"(?m)^\s*//.*$", "", body)
-    # Kunci tanpa tanda kutip juga tidak valid di Python.
+    # Unquoted keys are not valid Python either.
     python_literal = re.sub(
         r'(?m)^(\s*)([A-Za-z_][A-Za-z0-9_]*)\s*:', r'\1"\2":', body
     )
@@ -634,19 +634,19 @@ def _i18n_object(source: str, name: str) -> dict:
 
 
 def _dictionaries() -> dict:
-    """Kembalikan kedua kamus, diindeks dengan kode bahasa."""
+    """Return both dictionaries, indexed by language code."""
     return _i18n_object(I18N_PATH.read_text(encoding="utf-8"), "I18N")
 
 
 def _dictionary_keys() -> tuple:
-    """Kembalikan (kunci bahasa Inggris, kunci bahasa Indonesia)."""
+    """Return (english keys, indonesian keys)."""
     dicts = _dictionaries()
     return set(dicts["en"]), set(dicts["id"])
 
 
-# --- 1. berkas kamus ada dan bisa dibaca -----------------------------------
+# --- 1. the dictionary file exists and is readable -----------------------------
 def test_i18n_file_exists_and_is_readable() -> None:
-    """app/static/i18n.js harus ada, tidak kosong, dan terbaca jadi dua kamus."""
+    """app/static/i18n.js must exist, be non empty, and read as two dictionaries."""
     assert I18N_PATH.is_file(), "app/static/i18n.js tidak ada"
     assert I18N_PATH.stat().st_size > 0, "app/static/i18n.js kosong"
 
@@ -659,9 +659,9 @@ def test_i18n_file_exists_and_is_readable() -> None:
             assert isinstance(value, str), f"{lang}.{key} bukan string"
 
 
-# --- 2. kedua bahasa punya kumpulan kunci yang identik ----------------------
+# --- 2. both languages have an identical key set -----------------------------
 def test_both_languages_have_identical_keys() -> None:
-    """Satu kunci yang hilang di satu bahasa akan lolos ke Inggris diam-diam."""
+    """A key missing in one language would silently fall through to English."""
     english, indonesian = _dictionary_keys()
 
     assert english, "kamus bahasa Inggris kosong"
@@ -673,9 +673,9 @@ def test_both_languages_have_identical_keys() -> None:
     )
 
 
-# --- 3. tidak ada kunci bernilai kosong ------------------------------------
+# --- 3. no key has an empty value -------------------------------------------
 def test_no_key_has_an_empty_value() -> None:
-    """Kunci kosong membuat elemen antarmuka kosong tanpa error terlihat."""
+    """An empty key leaves a UI element blank with no visible error."""
     dicts = _dictionaries()
     empty = []
 
@@ -687,9 +687,9 @@ def test_no_key_has_an_empty_value() -> None:
     assert not empty, f"nilai kunci kosong: {empty}"
 
 
-# --- 4. setiap kunci dari server ada di kedua bahasa -----------------------
+# --- 4. every server key exists in both languages -----------------------------
 def test_every_server_note_and_stage_key_exists_in_both_languages() -> None:
-    """note_keys dan stage_keys dari server harus punya terjemahan."""
+    """note_keys and stage_keys from the server must be translatable."""
     from bacteriacv.config import LOW_CONFIDENCE_WARNING_KEY
     from bacteriacv.infer import FAILED_STAGES_NOTE_KEY
     from bacteriacv.preprocess import SEGMENTATION_FAILURE_MESSAGE_KEY
@@ -703,8 +703,8 @@ def test_every_server_note_and_stage_key_exists_in_both_languages() -> None:
         SEGMENTATION_FAILURE_MESSAGE_KEY,
         FAILED_STAGES_NOTE_KEY,
     }
-    # Sufiks gagal dipakai sebagai bagian dari kunci bertitik, jadi harus ada
-    # sebagai kunci tersendiri juga.
+    # The failure suffix is addressed by name inside a dotted key, so it must
+    # exist as a key in its own right too.
     stage_keys = set(STAGE_KEYS.values()) | {"stage_failed_suffix"}
 
     for key in sorted(note_keys | stage_keys):
@@ -713,7 +713,7 @@ def test_every_server_note_and_stage_key_exists_in_both_languages() -> None:
 
 
 def test_stage_keys_cover_every_stage() -> None:
-    """Setiap tahap perlu kunci, kalau tidak judulnya tak bisa ditransliterasi."""
+    """Every stage needs a key, otherwise its title cannot be translated."""
     from bacteriacv.preprocess import STAGE_NAMES
     from bacteriacv.visualize import STAGE_KEYS
 
@@ -727,9 +727,9 @@ def test_stage_keys_cover_every_stage() -> None:
     assert not outside, f"ada kunci tahap di luar kamus: {outside}"
 
 
-# --- 5. respons predict mengembalikan kunci, bukan teks langsung -----------
+# --- 5. the predict response returns keys, not bare translated text -----------
 def test_predict_returns_note_keys_and_notes_text(client: TestClient) -> None:
-    """Server mengembalikan kunci dan teks, bukan teks saja."""
+    """The server returns keys and text, not text alone."""
     response = client.post(
         "/api/predict",
         files={"file": (GOOD_IMAGE, _png_bytes(), "image/png")},
@@ -748,8 +748,8 @@ def test_predict_returns_note_keys_and_notes_text(client: TestClient) -> None:
         "stage_keys dan stage_texts harus sejajar indeks per indeks"
     )
 
-    # Field lama diganti, bukan dipertahankan dua-duanya, supaya tiap butir
-    # hanya punya satu sumber teks kanonik.
+    # The old field is replaced, not kept alongside, so each item has exactly
+    # one canonical source of text.
     assert "stage_titles" not in payload, (
         "stage_titles seharusnya digantikan stage_keys dan stage_texts, bukan "
         "dipertahankan dua-duanya"
@@ -763,7 +763,7 @@ def test_predict_returns_note_keys_and_notes_text(client: TestClient) -> None:
         assert base in english and base in indonesian, f"stage_key {key} tak ada di kamus"
 
 
-# --- 6. label server tetap Inggris apa pun Accept-Language-nya --------------
+# --- 6. server labels stay English whatever the Accept-Language header says ---
 @pytest.mark.parametrize(
     "accept_language",
     ["id-ID,id;q=0.9", "en-US,en;q=0.9", "en", "id", "*", "", "de-DE,de;q=0.8"],
@@ -771,9 +771,9 @@ def test_predict_returns_note_keys_and_notes_text(client: TestClient) -> None:
 def test_labels_stay_english_under_any_accept_language(
     client: TestClient, accept_language: str
 ) -> None:
-    """Data dari server tidak boleh pernah ikut berubah bahasa.
+    """Data from the server must never change language.
 
-    Inilah uji yang memastikan arsitektur data kanonik tidak bocor.
+    This is the test that proves the canonical data architecture does not leak.
     """
     response = client.post(
         "/api/predict",
@@ -801,10 +801,10 @@ def test_labels_stay_english_under_any_accept_language(
 
 
 def test_nothing_in_the_stack_reads_accept_language() -> None:
-    """Tidak boleh ada jalur kode yang membaca Accept-Language sama sekali.
+    """No code path may read Accept-Language at all.
 
-    Membuktikannya secara statis lebih kuat daripada sekadar percaya satu respons,
-    karena percakapan ini tidak bisa berubah tanpa menambah salah satu pola di
+    Proving it statically is stronger than trusting one response, because this
+    conversation cannot change without adding one of the patterns below.
     bawah ini.
     """
     forbidden = re.compile(r"accept[-_]?language", re.I)
@@ -828,9 +828,9 @@ def test_nothing_in_the_stack_reads_accept_language() -> None:
     assert checked == 4
 
 
-# --- 7. nilai respons sama persis apa pun Accept-Language-nya --------------
+# --- 7. the response value is identical whatever the Accept-Language header ---
 def test_response_is_identical_under_any_accept_language(client: TestClient) -> None:
-    """Dua header berbeda harus menghasilkan respons yang sama persis."""
+    """Two different headers must produce exactly the same response."""
     png = _png_bytes()
 
     def call(accept_language: str) -> dict:
@@ -853,7 +853,7 @@ def test_response_is_identical_under_any_accept_language(client: TestClient) -> 
         "respons berbeda antara header bahasa dan tanpa header"
     )
 
-    # Ditulis satu per satu supaya kegagalan menyebut field yang sebenarnya beda.
+    # Written one by one so a failure names the field that actually differs.
     assert (
         with_indonesian["prediction"]["gram_label"]
         == with_english["prediction"]["gram_label"]
@@ -864,9 +864,9 @@ def test_response_is_identical_under_any_accept_language(client: TestClient) -> 
     assert with_indonesian["stage_texts"] == with_english["stage_texts"]
 
 
-# --- tombol penganti -------------------------------------------------------
+# --- language switcher -------------------------------------------------------
 def test_language_toggle_buttons_exist_in_the_header() -> None:
-    """Dua tombol kecil di header, dekat tombol navigasi yang sudah ada."""
+    """Two small buttons in the header, next to the existing navigation buttons."""
     page = (STATIC_DIR / "index.html").read_text(encoding="utf-8")
 
     assert 'id="lang-en"' in page, "tombol EN tidak ada"
@@ -887,7 +887,7 @@ def test_language_toggle_buttons_exist_in_the_header() -> None:
 
 
 def test_default_language_is_english() -> None:
-    """English adalah bawaan karena README dan dokumentasi sekarang bahasa Inggris."""
+    """English is the default because the README and docs are English now."""
     js = MAIN_JS_PATH.read_text(encoding="utf-8")
 
     assert 'DEFAULT_LANG = "en"' in js, "bahasa bawaan bukan English"
@@ -897,7 +897,7 @@ def test_default_language_is_english() -> None:
 
 
 def test_language_toggle_follows_the_brutalist_style_rules() -> None:
-    """Tanpa border-radius dan tanpa shadow, konsisten dengan header yang ada."""
+    """No border radius and no shadow, consistent with the existing header."""
     css = (STATIC_DIR / "main.css").read_text(encoding="utf-8")
 
     blocks = re.findall(r"\.lang-btn(?:\.[\w-]+)?\s*\{([^}]*)\}", css)
@@ -907,7 +907,7 @@ def test_language_toggle_follows_the_brutalist_style_rules() -> None:
         assert "border-radius" not in block, "tombol bahasa tidak boleh ada radius"
         assert "box-shadow" not in block, "tombol bahasa tidak boleh ada shadow"
 
-    # Ukuran teks tidak boleh lebih kecil dari nav-link yang sudah ada.
+    # The text size must not be smaller than the existing nav-link.
     size = re.search(r"\.lang-btn\s*\{[^}]*font-size:\s*(\d+)px", css, re.S)
     assert size, "ukuran font tombol bahasa tidak ditemukan"
     nav = re.search(r"\.nav-link\s*\{[^}]*font-size:\s*(\d+)px", css, re.S)
@@ -919,7 +919,7 @@ def test_language_toggle_follows_the_brutalist_style_rules() -> None:
 
 
 def test_confidence_level_selectors_match_the_server_values() -> None:
-    """Kelas CSS harus mengikuti nilai server, kalau tidak warnanya hilang."""
+    """The CSS classes must follow the server values, or the colour is lost."""
     from bacteriacv.visualize import confidence_level
 
     css = (STATIC_DIR / "main.css").read_text(encoding="utf-8")
@@ -930,7 +930,7 @@ def test_confidence_level_selectors_match_the_server_values() -> None:
 
 
 def test_data_labels_are_translated_only_for_display() -> None:
-    """label_cocci dan label_bacilli boleh berbeda, tapi data server tidak."""
+    """label_cocci and label_bacilli may differ, but the server data must not."""
     dicts = _dictionaries()
 
     assert dicts["en"]["label_cocci"] == "Cocci"
@@ -948,10 +948,10 @@ def test_data_labels_are_translated_only_for_display() -> None:
 
 
 def test_every_page_i18n_key_exists_in_the_dictionary() -> None:
-    """Setiap data-i18n di index.html harus ada kuncinya di kedua bahasa.
+    """Every data-i18n in index.html must have its key in both languages.
 
-    Inilah yang membuat ganti bahasa benar-benar mengubah semua teks statis,
-    bukan hanya sebagian.
+    This is what makes a language change actually alter all static text,
+    not just part of it.
     """
     page = (STATIC_DIR / "index.html").read_text(encoding="utf-8")
     english, indonesian = _dictionary_keys()
@@ -964,7 +964,7 @@ def test_every_page_i18n_key_exists_in_the_dictionary() -> None:
 
 
 def test_language_switcher_preserves_the_locked_markup() -> None:
-    """Empat hal yang dikunci tes lain tidak boleh berubah oleh tombol bahasa."""
+    """The four things other tests lock must not change because of the switcher."""
     page = (STATIC_DIR / "index.html").read_text(encoding="utf-8")
 
     assert 'id="tabs"' in page
@@ -982,7 +982,7 @@ def test_language_switcher_preserves_the_locked_markup() -> None:
     assert "<style" not in page, "tidak boleh ada blok style inline"
     assert page.count('name="viewport"') == 1, "meta viewport harus tetap satu"
 
-    # Kamus dimuat sebagai modul dari main.js, bukan dengan tag kedua.
+    # The dictionary is loaded as a module from main.js, not with a second tag.
     assert 'import("/static/i18n.js")' in MAIN_JS_PATH.read_text(encoding="utf-8"), (
         "i18n.js harus dimuat lewat import dinamis, bukan tag script kedua"
     )

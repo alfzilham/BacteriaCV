@@ -1,4 +1,4 @@
-"""Tes unit untuk ekstraksi arsip ke folder per spesies."""
+"""Unit tests for archive extraction into a folder per species."""
 
 from __future__ import annotations
 
@@ -28,9 +28,9 @@ from bacteriacv.datasets.species_map import SPECIES
 
 
 def _write_valid_images(directory: Path, count: int, prefix: str = "citra") -> list[Path]:
-    """Buat citra PNG valid yang benar-benar dapat dibuka cv2.
+    """Build a valid PNG that cv2 can genuinely open.
 
-    Prefix dipakai agar nama berkas antar spesies tidak kembar.
+    The prefix keeps filenames from colliding between species.
     """
     directory.mkdir(parents=True, exist_ok=True)
     paths: list[Path] = []
@@ -47,7 +47,7 @@ NESTED = SPECIES[8]
 
 
 def _make_zip(path: Path, entries: dict[str, bytes]) -> Path:
-    """Buat arsip ZIP dengan isi yang ditentukan."""
+    """Build a ZIP archive with the given content."""
     path.parent.mkdir(parents=True, exist_ok=True)
     with zipfile.ZipFile(path, "w") as bundle:
         for name, payload in entries.items():
@@ -56,12 +56,12 @@ def _make_zip(path: Path, entries: dict[str, bytes]) -> Path:
 
 
 def _full_archive(name: str, count: int) -> dict[str, bytes]:
-    """Buat isi arsip dengan jumlah citra tertentu pada folder datar."""
+    """Build an archive content with a given image count in a flat folder."""
     return {f"{name}_{index:04d}.tif": b"x" * 10 for index in range(1, count + 1)}
 
 
 def test_extract_flat_archive(tmp_path: Path) -> None:
-    """Arsip tanpa subfolder harus diekstrak ke satu folder spesies."""
+    """An archive without a subfolder must extract into one species folder."""
     zips = tmp_path / "zips"
     images = tmp_path / "images"
     _make_zip(zips / f"{SAMPLE.zip_name}.zip", _full_archive(SAMPLE.zip_name, 20))
@@ -74,7 +74,7 @@ def test_extract_flat_archive(tmp_path: Path) -> None:
 
 
 def test_extract_nested_archive_is_flattened(tmp_path: Path) -> None:
-    """Arsip dengan subfolder harus tetap diekstrak datar ke folder spesies."""
+    """An archive with a subfolder must still extract flat into the species folder."""
     zips = tmp_path / "zips"
     images = tmp_path / "images"
     entries = {f"{SAMPLE.zip_name}/{name}": payload for name, payload in _full_archive("a", 20).items()}
@@ -88,7 +88,7 @@ def test_extract_nested_archive_is_flattened(tmp_path: Path) -> None:
 
 
 def test_extract_skips_non_image_entries(tmp_path: Path) -> None:
-    """Berkas non-gambar di arsip harus dilewati."""
+    """Non image files in the archive must be skipped."""
     zips = tmp_path / "zips"
     images = tmp_path / "images"
     entries = _full_archive(SAMPLE.zip_name, 20)
@@ -103,7 +103,7 @@ def test_extract_skips_non_image_entries(tmp_path: Path) -> None:
 
 
 def test_extract_skips_when_already_complete(tmp_path: Path) -> None:
-    """Folder tujuan yang sudah lengkap tidak boleh diekstrak ulang."""
+    """A complete target folder must not be extracted again."""
     zips = tmp_path / "zips"
     images = tmp_path / "images"
     _make_zip(zips / f"{SAMPLE.zip_name}.zip", _full_archive(SAMPLE.zip_name, 20))
@@ -117,13 +117,13 @@ def test_extract_skips_when_already_complete(tmp_path: Path) -> None:
 
 
 def test_extract_missing_archive_raises(tmp_path: Path) -> None:
-    """Arsip yang tidak ada harus gagal dengan pesan jelas."""
+    """A missing archive must fail with a clear message."""
     with pytest.raises(FileNotFoundError, match="tidak ditemukan"):
         extract_species(SAMPLE, tmp_path / "zips", tmp_path / "images")
 
 
 def test_extract_archive_without_images_raises(tmp_path: Path) -> None:
-    """Arsip tanpa citra harus dianggap rusak."""
+    """An archive without images must count as damaged."""
     zips = tmp_path / "zips"
     images = tmp_path / "images"
     _make_zip(zips / f"{SAMPLE.zip_name}.zip", {"catatan.txt": b"tidak ada citra"})
@@ -133,7 +133,7 @@ def test_extract_archive_without_images_raises(tmp_path: Path) -> None:
 
 
 def test_count_images_ignores_other_files(tmp_path: Path) -> None:
-    """Penghitungan hanya menghitung berkas gambar."""
+    """The count only counts image files."""
     directory = tmp_path / "spesies"
     directory.mkdir()
     (directory / "a.tif").write_bytes(b"x")
@@ -144,12 +144,12 @@ def test_count_images_ignores_other_files(tmp_path: Path) -> None:
 
 
 def test_count_images_on_missing_directory(tmp_path: Path) -> None:
-    """Folder yang belum ada dihitung nol, bukan error."""
+    """A folder that does not exist counts zero, not an error."""
     assert count_images(tmp_path / "belum_ada") == 0
 
 
 def test_verify_all_passes_on_complete_dataset(project_tmp_dir: Path) -> None:
-    """Dataset dengan semua spesies lengkap dan terbaca harus lolos verifikasi."""
+    """A dataset with every species complete and readable must pass verification."""
     zips = project_tmp_dir / "zips"
     images = project_tmp_dir / "images"
     for species in SPECIES:
@@ -159,13 +159,13 @@ def test_verify_all_passes_on_complete_dataset(project_tmp_dir: Path) -> None:
 
 
 def test_verify_all_fails_on_missing_species(project_tmp_dir: Path) -> None:
-    """Spesies yang belum diekstrak harus membuat verifikasi gagal."""
+    """A species that has not been extracted must make verification fail."""
     images = project_tmp_dir / "images"
     assert verify_all(images, project_tmp_dir / "unreadable.csv") is False
 
 
 def test_verify_all_fails_on_thin_species(project_tmp_dir: Path) -> None:
-    """Spesies dengan citra terlalu sedikit harus dianggap gagal."""
+    """A species with too few images must count as failed."""
     images = project_tmp_dir / "images"
     for species in SPECIES:
         count = 3 if species is SAMPLE else MIN_IMAGES_PER_SPECIES
@@ -175,7 +175,7 @@ def test_verify_all_fails_on_thin_species(project_tmp_dir: Path) -> None:
 
 
 def test_verify_all_fails_on_zero_byte_image(project_tmp_dir: Path) -> None:
-    """Citra 0 byte harus terdeteksi meski jumlahnya cukup."""
+    """A zero byte image must be detected even when the count is sufficient."""
     images = project_tmp_dir / "images"
     for species in SPECIES:
         _write_valid_images(images / species.species_id, MIN_IMAGES_PER_SPECIES, species.species_id)
@@ -187,7 +187,7 @@ def test_verify_all_fails_on_zero_byte_image(project_tmp_dir: Path) -> None:
 
 
 def test_verify_all_fails_on_corrupt_image(project_tmp_dir: Path) -> None:
-    """Citra dengan isi rusak harus terdeteksi meski ukurannya normal."""
+    """An image with broken content must be detected even when its size is normal."""
     images = project_tmp_dir / "images"
     for species in SPECIES:
         _write_valid_images(images / species.species_id, MIN_IMAGES_PER_SPECIES, species.species_id)
@@ -199,7 +199,7 @@ def test_verify_all_fails_on_corrupt_image(project_tmp_dir: Path) -> None:
 
 
 def test_find_unreadable_reports_broken_files(project_tmp_dir: Path) -> None:
-    """Daftar citra tidak terbaca harus memuat berkas rusak."""
+    """The unreadable image list must include the damaged file."""
     images = project_tmp_dir / "images"
     for species in SPECIES:
         _write_valid_images(images / species.species_id, MIN_IMAGES_PER_SPECIES, species.species_id)
@@ -213,14 +213,14 @@ def test_find_unreadable_reports_broken_files(project_tmp_dir: Path) -> None:
 
 
 def test_classify_unreadable_distinguishes_causes() -> None:
-    """Alasan harus membedakan berkas kosong dari berkas rusak."""
+    """The reason must tell an empty file apart from a damaged one."""
     assert "0 byte" in classify_unreadable(0)
     assert "0 byte" not in classify_unreadable(9471378)
     assert "TIFF" in classify_unreadable(9471378)
 
 
 def test_verify_all_accepts_already_recorded_damage(project_tmp_dir: Path) -> None:
-    """Kerusakan yang sudah tercatat sebelumnya bukan kegagalan baru."""
+    """Damage already recorded earlier is not a new failure."""
     images = project_tmp_dir / "images"
     report = project_tmp_dir / "unreadable.csv"
     for species in SPECIES:
@@ -231,14 +231,14 @@ def test_verify_all_accepts_already_recorded_damage(project_tmp_dir: Path) -> No
     broken = images / SAMPLE.species_id / "sudah_dicatat.tif"
     broken.write_bytes(b"")
 
-    # Rekam kerusakan lebih dulu, lalu verifikasi ulang.
+    # Record the damage first, then verify again.
     assert verify_all(images, report) is False
     assert report.is_file()
     assert verify_all(images, report) is True
 
 
 def test_verify_all_rejects_new_damage(project_tmp_dir: Path) -> None:
-    """Kerusakan tambahan yang belum tercatat harus gagal."""
+    """Additional damage that was not recorded must fail."""
     images = project_tmp_dir / "images"
     report = project_tmp_dir / "unreadable.csv"
     for species in SPECIES:
@@ -256,7 +256,7 @@ def test_verify_all_rejects_new_damage(project_tmp_dir: Path) -> None:
 
 
 def test_write_unreadable_report_columns(project_tmp_dir: Path) -> None:
-    """Laporan harus memuat kolom yang dijanjikan."""
+    """The report must carry the columns it promises."""
     import csv
 
     record = UnreadableImage(
@@ -277,12 +277,12 @@ def test_write_unreadable_report_columns(project_tmp_dir: Path) -> None:
 
 
 def test_read_unreadable_report_missing_file(project_tmp_dir: Path) -> None:
-    """Laporan yang belum ada harus menghasilkan daftar kosong."""
+    """A missing report must yield an empty list."""
     assert read_unreadable_report(project_tmp_dir / "tidak_ada.csv") == []
 
 
 def test_verify_all_detects_duplicate_filenames(project_tmp_dir: Path) -> None:
-    """Nama berkas kembar di dua spesies harus terdeteksi."""
+    """Duplicate filenames across two species must be detected."""
     images = project_tmp_dir / "images"
     for species in SPECIES:
         directory = images / species.species_id
@@ -294,14 +294,14 @@ def test_verify_all_detects_duplicate_filenames(project_tmp_dir: Path) -> None:
 
 
 def test_image_suffixes_cover_dibas_formats() -> None:
-    """DIBaS hanya memuat TIFF, daftar sufiks tetap harus lengkap."""
+    """DIBaS only holds TIFF, the suffix list must still be complete."""
     assert ".tif" in IMAGE_SUFFIXES
     assert ".tiff" in IMAGE_SUFFIXES
     assert all(suffix.startswith(".") for suffix in IMAGE_SUFFIXES)
 
 
 def test_nested_species_uses_its_own_folder(tmp_path: Path) -> None:
-    """Spesies dengan subfolder di arsip tetap masuk foldernya sendiri."""
+    """A species with a subfolder in the archive still goes into its own folder."""
     zips = tmp_path / "zips"
     images = tmp_path / "images"
     entries = {f"{NESTED.zip_name}/{k}": v for k, v in _full_archive("b", 20).items()}
