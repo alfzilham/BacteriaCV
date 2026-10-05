@@ -38,15 +38,15 @@ def _image(success: bool = True) -> np.ndarray:
 
 def test_confidence_level_boundaries() -> None:
     """Level harus memakai ambang dari config, bukan angka duplikat."""
-    assert confidence_level(CONFIDENCE_HIGH) == "tinggi"
-    assert confidence_level(CONFIDENCE_MEDIUM) == "sedang"
-    assert confidence_level(0.0) == "rendah"
+    assert confidence_level(CONFIDENCE_HIGH) == "high"
+    assert confidence_level(CONFIDENCE_MEDIUM) == "medium"
+    assert confidence_level(0.0) == "low"
 
 
 def test_confidence_level_is_exhaustive() -> None:
     """Setiap nilai harus jatuh pada tepat satu level."""
     levels = {confidence_level(value / 20) for value in range(21)}
-    assert levels == {"tinggi", "sedang", "rendah"}
+    assert levels == {"high", "medium", "low"}
 
 
 # --- Annotate ---
@@ -130,7 +130,7 @@ def test_build_visualization_states_segmentation_is_not_validated() -> None:
     bundle = build_visualization(prepared, "cocci", 0.9, "positive", 0.8)
 
     assert SEGMENTATION_LIMITATION in bundle.notes
-    assert any("belum tervalidasi" in note for note in bundle.notes)
+    assert any("not yet validated" in note for note in bundle.notes)
 
 
 def test_segmentation_limitation_uses_measured_numbers() -> None:
@@ -146,8 +146,8 @@ def test_build_visualization_lists_failed_stages() -> None:
     bundle = build_visualization(prepared, "bacilli", 0.4, "negative", 0.3)
 
     assert bundle.failed_stages
-    assert any("gagal" in title for title in bundle.titles)
-    assert any("Tahap gagal" in note for note in bundle.notes)
+    assert any("(failed)" in title for title in bundle.titles)
+    assert any("Failed stages" in note for note in bundle.notes)
 
 
 def test_build_visualization_keeps_prediction_when_segmentation_fails() -> None:

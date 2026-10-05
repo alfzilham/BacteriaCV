@@ -1,11 +1,11 @@
 <!DOCTYPE html>
-<html lang="id">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <link rel="stylesheet" href="/static/main.css">
 <link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>BacteriaCV // Sistem Klasifikasi Morfologi & Gram Bakteri</title>
+<title data-i18n="ui_page_title">BacteriaCV // Bacterial Morphology &amp; Gram Classification</title>
 </head>
 <body>
 
@@ -18,156 +18,161 @@
       <span class="brand-badge">LAB INSTRUMENT</span>
     </div>
 
-    <nav class="header-nav" aria-label="Navigasi Utama">
-      <a href="#upload-card" class="nav-link">Unggah</a>
-      <a href="#result-section" class="nav-link">Riwayat</a>
-      <a href="#about-dialog" class="nav-link" id="btn-about">Tentang</a>
+    <nav class="header-nav" aria-label="Main navigation" data-i18n-aria-label="ui_nav_upload">
+      <a href="#upload-card" class="nav-link" data-i18n="ui_nav_upload">Upload</a>
+      <a href="#result-section" class="nav-link" data-i18n="ui_nav_history">History</a>
+      <a href="#about-dialog" class="nav-link" id="btn-about" data-i18n="ui_nav_about">About</a>
     </nav>
 
     <div class="header-actions">
-      <button type="button" class="nav-link" id="btn-report">Laporan</button>
+      <button type="button" class="nav-link" id="btn-report" data-i18n="ui_report">Report</button>
+
+      <!-- Language switcher: EN / ID -->
+      <div class="lang-toggle" role="group" aria-label="Language" data-i18n-aria-label="ui_language_label">
+        <button type="button" class="lang-btn" id="lang-en" data-lang="en" data-i18n="ui_lang_en">EN</button>
+        <button type="button" class="lang-btn" id="lang-id" data-lang="id" data-i18n="ui_lang_id">ID</button>
+      </div>
     </div>
   </header>
 
-  <!-- BARIS ATAS: Kiri Kartu Unggah, Kanan Kartu Ringkasan Hasil -->
+  <!-- TOP ROW: Left Upload Card, Right Result Summary Card -->
   <div class="top-row-grid">
-    <!-- Kiri: Kartu Unggah Citra -->
+    <!-- Left: Image Upload Card -->
     <section class="card" id="upload-card" aria-labelledby="title-upload">
       <div class="card-header">
-        <h2 class="card-title" id="title-upload">Unggah Citra Mikroskop</h2>
+        <h2 class="card-title" id="title-upload" data-i18n="ui_upload_title">Upload Microscope Image</h2>
         <span class="card-id-tag">[INPUT / D-01]</span>
       </div>
 
       <label class="upload-dropzone" for="file" id="dropzone">
         <input type="file" id="file" class="visually-hidden" accept=".png,.jpg,.jpeg,.tif,.tiff">
-        <span class="dropzone-label">Pilih atau Jatuhkan Citra di Sini</span>
-        <span class="dropzone-sub">Format PNG, JPG, atau TIFF (Maks. <span id="limit">20</span> MB)</span>
+        <span class="dropzone-label" data-i18n="ui_dropzone_label">Choose or Drop Image Here</span>
+        <span class="dropzone-sub"><span data-i18n="ui_dropzone_format_prefix">Format PNG, JPG, or TIFF (Max.</span> <span id="limit">20</span> <span data-i18n="ui_dropzone_format_suffix">MB)</span></span>
       </label>
 
-      <div class="file-name-display" id="file-name">Belum ada berkas yang dipilih</div>
+      <div class="file-name-display" id="file-name" data-i18n="ui_no_file">No file selected yet</div>
 
       <div class="alert-box alert-error" id="error" style="margin-top: 12px;" hidden></div>
     </section>
 
-    <!-- Kanan: Kartu Ringkasan Hasil -->
+    <!-- Right: Result Summary Card -->
     <section class="card" id="summary-card" aria-labelledby="title-summary">
       <div class="card-header">
-        <h2 class="card-title" id="title-summary">Ringkasan Klasifikasi</h2>
+        <h2 class="card-title" id="title-summary" data-i18n="ui_summary_title">Classification Summary</h2>
         <span class="card-id-tag">[OUTPUT / TELEMETRY]</span>
       </div>
 
       <div class="summary-grid">
         <div class="summary-cell">
-          <div class="summary-cell-title">Bentuk Sel (Head A)</div>
+          <div class="summary-cell-title" data-i18n="ui_shape_label">Cell Shape (Head A)</div>
           <div class="summary-cell-value" id="shape">-</div>
-          <div class="summary-cell-meta" id="shape-meta">Menunggu analisis</div>
+          <div class="summary-cell-meta" id="shape-meta" data-i18n="ui_waiting">Waiting for analysis</div>
         </div>
 
         <div class="summary-cell">
-          <div class="summary-cell-title">Status Gram (Head B)</div>
+          <div class="summary-cell-title" data-i18n="ui_gram_label">Gram Status (Head B)</div>
           <div class="summary-cell-value" id="gram">-</div>
-          <div class="summary-cell-meta" id="gram-meta">Menunggu analisis</div>
+          <div class="summary-cell-meta" id="gram-meta" data-i18n="ui_waiting">Waiting for analysis</div>
         </div>
       </div>
     </section>
   </div>
 
-  <!-- AREA UTAMA: Kiri Kontrol & Keterangan, Kanan Panel Visualisasi -->
+  <!-- MAIN AREA: Left Controls &amp; Caption, Right Visualisation Panel -->
   <main class="main-content-grid" id="result-section">
-    <!-- Kiri: Judul Bagian, Teks Keterangan, Tombol Proses, Teks Hasil Ringkas -->
+    <!-- Left: Section Heading, Caption Text, Process Button, Result Summary Text -->
     <div class="main-left-pane">
       <div class="pane-header">
-        <h2>Analisis Morfologi & Status Gram</h2>
-        <p class="pane-desc">
-          Klasifikasi simultan bentuk sel (cocci, bacilli) dan status Gram (positif, negatif) dari citra mikroskop DIBaS menggunakan backbone ResNet-50 ganda.
+        <h2 data-i18n="ui_analysis_heading">Morphology &amp; Gram Status Analysis</h2>
+        <p class="pane-desc" data-i18n="ui_analysis_desc">
+          Simultaneous classification of cell shape (cocci, bacilli) and Gram status (positive, negative) from a DIBaS microscope image using a dual ResNet-50 backbone.
         </p>
       </div>
 
-      <button type="button" id="submit" class="btn-process" disabled>Analisis Citra</button>
+      <button type="button" id="submit" class="btn-process" disabled data-i18n="ui_analyze">Analyze Image</button>
 
-      <div id="low-confidence-warning" class="alert-box alert-warning" hidden>
-        Hasil ini sebagai alat bantu, bukan diagnosis.
+      <div id="low-confidence-warning" class="alert-box alert-warning" hidden data-i18n="low_confidence_warning">
+        This result is an aid, not a diagnosis.
       </div>
 
-      <!-- Ringkasan Teks Hasil -->
+      <!-- Result Text Summary -->
       <div class="notes-card" id="result" hidden>
-        <div class="notes-header">Catatan & Keterbatasan Pipeline</div>
+        <div class="notes-header" data-i18n="ui_notes_title">Pipeline Notes &amp; Limitations</div>
         <ul class="notes-list" id="notes"></ul>
       </div>
     </div>
 
-    <!-- Kanan: Panel Visualisasi Segmentasi dan Panel Kontrol Toggle -->
+    <!-- Right: Segmentation Visualisation Panel and Toggle Control Panel -->
     <div class="main-right-pane">
       <div class="card-header" style="margin-bottom: 0;">
-        <h2 class="card-title">Visualisasi Segmentasi</h2>
+        <h2 class="card-title" data-i18n="ui_visualization_title">Segmentation Visualisation</h2>
         <span class="card-id-tag">[STAGE / VIEW]</span>
       </div>
 
-      <!-- Tepat SATU elemen img untuk panel visualisasi -->
+      <!-- Exactly ONE img element for the visualisation panel -->
       <div class="visual-viewport">
-        <img id="panel" alt="Panel visualisasi segmentasi citra" style="display:none;">
-        <div class="viewport-placeholder" id="panel-placeholder">
-          [ Area Visualisasi Citra // Unggah citra mikroskop dan tekan "Analisis Citra" ]
+        <img id="panel" alt="Segmentation visualisation panel for the image" style="display:none;">
+        <div class="viewport-placeholder" id="panel-placeholder" data-i18n="ui_panel_placeholder">
+          [ Image Visualisation Area // Upload a microscope image and press &quot;Analyze Image&quot; ]
         </div>
       </div>
 
-      <!-- Panel Kontrol Toggle / Tombol Alih -->
+      <!-- Toggle control container (id="tabs" required by the test_app.py test) -->
       <div class="control-strip">
         <div class="control-strip-header">
-          <span class="control-strip-label">Panel Kontrol: Opsi Tampilan & Kontur</span>
-          <p id="stage-title">Belum ada citra yang dianalisis.</p>
+          <span class="control-strip-label" data-i18n="ui_control_label">Control Panel: Display &amp; Contour Options</span>
+          <p id="stage-title" data-i18n="ui_no_image_analyzed">No image analyzed yet.</p>
         </div>
 
-        <!-- Wadah kontrol toggle/alih (id="tabs" wajib sesuai uji test_app.py) -->
-        <div id="tabs" role="toolbar" aria-label="Kontrol alih tampilan kontur dan tahapan segmentasi"></div>
+        <div id="tabs" role="toolbar" aria-label="Contour and segmentation stage toggle" data-i18n-aria-label="ui_control_label"></div>
       </div>
 
-      <!-- Teks Keterbatasan Segmentasi Wajib Tampil (SPEC Bagian 8 Butir 5) -->
+      <!-- Segmentation Limitation Text Must Show (SPEC Section 8 Item 5) -->
       <div class="segmentation-limitation-box">
-        <strong>Batasan Segmentasi (SPEC 8.5):</strong>
-        Segmentasi morfologis memisahkan kelompok bakteri tetapi bukan sel individual, karena sel bersentuhan pada citra Gram 100x. Rentang intraspesies 1,03 sampai 4,19 melampaui selisih antargrup 0,068, sehingga klasifikasi bentuk tidak dapat divalidasi dari objek hasil segmentasi.
+        <strong data-i18n="ui_limit_title">Segmentation Limitation (SPEC 8.5):</strong>
+        <span data-i18n="ui_limit_body">Morphological segmentation separates bacterial groups but not individual cells, because cells touch each other in 100x Gram images. The intraspecies range 1.03 to 4.19 exceeds the between-group difference of 0.068, so shape classification cannot be validated from the segmented objects.</span>
       </div>
     </div>
   </main>
 
-  <!-- FOOTER: Lima Chip Informasi Statis -->
+  <!-- FOOTER: Five Static Information Chips -->
   <footer class="site-footer">
     <div class="chip-container">
-      <span class="info-chip"><strong>Format:</strong> PNG, JPG, TIFF</span>
-      <span class="info-chip"><strong>Batas:</strong> 20 MB</span>
-      <span class="info-chip"><strong>Model:</strong> ResNet-50 (heads.pt)</span>
-      <span class="info-chip"><strong>Dataset:</strong> DIBaS (32 Spesies)</span>
-      <span class="info-chip"><strong>Disclaimer:</strong> Hasil ini sebagai alat bantu, bukan diagnosis.</span>
+      <span class="info-chip"><strong data-i18n="ui_chip_format">Format:</strong> PNG, JPG, TIFF</span>
+      <span class="info-chip"><strong data-i18n="ui_chip_limit">Limit:</strong> 20 MB</span>
+      <span class="info-chip"><strong data-i18n="ui_chip_model">Model:</strong> ResNet-50 (heads.pt)</span>
+      <span class="info-chip"><strong data-i18n="ui_chip_dataset">Dataset:</strong> DIBaS (32 Species)</span>
+      <span class="info-chip"><strong data-i18n="ui_chip_disclaimer">Disclaimer:</strong> <span data-i18n="low_confidence_warning">This result is an aid, not a diagnosis.</span></span>
     </div>
   </footer>
 </div>
 
-<!-- DIALOG MODAL LAPORAN EVALUASI -->
+<!-- REPORT EVALUATION MODAL DIALOG -->
 <div id="dialog-report" class="dialog-backdrop" hidden>
   <div class="dialog-panel" role="dialog" aria-labelledby="dialog-report-title">
     <div class="card-header">
-      <h2 class="card-title" id="dialog-report-title">Laporan Evaluasi Model</h2>
-      <button type="button" class="nav-link" id="btn-close-report">Tutup</button>
+      <h2 class="card-title" id="dialog-report-title" data-i18n="ui_report_title">Model Evaluation Report</h2>
+      <button type="button" class="nav-link" id="btn-close-report" data-i18n="ui_close">Close</button>
     </div>
-    <div id="report-content" style="font-family: var(--font-mono); font-size: 13px;">
-      Memuat laporan evaluasi...
+    <div id="report-content" style="font-family: var(--font-mono); font-size: 13px;" data-i18n="ui_report_loading">
+      Loading report from /api/report...
     </div>
   </div>
 </div>
 
-<!-- DIALOG MODAL TENTANG -->
+<!-- ABOUT MODAL DIALOG -->
 <div id="dialog-about" class="dialog-backdrop" hidden>
   <div class="dialog-panel" role="dialog" aria-labelledby="dialog-about-title">
     <div class="card-header">
-      <h2 class="card-title" id="dialog-about-title">Tentang BacteriaCV</h2>
-      <button type="button" class="nav-link" id="btn-close-about">Tutup</button>
+      <h2 class="card-title" id="dialog-about-title" data-i18n="ui_about_title">About BacteriaCV</h2>
+      <button type="button" class="nav-link" id="btn-close-about" data-i18n="ui_close">Close</button>
     </div>
     <div style="font-size: 14px; line-height: 1.6; color: var(--ink-secondary);">
       <p>
-        <strong>BacteriaCV</strong> adalah sistem Computer Vision yang memprediksi bentuk sel (cocci, bacilli) dan status Gram (positif, negatif) bakteri secara simultan dari satu citra mikroskop digital dengan backbone ResNet-50 dan dua classification head.
+        <strong>BacteriaCV</strong> <span data-i18n="ui_about_body_1">is a Computer Vision system that predicts bacterial cell shape (cocci, bacilli) and Gram status (positive, negative) simultaneously from a single digital microscope image using a ResNet-50 backbone and two classification heads.</span>
       </p>
-      <p>
-        Sistem dilatih menggunakan dataset DIBaS (Digital Images of Bacterial Species) yang mencakup 32 spesies bakteri. Sistem ini merupakan instrumen alat bantu diagnostik penelitian dan pendidikan, bukan diagnosis medis final.
+      <p data-i18n="ui_about_body_2">
+        The system is trained on the DIBaS dataset (Digital Images of Bacterial Species), which covers 32 bacterial species. It is a research and educational diagnostic aid, not a final medical diagnosis.
       </p>
     </div>
   </div>

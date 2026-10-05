@@ -20,18 +20,31 @@ from pathlib import Path
 import numpy as np
 import torch
 
-from .config import ALLOWED_SUFFIXES, CHECKPOINT_DIR, LOW_CONFIDENCE_WARNING
+from .config import (
+    ALLOWED_SUFFIXES,
+    CHECKPOINT_DIR,
+    LOW_CONFIDENCE_WARNING,
+    LOW_CONFIDENCE_WARNING_KEY,
+)
 from .model import build_model, gram_label, load_checkpoint, shape_label
 from .paths import IMAGES_DIR
-from .preprocess import PreprocessResult, preprocess
+from .preprocess import (
+    SEGMENTATION_FAILURE_MESSAGE_KEY,
+    PreprocessResult,
+    preprocess,
+)
 from .visualize import (
     SEGMENTATION_LIMITATION,
+    SEGMENTATION_LIMITATION_KEY,
     VisualizationBundle,
     build_visualization,
     confidence_level,
 )
 
 CHECKPOINT_NAME = "heads.pt"
+
+# Key for the note listing which stages failed.
+FAILED_STAGES_NOTE_KEY = "failed_stages_note"
 
 DEFAULT_CHECKPOINT = CHECKPOINT_DIR / CHECKPOINT_NAME
 
@@ -53,7 +66,8 @@ class Prediction:
         segmentation_ok: Whether segmentation produced objects.
         segmentation_validated: Always False, see SEGMENTATION_LIMITATION.
         stages_ok: Success status of each preprocessing stage.
-        notes: Notes that must be shown to the user.
+        notes: English note text that must be shown to the user.
+        note_keys: i18n keys aligned index for index with notes.
     """
 
     shape_label: str
@@ -69,11 +83,19 @@ class Prediction:
     segmentation_validated: bool
     stages_ok: dict[str, bool]
     notes: tuple[str, ...]
+    note_keys: tuple[str, ...]
 
     def to_dict(self) -> dict:
-        """Turn the prediction into a dictionary for JSON serialisation."""
+        """Turn the prediction into a dictionary for JSON serialisation.
+
+        The wire form carries note_keys alongside notes_text, never a bare
+        translated list. The keys let the client translate; the text is the
+        fallback for a client that ships no dictionary.
+        """
         payload = asdict(self)
         payload["notes"] = list(self.notes)
+        payload["notes_text"] = list(self.notes)
+        payload["note_keys"] = list(self.note_keys)
         return payload
 
 
@@ -136,6 +158,8 @@ class Predictor:
         gram_index = 1 if gram_probability > 0.5 else 0
         gram_confidence = gram_probability if gram_index == 1 else 1.0 - gram_probability
 
+        note_keys, notes_text = _notes(prepared)
+
         prediction = Prediction(
             shape_label=shape_label(shape_index),
             shape_confidence=shape_confidence,
@@ -149,7 +173,8 @@ class Predictor:
             segmentation_ok=prepared.stage_ok.get("segment", False),
             segmentation_validated=False,
             stages_ok=dict(prepared.stage_ok),
-            notes=_notes(prepared),
+            notes=notes_text,
+            note_keys=note_keys,
         )
 
         return InferenceResult(
@@ -182,18 +207,27 @@ def _notes(prepared: PreprocessResult) -> tuple[str, ...]:
         prepared: The preprocessing result.
 
     Returns:
-        Notes ordered from most to least important.
+        A (note_keys, notes_text) pair, ordered from most to least
+        important and index aligned. Both are English; the keys let the
+        client translate and the text is the fallback.
     """
     notes: list[str] = [SEGMENTATION_LIMITATION, LOW_CONFIDENCE_WARNING]
+    keys: list[str] = [
+        SEGMENTATION_LIMITATION_KEY,
+        LOW_CONFIDENCE_WARNING_KEY,
+    ]
     if prepared.message:
         notes.insert(0, prepared.message)
+        keys.insert(0, SEGMENTATION_FAILURE_MESSAGE_KEY)
     if prepared.failed_panels:
         notes.append(
-            "Tahap gagal: "
+            "Failed stages: "
             + ", ".join(prepared.failed_panels)
-            + ". Panel terkait dikosongkan, klasifikasi tetap dihitung."
+            + ". The related panels are empty, the classification is still "
+            "computed."
         )
-    return tuple(notes)
+        keys.append(FAILED_STAGES_NOTE_KEY)
+    return tuple(keys), tuple(notes)
 
 
 def check_suffix(path: Path | str) -> None:
@@ -208,7 +242,9 @@ def check_suffix(path: Path | str) -> None:
     suffix = Path(path).suffix.lower()
     if suffix not in ALLOWED_SUFFIXES:
         allowed = ", ".join(ALLOWED_SUFFIXES)
-        raise ValueError(f"Format {suffix or 'tanpa ekstensi'} tidak didukung. Gunakan: {allowed}.")
+        raise ValueError(
+            f"Format {suffix or 'without extension'} is not supported. Use: {allowed}."
+        )
 
 
 def main(argv: list[str] | None = None) -> int:

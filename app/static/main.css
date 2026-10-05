@@ -574,20 +574,57 @@
     margin-bottom: 4px;
   }
 
-  /* CONFIDENCE LEVEL ACCESSIBILITY */
-  .level-tinggi {
+  /* CONFIDENCE LEVEL ACCESSIBILITY
+     The class name follows the server value, which is canonical English.
+     The visible text is translated per language, so the level never depends
+     on colour alone, per DESIGN section 2.1. */
+  .level-high {
     color: var(--level-high);
     font-weight: 700;
   }
 
-  .level-sedang {
+  .level-medium {
     color: var(--level-med);
     font-weight: 700;
   }
 
-  .level-rendah {
+  .level-low {
     color: var(--level-low);
     font-weight: 700;
+  }
+
+  /* LANGUAGE SWITCHER: square corners, no radius, no shadow, matching the
+     existing nav-link treatment. Font size is the same 13px caption size,
+     never smaller. */
+  .lang-toggle {
+    display: flex;
+    gap: 2px;
+  }
+
+  .lang-btn {
+    font-family: var(--font-mono);
+    font-size: 13px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--ink-carbon);
+    background-color: var(--surface-sub);
+    border: var(--border-thick);
+    padding: 6px 10px;
+    cursor: pointer;
+  }
+
+  .lang-btn:hover {
+    background-color: var(--ink-carbon);
+    color: var(--surface-pure);
+  }
+
+  /* The active language is marked by the accent colour and by aria-pressed,
+     so the state is not carried by colour alone. */
+  .lang-btn.active {
+    background-color: var(--accent-hazard);
+    color: var(--text-on-accent);
+    border-color: var(--accent-hazard);
   }
 
   /* FOOTER & INFO CHIPS */

@@ -67,13 +67,13 @@ def test_check_suffix_is_case_insensitive() -> None:
 
 def test_check_suffix_rejects_other_files() -> None:
     """Berkas noncitra harus ditolak."""
-    with pytest.raises(ValueError, match="tidak didukung"):
+    with pytest.raises(ValueError, match="not supported"):
         check_suffix(BAD_IMAGE)
 
 
 def test_check_suffix_rejects_missing_suffix() -> None:
     """Berkas tanpa ekstensi harus ditolak dengan pesan jelas."""
-    with pytest.raises(ValueError, match="tanpa ekstensi"):
+    with pytest.raises(ValueError, match="without extension"):
         check_suffix("namaberkas")
 
 
@@ -124,7 +124,7 @@ def test_predict_marks_segmentation_as_not_validated(predictor: Predictor) -> No
     prediction = predictor.predict(_image()).prediction
 
     assert prediction.segmentation_validated is False
-    assert any("belum tervalidasi" in note for note in prediction.notes)
+    assert any("not yet validated" in note for note in prediction.notes)
 
 
 def test_predict_keeps_result_when_segmentation_fails(predictor: Predictor) -> None:
@@ -206,4 +206,4 @@ def test_prediction_notes_never_claim_diagnosis(predictor: Predictor) -> None:
     """Hasil harus selalu menyebut sifat alat bantu, bukan diagnosis."""
     prediction = predictor.predict(_image()).prediction
 
-    assert any("bukan diagnosis" in note for note in prediction.notes)
+    assert any("not a diagnosis" in note for note in prediction.notes)

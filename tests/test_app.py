@@ -110,7 +110,8 @@ def test_predict_sends_five_panels_and_five_tabs(client: TestClient) -> None:
     payload = response.json()
     assert len(payload["panels"]) == 5
     assert len(payload["stage_names"]) == 5
-    assert len(payload["stage_titles"]) == 5
+    assert len(payload["stage_texts"]) == 5
+    assert len(payload["stage_keys"]) == 5
     assert payload["stage_names"][0] == "original"
 
 
@@ -136,7 +137,7 @@ def test_predict_always_states_segmentation_not_validated(client: TestClient) ->
 
     payload = response.json()
     assert payload["notes"]
-    assert any("belum tervalidasi" in note for note in payload["notes"])
+    assert any("not yet validated" in note for note in payload["notes_text"])
     assert payload["disclaimer"]
     assert payload["prediction"]["segmentation_validated"] is False
 
@@ -163,7 +164,7 @@ def test_predict_rejects_non_image_suffix(client: TestClient) -> None:
     )
 
     assert response.status_code == 415
-    assert "tidak didukung" in response.json()["detail"]
+    assert "not supported" in response.json()["detail"]
 
 
 def test_predict_rejects_empty_file(client: TestClient) -> None:

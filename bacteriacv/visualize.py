@@ -27,20 +27,37 @@ from .config import (
 from .preprocess import STAGE_NAMES, PreprocessResult
 
 STAGE_TITLES = {
-    "original": "Citra asal",
+    "original": "Original image",
     "resized": "Resize 224 x 224",
-    "normalized": "Normalisasi ImageNet",
-    "segment": "Mask segmentasi",
-    "watershed": "Batas objek",
+    "normalized": "ImageNet normalization",
+    "segment": "Segmentation mask",
+    "watershed": "Object boundary",
 }
+
+# One i18n key per stage. The client translates these; the server only knows
+# the English titles above.
+STAGE_KEYS = {
+    "original": "stage_original",
+    "resized": "stage_resized",
+    "normalized": "stage_normalized",
+    "segment": "stage_segment",
+    "watershed": "stage_watershed",
+}
+
+# Suffix appended to a stage title whose panel could not be produced.
+STAGE_FAILED_SUFFIX = " (failed)"
+STAGE_FAILED_SUFFIX_KEY = "stage_failed_suffix"
 
 # Evidence from the segmentation experiment on DIBaS. These figures are measured,
 # not estimated. Elongation uses the major/minor axis metric.
 SEGMENTATION_LIMITATION = (
-    "Bentuk sel belum tervalidasi dari segmentasi: elongasi median kokus "
-    "1.30-1.43 dan batang 1.64-1.76, tetapi rentang intraspesies 1.03-4.19 "
-    "melampaui selisih antargrup 0.068."
+    "Cell shape is not yet validated from segmentation: median elongation "
+    "1.30-1.43 for cocci and 1.64-1.76 for bacilli, but the intraspecies "
+    "range 1.03-4.19 exceeds the between-group difference of 0.068."
 )
+
+# Key for SEGMENTATION_LIMITATION, used by the client dictionary.
+SEGMENTATION_LIMITATION_KEY = "shape_not_validated"
 
 FONT_SCALE = 0.42
 FONT_THICKNESS = 1
@@ -56,7 +73,9 @@ class VisualizationBundle:
     Attributes:
         panels: Five annotated RGB images, ordered per stage_names.
         stage_names: The stage keys for the toggle.
-        titles: The stage titles matching stage_names.
+        titles: The English stage titles matching stage_names.
+        title_keys: The i18n keys matching stage_names, index aligned with
+            titles.
         failed_stages: The stages that failed, highlighted in the interface.
         object_count: The segmentation object count, zero when it failed.
         notes: The notes that must appear below the panel.
@@ -65,6 +84,7 @@ class VisualizationBundle:
     panels: tuple[np.ndarray, ...]
     stage_names: tuple[str, ...]
     titles: tuple[str, ...]
+    title_keys: tuple[str, ...]
     failed_stages: tuple[str, ...]
     object_count: int
     notes: tuple[str, ...]
@@ -77,13 +97,13 @@ def confidence_level(value: float) -> str:
         value: A confidence between zero and one.
 
     Returns:
-        "tinggi", "sedang", or "rendah".
+        "high", "medium", or "low".
     """
     if value >= CONFIDENCE_HIGH:
-        return "tinggi"
+        return "high"
     if value >= CONFIDENCE_MEDIUM:
-        return "sedang"
-    return "rendah"
+        return "medium"
+    return "low"
 
 
 def annotate(
@@ -161,7 +181,7 @@ def _headline(
 ) -> str:
     """Assemble the prediction summary lines for annotation."""
     return (
-        f"Bentuk: {shape_label} ({shape_confidence:.0%}, "
+        f"Shape: {shape_label} ({shape_confidence:.0%}, "
         f"{confidence_level(shape_confidence)})   "
         f"Gram: {gram_label} ({gram_confidence:.0%}, "
         f"{confidence_level(gram_confidence)})"
@@ -195,32 +215,38 @@ def build_visualization(
         ("gram_confidence", gram_confidence),
     ):
         if not 0.0 <= value <= 1.0:
-            raise ValueError(f"{name} harus antara 0 dan 1, dapat {value}")
+            raise ValueError(f"{name} must be between 0 and 1, got {value}")
 
     notes: list[str] = [LOW_CONFIDENCE_WARNING, SEGMENTATION_LIMITATION]
     if result.failed_panels:
         notes.insert(
             0,
-            "Tahap gagal: " + ", ".join(result.failed_panels) + ". "
-            "Panel terkait dikosongkan, klasifikasi tetap dihitung.",
+            "Failed stages: " + ", ".join(result.failed_panels) + ". "
+            "The related panels are empty, the classification is still "
+            "computed.",
         )
 
     base = [_headline(shape_label, shape_confidence, gram_label, gram_confidence)]
     base.extend(notes)
 
     titles: list[str] = []
+    title_keys: list[str] = []
     panels: list[np.ndarray] = []
     for stage, panel in zip(STAGE_NAMES, result.panels):
         title = STAGE_TITLES[stage]
+        key = STAGE_KEYS[stage]
         if stage in result.failed_panels:
-            title = f"{title} (gagal)"
+            title = f"{title}{STAGE_FAILED_SUFFIX}"
+            key = f"{key}.{STAGE_FAILED_SUFFIX_KEY}"
         titles.append(title)
+        title_keys.append(key)
         panels.append(annotate(panel, base[:2] + [title] + base[2:4]))
 
     return VisualizationBundle(
         panels=tuple(panels),
         stage_names=STAGE_NAMES,
         titles=tuple(titles),
+        title_keys=tuple(title_keys),
         failed_stages=result.failed_panels,
         object_count=result.object_count,
         notes=tuple(notes),

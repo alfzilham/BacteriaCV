@@ -219,7 +219,7 @@ def test_preprocess_continues_when_segmentation_fails() -> None:
     assert result.object_count == 0
     assert result.failed_panels == ("segment", "watershed")
     assert result.message is not None
-    assert "kelompok sel" in result.message
+    assert "cell group level" in result.message
 
 
 def test_preprocess_continues_when_only_load_fails() -> None:

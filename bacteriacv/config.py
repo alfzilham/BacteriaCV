@@ -128,4 +128,8 @@ ALLOWED_SUFFIXES = (".png", ".jpg", ".jpeg", ".tif", ".tiff")
 CONFIDENCE_HIGH = 0.8
 CONFIDENCE_MEDIUM = 0.6
 
-LOW_CONFIDENCE_WARNING = "Hasil ini sebagai alat bantu, bukan diagnosis."
+LOW_CONFIDENCE_WARNING = "This result is an aid, not a diagnosis."
+
+# Key for LOW_CONFIDENCE_WARNING. The client looks the note up under this
+# key in its own dictionary, so the server only has to name it.
+LOW_CONFIDENCE_WARNING_KEY = "low_confidence_warning"

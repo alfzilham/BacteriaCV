@@ -51,9 +51,12 @@ STAGE_NAMES = ("original", "resized", "normalized", "segment", "watershed")
 BLUR_KERNEL = (5, 5)
 
 SEGMENTATION_FAILURE_MESSAGE = (
-    "Segmentasi pada level kelompok sel, bukan sel individual; "
-    "sel bersentuhan pada citra Gram 100x."
+    "Segmentation works at the cell group level, not the individual cell; "
+    "cells touch each other in 100x Gram images."
 )
+
+# Key for SEGMENTATION_FAILURE_MESSAGE, used by the client dictionary.
+SEGMENTATION_FAILURE_MESSAGE_KEY = "segmentation_failure"
 
 
 @dataclass(frozen=True)
@@ -92,12 +95,12 @@ def load_image(path: Path | str) -> np.ndarray:
     """
     location = Path(path)
     if not location.is_file():
-        raise FileNotFoundError(f"Citra tidak ditemukan: {location.name}")
+        raise FileNotFoundError(f"Image not found: {location.name}")
 
     raw = np.frombuffer(location.read_bytes(), dtype=np.uint8)
     decoded = cv2.imdecode(raw, cv2.IMREAD_COLOR)
     if decoded is None:
-        raise ValueError(f"Citra tidak dapat dibaca: {location.name}")
+        raise ValueError(f"Image cannot be read: {location.name}")
     return cv2.cvtColor(decoded, cv2.COLOR_BGR2RGB)
 
 
@@ -109,7 +112,7 @@ def _as_rgb(image: np.ndarray) -> np.ndarray:
     if array.ndim == 3 and array.shape[2] == 4:
         return cv2.cvtColor(array.astype(np.uint8), cv2.COLOR_BGRA2RGB)
     if array.ndim != 3 or array.shape[2] != 3:
-        raise ValueError(f"Bentuk citra tidak didukung: {array.shape}")
+        raise ValueError(f"Unsupported image shape: {array.shape}")
     return array.astype(np.uint8, copy=False)
 
 
@@ -369,7 +372,7 @@ def augment_train_variants(
         ValueError: When count is negative.
     """
     if count < 0:
-        raise ValueError(f"Jumlah varian tidak boleh negatif: {count}")
+        raise ValueError(f"Number of variants must not be negative: {count}")
     if count == 0:
         return []
 

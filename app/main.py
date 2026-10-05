@@ -29,6 +29,7 @@ from bacteriacv.config import (
     ALLOWED_SUFFIXES,
     CHECKPOINT_DIR,
     LOW_CONFIDENCE_WARNING,
+    LOW_CONFIDENCE_WARNING_KEY,
     MAX_UPLOAD_BYTES,
     STATIC_DIR,
 )
@@ -157,7 +158,7 @@ def create_app(checkpoint_path: Path | None = None) -> FastAPI:
         if state is None:
             raise HTTPException(status_code=503, detail="Model is not ready")
 
-        name = file.filename or "tanpa_nama"
+        name = file.filename or "unnamed"
         try:
             check_suffix(name)
         except ValueError as error:
@@ -189,7 +190,7 @@ def create_app(checkpoint_path: Path | None = None) -> FastAPI:
         try:
             result = state.predictor.predict(image)
         except Exception as error:  # noqa: BLE001 - report it, do not leak it
-            LOGGER.exception("Prediksi gagal")
+            LOGGER.exception("Prediction failed")
             raise HTTPException(status_code=500, detail=str(error)) from error
 
         panels = result.visualization.panels
@@ -204,15 +205,25 @@ def create_app(checkpoint_path: Path | None = None) -> FastAPI:
                 "prediction": prediction.to_dict(),
                 "stage_index": stage_index,
                 "stage_name": result.visualization.stage_names[stage_index],
+                "stage_key": result.visualization.title_keys[stage_index],
                 "stage_title": result.visualization.titles[stage_index],
                 "stage_names": list(result.visualization.stage_names),
-                "stage_titles": list(result.visualization.titles),
+                # stage_keys are i18n keys, stage_texts the English titles. The
+                # client translates the keys and falls back to the texts.
+                "stage_keys": list(result.visualization.title_keys),
+                "stage_texts": list(result.visualization.titles),
                 "panel": encode_png_base64(panels[stage_index]),
                 # All five panels are sent at once so the toggle does not have to
                 # re-upload the image. What is shown on screen stays one.
                 "panels": [encode_png_base64(panel) for panel in panels],
+                # Same rule as the stages: note_keys for translation,
+                # notes_text as the English fallback. notes is a documented alias
+                # of notes_text so a client without a dictionary still renders.
+                "note_keys": list(prediction.note_keys),
+                "notes_text": list(result.visualization.notes),
                 "notes": list(result.visualization.notes),
                 "disclaimer": LOW_CONFIDENCE_WARNING,
+                "disclaimer_key": LOW_CONFIDENCE_WARNING_KEY,
                 "failed_stages": list(result.visualization.failed_stages),
             }
         )
