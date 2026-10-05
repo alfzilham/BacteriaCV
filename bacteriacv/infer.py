@@ -257,7 +257,7 @@ def main(argv: list[str] | None = None) -> int:
         The exit code, zero when the prediction finished.
     """
     parser = argparse.ArgumentParser(
-        description="Prediksi bentuk sel dan status Gram untuk satu citra."
+        description="Predict the cell shape and Gram status of one image."
     )
     parser.add_argument("image", type=Path)
     parser.add_argument("--checkpoint", type=Path, default=DEFAULT_CHECKPOINT)

@@ -118,7 +118,7 @@ def test_extract_skips_when_already_complete(tmp_path: Path) -> None:
 
 def test_extract_missing_archive_raises(tmp_path: Path) -> None:
     """A missing archive must fail with a clear message."""
-    with pytest.raises(FileNotFoundError, match="tidak ditemukan"):
+    with pytest.raises(FileNotFoundError, match="not found"):
         extract_species(SAMPLE, tmp_path / "zips", tmp_path / "images")
 
 
@@ -128,7 +128,7 @@ def test_extract_archive_without_images_raises(tmp_path: Path) -> None:
     images = tmp_path / "images"
     _make_zip(zips / f"{SAMPLE.zip_name}.zip", {"catatan.txt": b"tidak ada citra"})
 
-    with pytest.raises(RuntimeError, match="Tidak ada citra"):
+    with pytest.raises(RuntimeError, match="No images inside"):
         extract_species(SAMPLE, zips, images)
 
 

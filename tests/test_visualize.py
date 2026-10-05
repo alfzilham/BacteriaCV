@@ -74,7 +74,7 @@ def test_annotate_does_not_mutate_input() -> None:
 
 def test_annotate_rejects_empty_lines() -> None:
     """With no text lines, annotate has nothing to do."""
-    with pytest.raises(ValueError, match="baris"):
+    with pytest.raises(ValueError, match="annotate line is required"):
         annotate(np.zeros((10, 10, 3), dtype=np.uint8), [])
 
 

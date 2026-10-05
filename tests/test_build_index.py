@@ -225,7 +225,7 @@ def test_verify_rejects_fold_outside_range(project_tmp_dir: Path, bad_fold: int)
     rows = build_rows({SPECIES[8].species_id: list(paths)})
     source = next(row for row in rows if row.split == "train")
     broken = rows + [source.__class__(**{**source.__dict__, "fold": bad_fold})]
-    with pytest.raises(RuntimeError, match="Nomor lipatan di luar rentang"):
+    with pytest.raises(RuntimeError, match="Fold number out of range"):
         verify_no_leakage(broken)
 
 
@@ -260,7 +260,7 @@ def test_verify_rejects_fold_on_val(project_tmp_dir: Path) -> None:
     broken = [val_row.__class__(**{**val_row.__dict__, "fold": 2})] + [
         row for row in rows if row is not val_row
     ]
-    with pytest.raises(RuntimeError, match="Pelanggaran lipatan"):
+    with pytest.raises(RuntimeError, match="Fold rule violation"):
         verify_no_leakage(broken)
 
 
@@ -272,7 +272,7 @@ def test_verify_rejects_fold_on_test(project_tmp_dir: Path) -> None:
     broken = [test_row.__class__(**{**test_row.__dict__, "fold": 3})] + [
         row for row in rows if row is not test_row
     ]
-    with pytest.raises(RuntimeError, match="Pelanggaran lipatan"):
+    with pytest.raises(RuntimeError, match="Fold rule violation"):
         verify_no_leakage(broken)
 
 
@@ -307,7 +307,7 @@ def test_verify_no_leakage_detects_duplicate_path(project_tmp_dir: Path) -> None
     """
     paths = _fake_images(project_tmp_dir)
     rows = build_rows({SPECIES[8].species_id: sorted(paths)})
-    with pytest.raises(RuntimeError, match="Citra berulang"):
+    with pytest.raises(RuntimeError, match="Repeated image"):
         verify_no_leakage(rows + [rows[0]])
 
 
@@ -325,7 +325,7 @@ def test_verify_no_leakage_detects_shared_fold(project_tmp_dir: Path) -> None:
     source = next(row for row in rows if row.split == "train")
     other_fold = (source.fold + 1) % N_FOLDS
     clash = source.__class__(**{**source.__dict__, "fold": other_fold})
-    with pytest.raises(RuntimeError, match="Kebocoran antar lipatan"):
+    with pytest.raises(RuntimeError, match="Cross fold leakage"):
         verify_no_leakage(rows + [clash])
 
 
@@ -337,7 +337,7 @@ def test_duplicate_path_in_same_fold_is_caught_by_path_rule(
     rows = build_rows({SPECIES[8].species_id: sorted(paths)})
     source = next(row for row in rows if row.split == "train")
     twin = source.__class__(**{**source.__dict__, "split": "val", "fold": TEST_FOLD})
-    with pytest.raises(RuntimeError, match="Citra berulang"):
+    with pytest.raises(RuntimeError, match="Repeated image"):
         verify_no_leakage(rows + [twin])
 
 
@@ -357,14 +357,14 @@ def test_relative_posix_strips_project_root(project_tmp_dir: Path) -> None:
 def test_relative_posix_rejects_path_outside_root() -> None:
     """An image outside the project root must be rejected, not written as an absolute path."""
     outside = Path(tempfile.gettempdir()) / "bacteriacv_probe" / "citra.tif"
-    with pytest.raises(ValueError, match="di luar root proyek"):
+    with pytest.raises(ValueError, match="outside the project root"):
         _relative_posix(outside)
 
 
 def test_build_rows_rejects_images_outside_root() -> None:
     """build_rows must fail when given an image outside the project root."""
     grouped = {"escherichia_coli": [Path(tempfile.gettempdir()) / "keluar" / "a.tif"]}
-    with pytest.raises(ValueError, match="di luar root proyek"):
+    with pytest.raises(ValueError, match="outside the project root"):
         build_rows(grouped)
 
 
@@ -577,8 +577,8 @@ def test_report_runs_without_error(project_tmp_dir: Path, capsys: pytest.Capture
     rows = build_rows(_full_fake_dataset(project_tmp_dir))
     report(rows)
     captured = capsys.readouterr()
-    assert "Total 669 citra" in captured.out
-    assert "Lipatan (hanya data latih)" in captured.out
+    assert "Total 669 images" in captured.out
+    assert "Folds (train data only)" in captured.out
 
 
 def test_index_row_fields_are_stable(project_tmp_dir: Path) -> None:

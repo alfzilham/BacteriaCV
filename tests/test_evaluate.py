@@ -106,8 +106,8 @@ def test_gram_uses_sigmoid_not_softmax_over_both_columns(tmp_path: Path) -> None
 
     note = report["gram_calibration_note"]
     assert "sigmoid(logit)" in note
-    assert "tidak pernah masuk loss" in note
-    assert "tidak boleh dipakai" in note
+    assert "never enters the loss" in note
+    assert "must not be used" in note
 
 
 def test_report_checkpoint_contains_only_file_name(tmp_path: Path) -> None:

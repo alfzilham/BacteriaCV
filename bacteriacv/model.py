@@ -49,7 +49,7 @@ class BacteriaNet(nn.Module):
         super().__init__()
 
         if BACKBONE_NAME != "resnet50":
-            raise ValueError(f"Backbone {BACKBONE_NAME} belum didukung.")
+            raise ValueError(f"Backbone {BACKBONE_NAME} is not supported.")
 
         weights = ResNet50_Weights[BACKBONE_WEIGHTS] if pretrained else None
         network = resnet50(weights=weights)
@@ -136,7 +136,9 @@ def load_state_dicts(model: BacteriaNet, state: dict[str, torch.Tensor]) -> None
     """
     unexpected = [key for key in state if not key.startswith(HEAD_PREFIX)]
     if unexpected:
-        raise RuntimeError(f"Checkpoint memuat kunci bukan head: {sorted(unexpected)}")
+        raise RuntimeError(
+            f"Checkpoint carries keys that are not head keys: {sorted(unexpected)}"
+        )
 
     current = model.state_dict()
     missing = [
@@ -145,7 +147,7 @@ def load_state_dicts(model: BacteriaNet, state: dict[str, torch.Tensor]) -> None
         if key.startswith(HEAD_PREFIX) and key not in state
     ]
     if missing:
-        raise RuntimeError(f"Checkpoint tidak memuat kunci head: {sorted(missing)}")
+        raise RuntimeError(f"Checkpoint does not carry the head keys: {sorted(missing)}")
 
     model.load_state_dict(state, strict=False)
 
@@ -181,7 +183,7 @@ def load_checkpoint(model: BacteriaNet, path: Path | str) -> BacteriaNet:
     """
     location = Path(path)
     if not location.is_file():
-        raise FileNotFoundError(f"Checkpoint tidak ditemukan: {location.name}")
+        raise FileNotFoundError(f"Checkpoint not found: {location.name}")
     load_state_dicts(model, torch.load(location, map_location="cpu", weights_only=True))
     return model
 

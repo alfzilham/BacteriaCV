@@ -45,8 +45,8 @@ def _relative_posix(path: Path) -> str:
     resolved = path.resolve()
     if not resolved.is_relative_to(PROJECT_ROOT):
         raise ValueError(
-            f"Citra di luar root proyek: {resolved}. "
-            f"Index hanya menerima citra di dalam {PROJECT_ROOT.name}."
+            f"Image outside the project root: {resolved}. "
+            f"The index only accepts images inside {PROJECT_ROOT.name}."
         )
     return resolved.relative_to(PROJECT_ROOT).as_posix()
 
@@ -122,7 +122,7 @@ def extract_species(
     """
     archive = zips_dir / f"{species.zip_name}.zip"
     if not archive.is_file():
-        raise FileNotFoundError(f"Arsip tidak ditemukan: {archive.name}")
+        raise FileNotFoundError(f"Archive not found: {archive.name}")
 
     target = images_dir / species.species_id
     existing = count_images(target)
@@ -145,7 +145,7 @@ def extract_species(
             extracted += 1
 
     if extracted == 0:
-        raise RuntimeError(f"Tidak ada citra di dalam {archive.name}.")
+        raise RuntimeError(f"No images inside {archive.name}.")
 
     return ExtractResult(species, target, extracted, skipped=False)
 
@@ -159,13 +159,13 @@ def extract_all(zips_dir: Path = ZIPS_DIR, images_dir: Path = IMAGES_DIR) -> lis
         status = "lompat" if result.skipped else "ekstrak"
         print(
             f"[{index:2d}/{len(SPECIES)}] {species.display_name:38s} "
-            f"{status}  {result.image_count:3d} citra",
+            f"{status}  {result.image_count:3d} images",
             flush=True,
         )
         results.append(result)
 
     total = sum(result.image_count for result in results)
-    print(f"\nSelesai. {len(results)} spesies, total {total} citra.")
+    print(f"\nDone. {len(results)} species, {total} images in total.")
     return results
 
 
@@ -193,11 +193,18 @@ def classify_unreadable(size_bytes: int) -> str:
         size_bytes: The file size on disk.
 
     Returns:
-        A short reason, in Indonesian. Left as data, not translated here.
+        A short reason.
+
+    The zero byte reason below is deliberately left in Indonesian. It is not
+    a message shown to a user: it fills the reason column of
+    data/raw/unreadable.csv, which is committed as provenance evidence and
+    compared byte for byte by tests/test_extract.py. Translating it would
+    either break that test or silently rewrite committed data, so it is
+    treated as data rather than as prose.
     """
     if size_bytes == 0:
         return "berkas 0 byte, tidak ada data gambar"
-    return "struktur TIFF rusak atau kompresi tidak didukung"
+    return "broken TIFF structure or unsupported compression"
 
 
 def find_unreadable(images_dir: Path = IMAGES_DIR) -> list[UnreadableImage]:
@@ -310,8 +317,8 @@ or was never recorded makes the verification fail.
         count = count_images(directory)
         if count < MIN_IMAGES_PER_SPECIES:
             print(
-                f"GAGAL  {species.species_id}: {count} citra, "
-                f"kurang dari {MIN_IMAGES_PER_SPECIES}"
+                f"FAILED  {species.species_id}: {count} images, "
+                f"fewer than {MIN_IMAGES_PER_SPECIES}"
             )
             ok = False
         for path in sorted(directory.glob("*")) if directory.is_dir() else []:
@@ -319,8 +326,8 @@ or was never recorded makes the verification fail.
                 continue
             if path.name in seen:
                 print(
-                    f"GAGAL  nama berkas kembar {path.name} di "
-                    f"{seen[path.name]} dan {species.species_id}"
+                    f"FAILED  duplicate filename {path.name} in "
+                    f"{seen[path.name]} and {species.species_id}"
                 )
                 ok = False
             else:
@@ -335,37 +342,39 @@ or was never recorded makes the verification fail.
         known_before = previously_recorded
         new_damage = found - known_before
         for item in unreadable:
-            marker = "diketahui" if item.path in known_before else "BARU"
+            marker = "known" if item.path in known_before else "NEW"
             print(f"    {item.path}  ({item.reason}) [{marker}]")
         if new_damage:
             ok = False
             print(
-                f"GAGAL  {len(new_damage)} kerusakan baru ditemukan, "
-                f"total {len(found)} citra tidak terbaca."
+                f"FAILED  {len(new_damage)} newly found damaged files, "
+                f"{len(found)} unreadable images in total."
             )
         else:
             print(
-                f"CATATAN  {len(found)} citra tidak terbaca, semua sudah "
-                f"tercatat di {report_path.name}."
+                f"NOTE  {len(found)} unreadable images, all already "
+                f"recorded in {report_path.name}."
             )
 
     readable = len(seen) - len(unreadable)
     print(
-        f"Total {len(seen)} berkas citra unik, {readable} terbaca, "
-        f"{len(unreadable)} rusak."
+        f"Total {len(seen)} unique image files, {readable} readable, "
+        f"{len(unreadable)} unreadable."
     )
     return ok
 
 
 def main(argv: list[str] | None = None) -> int:
     """Command line entry point."""
-    parser = argparse.ArgumentParser(description="Ekstrak arsip DIBaS per spesies.")
+    parser = argparse.ArgumentParser(
+        description="Extract the DIBaS archives per species."
+    )
     parser.add_argument("--zips-dir", type=Path, default=ZIPS_DIR)
     parser.add_argument("--images-dir", type=Path, default=IMAGES_DIR)
     parser.add_argument(
         "--verify-only",
         action="store_true",
-        help="Hanya periksa hasil ekstraksi tanpa mengekstrak ulang.",
+        help="Only verify the extraction result without extracting again.",
     )
     args = parser.parse_args(argv)
 
@@ -374,11 +383,11 @@ def main(argv: list[str] | None = None) -> int:
             return 0 if verify_all(args.images_dir, UNREADABLE_PATH) else 1
         extract_all(args.zips_dir, args.images_dir)
     except (FileNotFoundError, RuntimeError) as error:
-        print(f"GAGAL: {error}", file=sys.stderr)
+        print(f"FAILED: {error}", file=sys.stderr)
         return 1
 
     if len(SPECIES) != EXPECTED_SPECIES_COUNT:
-        print("GAGAL: jumlah spesies tidak sesuai.", file=sys.stderr)
+        print("FAILED: the species count does not match.", file=sys.stderr)
         return 1
 
     return 0 if verify_all(args.images_dir, UNREADABLE_PATH) else 1

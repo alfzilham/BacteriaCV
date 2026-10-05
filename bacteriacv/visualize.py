@@ -123,7 +123,7 @@ def annotate(
         ValueError: When lines is empty.
     """
     if not lines:
-        raise ValueError("Setidaknya satu baris annotate wajib ada.")
+        raise ValueError("At least one annotate line is required.")
 
     result = np.ascontiguousarray(panel.copy())
     height = LINE_HEIGHT * len(lines)
@@ -157,7 +157,7 @@ def encode_png(panel: np.ndarray) -> bytes:
     """
     ok, buffer = cv2.imencode(".png", cv2.cvtColor(panel, cv2.COLOR_RGB2BGR))
     if not ok:
-        raise ValueError("Panel tidak dapat dikodekan menjadi PNG.")
+        raise ValueError("The panel cannot be encoded as PNG.")
     return buffer.tobytes()
 
 

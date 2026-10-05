@@ -131,13 +131,15 @@ def download_species(species: Species, zips_dir: Path = ZIPS_DIR) -> DownloadRes
             _discard_partial(target)
             if attempt < _RETRY:
                 print(
-                    f"    percobaan {attempt} gagal: {error}. "
-                    f"mengulang dalam {_RETRY_WAIT_SEC} detik.",
+                    f"    attempt {attempt} failed: {error}. "
+                    f"retrying in {_RETRY_WAIT_SEC} seconds.",
                     flush=True,
                 )
                 time.sleep(_RETRY_WAIT_SEC)
     else:
-        raise RuntimeError(f"Gagal mengunduh {species.zip_name}: {last_error}") from last_error
+        raise RuntimeError(
+            f"Failed to download {species.zip_name}: {last_error}"
+        ) from last_error
 
     return DownloadResult(
         species, target, target.stat().st_size, sha256_of(target), skipped=False
@@ -167,7 +169,8 @@ def download_all(zips_dir: Path = ZIPS_DIR) -> list[DownloadResult]:
     ensure_data_dirs()
     if len(SPECIES) != EXPECTED_SPECIES_COUNT:
         raise RuntimeError(
-            f"Peta spesies berisi {len(SPECIES)} entri, diharapkan {EXPECTED_SPECIES_COUNT}."
+            f"The species map holds {len(SPECIES)} entries, "
+            f"expected {EXPECTED_SPECIES_COUNT}."
         )
 
     results: list[DownloadResult] = []
@@ -185,26 +188,28 @@ def download_all(zips_dir: Path = ZIPS_DIR) -> list[DownloadResult]:
         results.append(result)
 
     write_manifest(results)
-    print(f"\nSelesai. {len(results)} arsip, total {total_bytes / 1073741824:.2f} GB.")
-    print(f"Manifest: {MANIFEST_PATH.name} di folder data/raw")
+    print(f"\nDone. {len(results)} archives, {total_bytes / 1073741824:.2f} GB in total.")
+    print(f"Manifest: {MANIFEST_PATH.name} in the data/raw folder")
     return results
 
 
 def main(argv: list[str] | None = None) -> int:
     """Command line entry point."""
-    parser = argparse.ArgumentParser(description="Unduh arsip DIBaS dan tulis manifest.")
+    parser = argparse.ArgumentParser(
+        description="Download the DIBaS archives and write the manifest."
+    )
     parser.add_argument(
         "--zips-dir",
         type=Path,
         default=ZIPS_DIR,
-        help="Folder tujuan berkas ZIP.",
+        help="Target folder for the ZIP files.",
     )
     args = parser.parse_args(argv)
 
     try:
         download_all(args.zips_dir)
     except RuntimeError as error:
-        print(f"GAGAL: {error}", file=sys.stderr)
+        print(f"FAILED: {error}", file=sys.stderr)
         return 1
     return 0
 

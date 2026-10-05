@@ -183,8 +183,8 @@ def _relative_posix(path: Path) -> str:
     resolved = path.resolve()
     if not resolved.is_relative_to(PROJECT_ROOT):
         raise ValueError(
-            f"Citra di luar root proyek: {resolved}. "
-            f"Index hanya menerima citra di dalam {PROJECT_ROOT.name}."
+            f"Image outside the project root: {resolved}. "
+            f"The index only accepts images inside {PROJECT_ROOT.name}."
         )
     return resolved.relative_to(PROJECT_ROOT).as_posix()
 
@@ -224,15 +224,15 @@ Four things are checked:
     for row in rows:
         if row.split != "train" and row.fold != TEST_FOLD:
             raise RuntimeError(
-                f"Pelanggaran lipatan: {row.path} berlabel split {row.split} "
-                f"lalu mendapat fold {row.fold}. Hanya data latih yang boleh "
-                f"punya nomor lipatan."
+                f"Fold rule violation: {row.path} is labelled split {row.split} "
+                f"and has fold {row.fold}. Only train data may "
+                f"carry a fold number."
             )
         if row.split == "train" and not 0 <= row.fold < N_FOLDS:
             raise RuntimeError(
-                f"Nomor lipatan di luar rentang: {row.path} pada split train "
-                f"mendapat fold {row.fold}. Rentang yang sah adalah "
-                f"0 sampai {N_FOLDS - 1}."
+                f"Fold number out of range: {row.path} on split train has "
+                f"fold {row.fold}. The valid range is "
+                f"0 to {N_FOLDS - 1}."
             )
 
     fold_members: dict[int, set[str]] = defaultdict(set)
@@ -246,8 +246,8 @@ Four things are checked:
             overlap = fold_members[left] & fold_members[right]
             if overlap:
                 raise RuntimeError(
-                    f"Kebocoran antar lipatan: {len(overlap)} citra muncul di "
-                    f"lipatan {left} dan lipatan {right}. Contoh: "
+                    f"Cross fold leakage: {len(overlap)} images appear in "
+                    f"fold {left} and fold {right}. Example: "
                     f"{sorted(overlap)[0]}."
                 )
 
@@ -255,8 +255,8 @@ Four things are checked:
     for row in rows:
         if row.path in seen:
             raise RuntimeError(
-                f"Citra berulang: {row.path} muncul di split {seen[row.path]} "
-                f"dan split {row.split}."
+                f"Repeated image: {row.path} appears in split {seen[row.path]} "
+                f"and in split {row.split}."
             )
         seen[row.path] = row.split
 
@@ -267,18 +267,18 @@ def report(rows: list[IndexRow]) -> None:
     per_split = Counter(row.split for row in rows)
     per_fold = Counter(row.fold for row in rows)
 
-    print("Jumlah citra per spesies")
+    print("Image counts per species")
     for species in TRAINABLE_SPECIES:
         print(f"  {species.species_id:38s} {per_species.get(species.species_id, 0):3d}")
 
     total = len(rows)
-    print(f"\nTotal {total} citra")
+    print(f"\nTotal {total} images")
     print("Split")
     for name in ("train", "val", "test"):
         count = per_split[name]
         print(f"  {name:6s} {count:4d}  {count / total * 100:5.1f}%")
 
-    print("Lipatan (hanya data latih)")
+    print("Folds (train data only)")
     for fold in range(N_FOLDS):
         print(f"  fold {fold}  {per_fold[fold]:4d}")
     print(f"  val    {per_split['val']:4d}  (fold -1)")
@@ -292,12 +292,12 @@ def report_exclusions() -> None:
     """
     if not EXCLUDED_FROM_TRAINING:
         return
-    print("\nSpesies dikecualikan dari pelatihan")
+    print("\nSpecies excluded from training")
     for species in SPECIES:
         reason = EXCLUDED_FROM_TRAINING.get(species.species_id)
         if reason:
             print(f"  {species.display_name} ({species.species_id})")
-            print(f"    alasan: {reason}")
+            print(f"    reason: {reason}")
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -308,7 +308,9 @@ def main(argv: list[str] | None = None) -> int:
     New damage or an unrecorded change to the list makes the process
     stop without touching the index.
     """
-    parser = argparse.ArgumentParser(description="Bangun data/index.csv dari citra DIBaS.")
+    parser = argparse.ArgumentParser(
+        description="Build data/index.csv from the DIBaS images."
+    )
     parser.add_argument("--images-dir", type=Path, default=IMAGES_DIR)
     parser.add_argument("--index-path", type=Path, default=INDEX_PATH)
     parser.add_argument("--unreadable", type=Path, default=UNREADABLE_PATH)
@@ -317,7 +319,7 @@ def main(argv: list[str] | None = None) -> int:
 
     grouped, skipped = collect_images(args.images_dir)
     if not grouped:
-        print("GAGAL: tidak ada citra ditemukan.", file=sys.stderr)
+        print("FAILED: no images found.", file=sys.stderr)
         return 1
 
     expected_skipped = {row["path"] for row in read_unreadable_report(args.unreadable)}
@@ -326,13 +328,13 @@ def main(argv: list[str] | None = None) -> int:
         missing = actually_skipped - expected_skipped
         stale = expected_skipped - actually_skipped
         print(
-            "GAGAL: daftar citra tidak terbaca tidak cocok dengan "
-            f"{args.unreadable.name}. Jalankan ekstraksi dengan verifikasi lebih dulu."
+            "FAILED: the unreadable image list does not match "
+            f"{args.unreadable.name}. Run the extraction with verification first."
         )
         if missing:
-            print(f"  tidak tercatat di laporan: {sorted(missing)}")
+            print(f"  not recorded in the report: {sorted(missing)}")
         if stale:
-            print(f"  tercatat tapi ternyata terbaca: {sorted(stale)}")
+            print(f"  recorded but turns out to be readable: {sorted(stale)}")
         return 1
 
     rows = build_rows(grouped, seed=args.seed)
@@ -340,17 +342,17 @@ def main(argv: list[str] | None = None) -> int:
     try:
         verify_no_leakage(rows)
     except RuntimeError as error:
-        print(f"GAGAL: {error}", file=sys.stderr)
+        print(f"FAILED: {error}", file=sys.stderr)
         return 1
 
     write_index(rows, args.index_path)
     report(rows)
     report_exclusions()
     if skipped:
-        print(f"\n{len(skipped)} citra tidak terbaca dan tidak masuk index:")
+        print(f"\n{len(skipped)} unreadable images, not in the index:")
         for name in skipped:
             print(f"  {name}")
-    print(f"\nIndex ditulis: {args.index_path}")
+    print(f"\nIndex written: {args.index_path}")
     return 0
 
 

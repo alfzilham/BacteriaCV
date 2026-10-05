@@ -97,11 +97,11 @@ EXPECTED_SPECIES_COUNT = 33
 # reason. The exclusion is recorded here, not quietly dropped from SPEC.
 EXCLUDED_FROM_TRAINING: dict[str, str] = {
     "candida_albicans": (
-        "Candida albicans adalah jamur, bukan bakteri, sehingga tidak memenuhi "
-        "premis sistem yang mengklasifikasi bakteri. Sel jamur berukuran 5 sampai "
-        "10 mikron, jauh lebih besar dari bakteri 1 sampai 2 mikron, sehingga "
-        "masuknya kelas ini akan menaikkan F1-score tanpa menunjukkan kemampuan "
-        "klasifikasi morfologi bakteri."
+        "Candida albicans is a fungus, not a bacterium, so it does not "
+        "satisfy the system premise. Fungal cells are 5 to 10 microns, "
+        "far larger than bacteria at 1 to 2 microns, so this class will be "
+        "easily separated by the backbone and will raise the F1-score without "
+        "demonstrating bacterial morphology classification ability."
     ),
 }
 

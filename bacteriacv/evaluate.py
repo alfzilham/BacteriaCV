@@ -189,7 +189,7 @@ def select_split(store: FeatureStore, split: str) -> np.ndarray:
         dtype=np.int64,
     )
     if positions.size == 0:
-        raise ValueError(f"Split {split!r} kosong pada feature store.")
+        raise ValueError(f"Split {split!r} is empty in the feature store.")
     return positions
 
 
@@ -300,19 +300,20 @@ def evaluate_checkpoint(
             species_ids, shape_prediction == shape_truth, shape_prediction
         ),
         "scope_note": (
-            "Head A dilatih pada dua kelas karena DIBaS tidak memuat spesies "
-            f"berbentuk {SHAPE_UNPOPULATED}. Kelas {SHAPE_UNPOPULATED} pada "
-            f"{list(SHAPE_LABELS_FULL)[2:]} tidak terisi dan tidak masuk metrik."
+            "Head A was trained on two classes because DIBaS contains no "
+            f"spiral-shaped species. The {SHAPE_UNPOPULATED} class in "
+            f"{list(SHAPE_LABELS_FULL)[2:]} is unpopulated and is excluded "
+            "from the metrics."
         ),
         "gram_calibration_note": (
-            "Head B dilatih sebagai klasifier biner satu logit dengan "
-            "BCEWithLogitsLoss pada kolom keluaran kedua. sigmoid(logit) adalah "
-            "probabilitas kelas positif, sehingga ambang 0,5 berlaku langsung "
-            "dan confidence adalah probabilitas kelas yang dipilih. Kolom "
-            "keluaran pertama tidak pernah masuk loss dan tidak membawa "
-            "informasi yang dipelajari, jadi tidak boleh dipakai: softmax atas "
-            "dua kolom akan mencampur logit yang dilatih dengan logit yang "
-            "hanya mengalami weight decay."
+            "Head B was trained as a single-logit binary classifier with "
+            "BCEWithLogitsLoss on the second output column. sigmoid(logit) is "
+            "the probability of the positive class, so the 0.5 threshold "
+            "applies directly and the confidence is the probability of the "
+            "chosen class. The first output column never enters the loss and "
+            "carries no learned information, so it must not be used: a "
+            "softmax over two columns would mix the trained logit with the "
+            "logit that only experiences weight decay."
         ),
     }
 
@@ -327,7 +328,7 @@ def main(argv: list[str] | None = None) -> int:
         The exit code, zero when the evaluation finished.
     """
     parser = argparse.ArgumentParser(
-        description="Nilai checkpoint BacteriaCV pada split data uji."
+        description="Evaluate a BacteriaCV checkpoint on the test split."
     )
     parser.add_argument("--index", type=Path, default=INDEX_PATH)
     parser.add_argument("--root", type=Path, default=PROJECT_ROOT)
@@ -354,12 +355,12 @@ def main(argv: list[str] | None = None) -> int:
 
     shape = report["shape"]
     gram = report["gram"]
-    print(f"Split                  : {report['split']} ({report['n_images']} citra)")
-    print(f"Head A bentuk F1       : {shape['f1_macro']:.4f} akurasi {shape['accuracy']:.4f}")
-    print(f"Head A confidence rata : {report['mean_confidence_shape']:.4f}")
-    print(f"Head B Gram F1         : {gram['f1_macro']:.4f} akurasi {gram['accuracy']:.4f}")
-    print(f"Head B confidence rata : {report['mean_confidence_gram']:.4f}")
-    print(f"Laporan             : {args.out}")
+    print(f"Split                  : {report['split']} ({report['n_images']} images)")
+    print(f"Head A shape F1        : {shape['f1_macro']:.4f} accuracy {shape['accuracy']:.4f}")
+    print(f"Head A mean confidence : {report['mean_confidence_shape']:.4f}")
+    print(f"Head B Gram F1         : {gram['f1_macro']:.4f} accuracy {gram['accuracy']:.4f}")
+    print(f"Head B mean confidence : {report['mean_confidence_gram']:.4f}")
+    print(f"Report                : {args.out}")
     return 0
 
 

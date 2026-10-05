@@ -439,6 +439,6 @@
       ]
     }
   ],
-  "scope_note": "Head A dilatih pada dua kelas karena DIBaS tidak memuat spesies berbentuk spiral. Kelas spiral pada ['spiral'] tidak terisi dan tidak masuk metrik.",
-  "gram_calibration_note": "Head B dilatih sebagai klasifier biner satu logit dengan BCEWithLogitsLoss pada kolom keluaran kedua. sigmoid(logit) adalah probabilitas kelas positif, sehingga ambang 0,5 berlaku langsung dan confidence adalah probabilitas kelas yang dipilih. Kolom keluaran pertama tidak pernah masuk loss dan tidak membawa informasi yang dipelajari, jadi tidak boleh dipakai: softmax atas dua kolom akan mencampur logit yang dilatih dengan logit yang hanya mengalami weight decay."
+  "scope_note": "Head A was trained on two classes because DIBaS contains no spiral-shaped species. The spiral class in ['spiral'] is unpopulated and is excluded from the metrics.",
+  "gram_calibration_note": "Head B was trained as a single-logit binary classifier with BCEWithLogitsLoss on the second output column. sigmoid(logit) is the probability of the positive class, so the 0.5 threshold applies directly and the confidence is the probability of the chosen class. The first output column never enters the loss and carries no learned information, so it must not be used: a softmax over two columns would mix the trained logit with the logit that only experiences weight decay."
 }

@@ -110,7 +110,7 @@ def test_download_species_raises_after_all_retries(tmp_path: Path) -> None:
     download_module._download_once = always_fails
     download_module._RETRY_WAIT_SEC = 0
     try:
-        with pytest.raises(RuntimeError, match="Gagal mengunduh"):
+        with pytest.raises(RuntimeError, match="Failed to download"):
             download_species(SAMPLE, zips)
     finally:
         download_module._download_once = original
@@ -160,7 +160,7 @@ def test_download_retries_cleanup_never_masks_original_error(tmp_path: Path) -> 
         download_module._download_once = original
         download_module._RETRY_WAIT_SEC = original_wait
 
-    assert "Gagal mengunduh" in str(info.value)
+    assert "Failed to download" in str(info.value)
 
 
 def test_write_manifest_columns_and_values(tmp_path: Path) -> None:

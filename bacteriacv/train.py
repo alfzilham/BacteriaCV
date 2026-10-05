@@ -133,13 +133,13 @@ def load_feature_store(directory: Path | str) -> FeatureStore:
     source = Path(directory)
     matrix_path = source / MATRIX_NAME
     if not matrix_path.is_file():
-        raise FileNotFoundError(f"Feature store tidak ditemukan: {source.name}")
+        raise FileNotFoundError(f"Feature store not found: {source.name}")
 
     matrix = np.load(matrix_path)
     if matrix.ndim != 2 or matrix.shape[1] != FEATURE_DIM:
         raise ValueError(
-            f"Jumlah kolom fitur tidak cocok dengan FEATURE_DIM, "
-            f"periksa dimensi matriks: bentuk {matrix.shape}"
+            f"The feature column count does not match FEATURE_DIM, "
+            f"check the matrix dimensions: shape {matrix.shape}"
         )
 
     labels = np.load(source / LABELS_NAME, allow_pickle=False)
@@ -150,7 +150,7 @@ def load_feature_store(directory: Path | str) -> FeatureStore:
     lengths = {len(matrix), len(species_ids), len(splits), len(paths)}
     if len(lengths) != 1:
         raise ValueError(
-            f"Jumlah label tidak sama dengan jumlah baris fitur: "
+            f"The label count does not match the feature row count: "
             f"{len(matrix)}, {len(species_ids)}, {len(splits)}, {len(paths)}"
         )
 
@@ -184,7 +184,7 @@ def cache_signature(images_dir: Path | str, rows: list[dict], augment: bool) -> 
             stat = location.stat()
             marker = f"{stat.st_size}-{stat.st_mtime_ns}"
         except OSError:
-            marker = "tidak-ada"
+            marker = "absent"
         digest.update(f"{row['path']}|{row.get('split', '')}|{marker}\n".encode())
 
     return digest.hexdigest()[:16]
@@ -252,8 +252,8 @@ def extract_features_for_rows(
 
         if verbose and (position + 1) % PROGRESS_EVERY == 0:
             print(
-                f"Ekstraksi {position + 1}/{len(rows)} citra, "
-                f"{len(tensors)} baris fitur",
+                f"Extracting {position + 1}/{len(rows)} images, "
+                f"{len(tensors)} feature rows",
                 flush=True,
             )
 
@@ -512,7 +512,7 @@ def _split_masks(splits: list[str]) -> dict[str, torch.Tensor]:
     }
     for name in REQUIRED_SPLITS:
         if not bool(masks[name].any()):
-            raise ValueError(f"Split {name!r} kosong pada feature store.")
+            raise ValueError(f"Split {name!r} is empty in the feature store.")
     return masks
 
 
@@ -544,7 +544,7 @@ def train(store: FeatureStore, config: TrainConfig | None = None) -> TrainingRep
     matrix = np.ascontiguousarray(store.matrix, dtype=np.float32)
     if matrix.ndim != 2 or matrix.shape[1] != FEATURE_DIM:
         raise ValueError(
-            f"Matriks fitur harus berbentuk (N, {FEATURE_DIM}), bukan {matrix.shape}"
+            f"The feature matrix must have shape (N, {FEATURE_DIM}), got {matrix.shape}"
         )
 
     masks = _split_masks(store.splits)
@@ -706,7 +706,7 @@ def read_index_rows(index_path: Path | str = INDEX_PATH) -> list[dict]:
     """
     location = Path(index_path)
     if not location.is_file():
-        raise FileNotFoundError(f"Berkas index tidak ditemukan: {location.name}")
+        raise FileNotFoundError(f"Index file not found: {location.name}")
 
     with location.open(newline="", encoding="utf-8") as handle:
         return list(csv.DictReader(handle))
@@ -722,7 +722,7 @@ def main(argv: list[str] | None = None) -> int:
         The exit code, zero when training finished.
     """
     parser = argparse.ArgumentParser(
-        description="Latih dua head BacteriaCV pada fitur backbone beku."
+        description="Train the two BacteriaCV heads on frozen backbone features."
     )
     parser.add_argument("--index", type=Path, default=INDEX_PATH)
     parser.add_argument("--root", type=Path, default=PROJECT_ROOT)
@@ -736,7 +736,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "--no-augment",
         action="store_true",
-        help="Lewati augmentasi dan pakai fitur apa adanya.",
+        help="Skip augmentation and use the features as they are.",
     )
     args = parser.parse_args(argv)
 
@@ -755,9 +755,9 @@ def main(argv: list[str] | None = None) -> int:
         verbose=True,
     )
 
-    print(f"Baris index       : {len(rows)}")
-    print(f"Baris fitur       : {store.matrix.shape[0]}")
-    print(f"Cache             : {directory.name} (dipakai ulang: {reused})")
+    print(f"Index rows        : {len(rows)}")
+    print(f"Feature rows      : {store.matrix.shape[0]}")
+    print(f"Cache             : {directory.name} (reused: {reused})")
 
     report = train(
         store,
@@ -776,11 +776,11 @@ def main(argv: list[str] | None = None) -> int:
         json.dumps(report.to_dict(), indent=2), encoding="utf-8"
     )
 
-    print(f"Epoch dijalankan  : {report.epochs_run} (terbaik epoch {report.best_epoch})")
-    print(f"Validasi bentuk   : F1 {report.best_val_f1_shape:.4f}")
-    print(f"Validasi Gram     : F1 {report.best_val_f1_gram:.4f}")
-    print(f"Uji bentuk        : F1 {report.test_f1_shape[0]:.4f} akurasi {report.test_accuracy_shape:.4f}")
-    print(f"Uji Gram          : F1 {report.test_f1_gram[0]:.4f} akurasi {report.test_accuracy_gram:.4f}")
+    print(f"Epochs run        : {report.epochs_run} (best epoch {report.best_epoch})")
+    print(f"Shape validation  : F1 {report.best_val_f1_shape:.4f}")
+    print(f"Gram validation   : F1 {report.best_val_f1_gram:.4f}")
+    print(f"Shape test        : F1 {report.test_f1_shape[0]:.4f} accuracy {report.test_accuracy_shape:.4f}")
+    print(f"Gram test         : F1 {report.test_f1_gram[0]:.4f} accuracy {report.test_accuracy_gram:.4f}")
     print(f"Checkpoint        : {report.checkpoint_path}")
     return 0
 

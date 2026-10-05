@@ -164,11 +164,11 @@ def class_weights(targets: list[int], n_classes: int | None = None) -> torch.Ten
     if n_classes is None:
         n_classes = len(SHAPE_LABELS)
     if not targets:
-        raise ValueError("Daftar target kosong, bobot kelas tidak dapat dihitung.")
+        raise ValueError("The target list is empty, class weights cannot be computed.")
 
     counts = Counter(targets)
     if len(counts) < 2:
-        raise ValueError("Hanya satu kelas pada data latih, bobot tidak dapat dihitung.")
+        raise ValueError("Only one class in the train data, weights cannot be computed.")
 
     weights = [1.0] * n_classes
     for index, count in counts.items():

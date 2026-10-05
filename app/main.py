@@ -86,7 +86,7 @@ def build_lifespan(checkpoint_path: Path | None = None):
         cv2.utils.logging.setLogLevel(cv2.utils.logging.LOG_LEVEL_ERROR)
         application.state.bacteria = AppState(checkpoint_path)
         LOGGER.info(
-            "Checkpoint dimuat: %s", application.state.bacteria.checkpoint_path.name
+            "Checkpoint loaded: %s", application.state.bacteria.checkpoint_path.name
         )
         try:
             yield

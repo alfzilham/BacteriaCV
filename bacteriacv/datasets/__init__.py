@@ -1,1 +1,1 @@
-"""Modul dataset BacteriaCV."""
+"""The BacteriaCV dataset modules."""
