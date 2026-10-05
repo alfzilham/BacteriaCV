@@ -184,7 +184,7 @@ def test_predict_rejects_unreadable_image(client: TestClient) -> None:
     )
 
     assert response.status_code == 400
-    assert "citra" in response.json()["detail"]
+    assert "image" in response.json()["detail"]
 
 
 def test_predict_rejects_oversized_file(client: TestClient) -> None:

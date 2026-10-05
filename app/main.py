@@ -118,7 +118,7 @@ def create_app(checkpoint_path: Path | None = None) -> FastAPI:
         """
         page = STATIC_DIR / "index.html"
         if not page.is_file():
-            raise HTTPException(status_code=500, detail="index.html tidak ditemukan")
+            raise HTTPException(status_code=500, detail="index.html not found")
         return HTMLResponse(page.read_text(encoding="utf-8"))
 
     @app.get("/api/health")
@@ -155,7 +155,7 @@ def create_app(checkpoint_path: Path | None = None) -> FastAPI:
         """
         state: AppState | None = getattr(request.app.state, "bacteria", None)
         if state is None:
-            raise HTTPException(status_code=503, detail="Model belum siap")
+            raise HTTPException(status_code=503, detail="Model is not ready")
 
         name = file.filename or "tanpa_nama"
         try:
@@ -165,12 +165,12 @@ def create_app(checkpoint_path: Path | None = None) -> FastAPI:
 
         payload = await file.read(MAX_UPLOAD_BYTES + 1)
         if not payload:
-            raise HTTPException(status_code=400, detail="Berkas kosong")
+            raise HTTPException(status_code=400, detail="Empty file")
         if len(payload) > MAX_UPLOAD_BYTES:
             limit_mb = MAX_UPLOAD_BYTES // (1024 * 1024)
             raise HTTPException(
                 status_code=413,
-                detail=f"Berkas melebihi batas {limit_mb} MB",
+                detail=f"File exceeds the {limit_mb} MB limit",
             )
 
         stage = request.query_params.get(STAGE_INDEX_FIELD, "0")
@@ -178,7 +178,7 @@ def create_app(checkpoint_path: Path | None = None) -> FastAPI:
             stage_index = int(stage)
         except ValueError as error:
             raise HTTPException(
-                status_code=400, detail="Parameter stage harus angka"
+                status_code=400, detail="stage parameter must be a number"
             ) from error
 
         try:
@@ -195,7 +195,7 @@ def create_app(checkpoint_path: Path | None = None) -> FastAPI:
         panels = result.visualization.panels
         if not 0 <= stage_index < len(panels):
             raise HTTPException(
-                status_code=400, detail=f"Stage di luar rentang 0 sampai {len(panels) - 1}"
+                status_code=400, detail=f"Stage out of range, must be 0 to {len(panels) - 1}"
             )
 
         prediction = result.prediction
@@ -226,7 +226,7 @@ def create_app(checkpoint_path: Path | None = None) -> FastAPI:
         """
         path = CHECKPOINT_DIR / EVALUATION_NAME
         if not path.is_file():
-            raise HTTPException(status_code=404, detail="Evaluasi belum dijalankan")
+            raise HTTPException(status_code=404, detail="Evaluation has not been run yet")
         return JSONResponse(json.loads(path.read_text(encoding="utf-8")))
 
     return app
@@ -242,12 +242,12 @@ def _decode(payload: bytes) -> np.ndarray:
         Array RGB uint8.
 
     Raises:
-        ValueError: Bila isi berkas tidak dapat dibaca sebagai citra.
+        ValueError: When the file content cannot be read as an image.
     """
     raw = np.frombuffer(payload, dtype=np.uint8)
     decoded = cv2.imdecode(raw, cv2.IMREAD_COLOR)
     if decoded is None:
-        raise ValueError("Berkas tidak dapat dibaca sebagai citra")
+        raise ValueError("File cannot be read as an image")
     return cv2.cvtColor(decoded, cv2.COLOR_BGR2RGB)
 
 
