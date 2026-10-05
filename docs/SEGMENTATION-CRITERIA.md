@@ -1,78 +1,75 @@
-# Kriteria Sukses Segmentasi DIBaS
+# DIBaS Segmentation Success Criteria
 
-Ditetapkan sebelum eksperimen, 4 Oktober 2026, oleh pemilik proyek.
+Established before the experiment, 4 October 2026, by the project owner.
 
-## Latar Belakang
+## Background
 
-Segmentasi morfologis adalah keputusan arsitektur A4 danentropy untuk output F5
-di SPEC bagian 4. Parameternya belum tervalidasi, sehingga tidak boleh dipakai
-sebagai klaim kapasitas sistem sebelum lolos pengukuran.
+Morphological segmentation is architecture decision A4 and the basis for output F5
+in SPEC section 4. Its parameters have not been validated, so they must not be used
+as a claim of system capability before passing measurement.
 
-## Parameter yang Diuji
+## Parameters Tested
 
-- `min_distance`: 8, 12, 16 (dimulai dari 12)
-- Skala: resolusi asli 2048 x 1532
-- Disk erosi dan dilasi: `disk(5)`, jejak 11 x 11
+- `min_distance`: 8, 12, 16 (starting from 12)
+- Scale: original resolution 2048 x 1532
+- Erosion and dilation disk: `disk(5)`, footprint 11 x 11
 - `min_object_area`: 300
-- Ambang: Otsu pada citra grayscale yang sudah diblur
+- Threshold: Otsu on an already blurred grayscale image
 
-## KLASIFIKASI YANG DIGUNAKAN
+## CLASSIFICATION USED
 
-Menggunakan `label_map.LOOKUP` yang sudah tervalidasi audit, bukan penentuan ulang:
+Using the audit-validated `label_map.LOOKUP`, not a new determination:
 
-- Kokus: 9 spesies
-- Batang: 23 spesies
+- Cocci: 9 species
+- Bacilli: 23 species
 
-## KRITERIA LANGSUNG BERHASIL
+## DIRECT SUCCESS CRITERIA
 
-Pada `min_distance = 12`, ketiga syarat berikut harus terpenuhi:
+At `min_distance = 12`, all three of the following conditions must be met:
 
-1. Elongasi median seluruh spesies kokus tidak boleh lebih dari 1,45
-2. Elongasi median seluruh spesies batang tidak boleh kurang dari 1,60
-3. Jarak antara median kokus dan median batang minimal 0,15
+1. The median elongation across all cocci species must not exceed 1.45
+2. The median elongation across all bacilli species must not fall below 1.60
+3. The distance between the cocci median and the bacilli median is at least 0.15
 
-Elongasi dihitung sebagai `axis_major_length / axis_minor_length` dari
-`skimage.measure.regionprops` pada setiap objek hasil watershed._statistik
-yang dipakai adalah median, bukan rata-rata, karena distributionnya tidak normal.
+Elongation is computed as `axis_major_length / axis_minor_length` from
+`skimage.measure.regionprops` on each watershed object. The statistic used is the
+median, not the mean, because the distribution is not normal.
 
-## KRITERIA GAGAL
+## FAILURE CRITERIA
 
-Eksperimen dinyatakan gagal bila setelah `min_distance` diuji pada 8, 12, dan
-16, ada `min_distance` yang memenuhi ketiga syarat di atas.
+The experiment is declared failed if, after testing `min_distance` at 8, 12, and
+16, there is a `min_distance` that meets the three conditions above.
 
-## BATAS WAKTU
+## TIME LIMIT
 
-30 menit. Bila habis tanpa memenuhi kriteria, eksperimen dihentikan.
+30 minutes. If that runs out without meeting the criteria, the experiment is stopped.
 
-## KEPUTUSAN YANG MENGIKUTI
+## FOLLOW-UP DECISION
 
-### Bila berhasil
+### If it succeeds
 
-Opsi (c) diteruskan. Segmentasi berjalan pada resolusi asli untuk mask dan
-visualisasi, resize 224 hanya untuk tensor model. Konstan di `config.py`
-diperbarui ke nilai yang terpilih.
+Option (c) proceeds. Segmentation runs at the original resolution for the mask and
+visualization, and the 224 resize is only for the model tensor. Constants in `config.py`
+are updated to the chosen values.
 
-### Bila gagal
+### If it fails
 
-Segmenasi TIDAK dibuang. Fallback adalah opsi (c) yang diperbaiki dengan label
-akurat:
+Segmentation is NOT discarded. The fallback is option (c) fixed with accurate labels:
 
-1. Istilah "kontur sel" di ARCHITECTURE C6 dan F5 di SPEC bagian 4 diubah
-   menjadi "kontur area bakteri", karena yang tersegmentasi adalah kelompok
-   bakteri, bukan sel individual. Ini amendemen terpisah.
-2. SPEC bagian 8 mencatat keterbatasan dengan angka terukur: segmentasi
-   memisahkan kelompok bakteri tetapi bukan sel individual, karena sel
-   bersentuhan pada citra Gram 100x.
-3. Tabel elongasi per spesies masuk laporan.
+1. The term "cell contour" in ARCHITECTURE C6 and F5 in SPEC section 4 is changed
+   to "bacterial area contour", because what is segmented is bacterial groups, not
+   individual cells. This is a separate amendment.
+2. SPEC section 8 records the limitation with measured figures: segmentation
+   separates bacterial groups but not individual cells, because cells
+   touch each other in 100x Gram images.
+3. The per-species elongation table goes into the report.
 
-Alasan fallback dipilih, bukan pembuangan segmentasi: F5 berstatus Wajib di
-SPEC bagian 4, dan ARCHITECTURE A3 menyatakan segmentasi tidak dibutuhkan pada
-inferensi sehingga segmentasi tidak memengaruhi akurasi model. Segmentasi yang
-kurang sempurna dengan label yang benar masih bernilai; yang merusak adalah
-label yang salah.
+The reason the fallback was chosen rather than discarding segmentation: F5 has Required
+status in SPEC section 4, and ARCHITECTURE A3 states segmentation is not needed at
+inference so segmentation does not affect model accuracy. Imperfect segmentation with
+correct labels still has value; what is damaging is wrong labels.
 
-## CATATAN TENTANG STAPHYLOCOCCUS
+## NOTE ON STAPHYLOCOCCUS
 
-Klaster anggur pada Staphylococcus adalah unit morfologis yang nyata pada
-perbesaran 100x, bukan artefak segmentasi. Objek yang lebih besar pada spesies
-kokus klaster tidak otomatis berarti segmentasi gagal.
+The grape-like clusters in Staphylococcus are a real morphological unit at
+100x magnification, not a segmentation artifact. Larger objects in cluster-forming cocci species do not automatically mean segmentation failed.

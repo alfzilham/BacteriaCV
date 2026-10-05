@@ -1,91 +1,91 @@
-# PRD: Prototipe Klasifikasi Bentuk Sel dan Status Gram
+# PRD: Cell Shape and Gram Status Classification Prototype
 
-> STATUS: FINAL (versi 1.0). Keputusan produk sudah disepakati melalui sesi product-brainstorming.
+> STATUS: FINAL (version 1.0). Product decisions have been agreed through product-brainstorming sessions.
 
-## 1. Ringkasan
-Prototipe Computer Vision yang menerima satu citra mikroskop digital dan menampilkan bentuk sel, status Gram, confidence score per head, dan visualisasi setiap tahap pra-pemrosesan secara berurutan. Dijalankan di laptop atau PC dengan GPU konsumen.
+## 1. Summary
+A Computer Vision prototype that accepts a single digital microscope image and displays the cell shape, Gram status, confidence score per head, and a visualization of each preprocessing stage in sequence. Runs on a laptop or PC with a consumer GPU.
 
-## 2. Masalah
-Klasifikasi bakteri secara manual memakan waktu dan rentan terhadap kesalahan pembaca. Sementara itu, mahasiswa yang belajar integrasi mikrobiologi dan Computer Vision sulit menghubungkan teori pewarnaan Gram dengan proses komputasi yang sebenarnya. Prototipe ini menjembatani keduanya.
+## 2. The Problem
+Manual bacterial classification is time-consuming and prone to reader error. Meanwhile, students studying the integration of microbiology and Computer Vision struggle to connect Gram staining theory with the actual computational process. This prototype bridges the two.
 
-## 3. Tujuan Produk
-1. Membantu mahasiswa memahami alur dari citra mikroskop hingga prediksi.
-2. Menyediakan prototipe yang dapat dijalankan dan dimodifikasi.
-3. Menunjukkan bahwa satu backbone CNN dapat memprediksi bentuk dan status Gram sekaligus.
-4. Menjadi dasar yang dapat dikembangkan untuk dataset lain.
+## 3. Product Goals
+1. Help students understand the flow from microscope image to prediction.
+2. Provide a prototype that can be run and modified.
+3. Show that a single CNN backbone can predict shape and Gram status at the same time.
+4. Become a foundation that can be developed for other datasets.
 
-Prioritas bila terjadi konflik: kualitas laporan dan rubrik didahulukan; prototipe cukup berjalan untuk demo.
+Priority when a conflict arises: report quality and the rubric come first; the prototype only needs to run well enough for a demo.
 
-## 4. Pengguna
+## 4. Users
 
-| Segmen | Peran | Kebutuhan utama |
+| Segment | Role | Main need |
 |--------|-------|-----------------|
-| Mahasiswa (utama) | Pengguna langsung | Memahami alur, memodifikasi kode, mendapat hasil cepat, membandingkan dengan label asli |
-| Peneliti (sekunder) | Pengembang lanjutan | Struktur modul yang jelas dan titik ekstensi |
-| Ahli mikrobiologi (sekunder) | Pengguna alat bantu | Hasil dengan confidence jelas dan peringatan bila tidak pasti |
+| Students (primary) | Direct user | Understand the flow, modify the code, get results quickly, compare with the true label |
+| Researchers (secondary) | Advanced developer | Clear module structure and extension points |
+| Microbiology experts (secondary) | Aid user | Results with clear confidence and a warning when uncertain |
 
-### 4.1 Urutan Prioritas Kebutuhan Mahasiswa
-1. Memahami alur (tertinggi): visualisasi setiap tahap pra-pemrosesan.
-2. Memodifikasi kode: modul terstruktur sesuai DESIGN.md bagian 8.
-3. Hasil cepat: tercakup oleh kriteria demo.
-4. Membandingkan dengan label asli: fitur pengembangan, karena antarmuka demo tidak memuat data uji.
+### 4.1 Student Requirement Priority Order
+1. Understand the flow (highest): visualization of each preprocessing stage.
+2. Modify the code: modules structured according to DESIGN.md section 8.
+3. Fast results: covered by the demo criteria.
+4. Compare with the true label: a development feature, because the demo interface does not include test data.
 
-## 5. Cerita Pengguna
-1. Sebagai mahasiswa, saya ingin melihat citra asli, hasil resize, normalisasi, segmentasi, dan hasil akhir secara berurutan, agar saya dapat mencocokkan langkah-langkah itu dengan teori di laporan.
-2. Sebagai mahasiswa, saya ingin melihat keterangan khusus pada tahap yang gagal, agar saya tahu di mana masalah terjadi.
-3. Sebagai mahasiswa, saya ingin mengunggah citra dan mendapat label bentuk serta status Gram beserta confidence-nya, agar saya bisa menggunakannya untuk tugas.
-4. Sebagai mahasiswa, saya ingin membuka dan mengubah kode per modul, agar saya dapat bereksperimen.
-5. Sebagai peneliti, saya ingin menambahkan dataset atau arsitektur baru melalui titik ekstensi yang didokumentasikan, agar pengembangan tidak mengubah seluruh sistem.
-6. Sebagai ahli mikrobiologi, saya ingin melihat peringatan saat confidence rendah, agar saya tidak mengandalkan hasil yang tidak pasti.
+## 5. User Stories
+1. As a student, I want to see the original image, the resize result, normalization, segmentation, and the final result in sequence, so I can match those steps against the theory in the report.
+2. As a student, I want to see a specific caption on a stage that failed, so I know where the problem occurred.
+3. As a student, I want to upload an image and get the shape and Gram labels with their confidence, so I can use it for assignments.
+4. As a student, I want to open and change the code per module, so I can experiment.
+5. As a researcher, I want to add a new dataset or architecture through documented extension points, so development does not require changing the whole system.
+6. As a microbiology expert, I want to see a warning when confidence is low, so I do not rely on an uncertain result.
 
-## 6. Kebutuhan
-Mengacu pada SPEC.md bagian 4, ditambah kebutuhan UX berikut:
+## 6. Requirements
+Referring to SPEC.md section 4, plus the following UX requirements:
 
-| ID | Kebutuhan | Prioritas |
+| ID | Requirement | Priority |
 |----|-----------|-----------|
-| U1 | Panel bernomor menampilkan setiap tahap pra-pemrosesan secara berurutan | Wajib |
-| U2 | Tombol "lanjut" dan "kembali" untuk menelusuri tahap | Wajib |
-| U3 | Tahap yang gagal ditandai dengan keterangan khusus dan alasan singkat | Wajib |
-| U4 | Keterangan singkat untuk setiap tahap, sesuai teori di laporan | Wajib |
-| U5 | Peringatan bila confidence di bawah 0,6 | Wajib |
-| U6 | Grad-CAM atau visualisasi aktivasi lapisan | Tidak termasuk versi awal |
-| U7 | Perbandingan hasil dengan label asli dari dataset | Pengembangan |
+| U1 | A numbered panel displays each preprocessing stage in sequence | Required |
+| U2 | "next" and "back" buttons to step through the stages | Required |
+| U3 | A failed stage is marked with a specific caption and a short reason | Required |
+| U4 | A short caption for each stage, matching the theory in the report | Required |
+| U5 | A warning when confidence is below 0.6 | Required |
+| U6 | Grad-CAM or layer activation visualization | Not included in the first version |
+| U7 | Comparing results with the true label from the dataset | Development |
 
-## 7. Kriteria Keberhasilan
+## 7. Success Criteria
 
-### 7.1 Demo (batas minimal, disepakati)
-Sistem dapat menerima satu citra dan menampilkan label bentuk, label Gram, confidence per head, dan panel tahap pra-pemrosesan.
+### 7.1 Demo (minimum bar, agreed)
+The system can accept one image and display the shape label, Gram label, confidence per head, and the preprocessing stage panel.
 
-### 7.2 Laporan
-- Acuan utama: F1-score makro per head pada data uji, dari eksperimen nyata.
-- Pelengkap: akurasi per head.
-- Proyeksi 95% hingga 99% dari literatur adalah pembanding, bukan syarat.
-- Non-fungsional: inferensi satu citra di GPU konsumen diukur dan dilaporkan; tidak ada ambang yang dipaksakan sebelum diukur.
+### 7.2 Report
+- Primary reference: macro F1-score per head on the test data, from the real experiment.
+- Secondary: accuracy per head.
+- The 95% to 99% projection from the literature is a comparison, not a requirement.
+- Non-functional: single-image inference on a consumer GPU is measured and reported; no threshold is imposed before measuring.
 
-### 7.3 Pengalaman Pengguna
-- Mahasiswa dapat menjelaskan urutan tahap pra-pemrosesan setelah menggunakan prototipe, diuji melalui sesi singkat dengan minimal tiga mahasiswa (metode dan hasil perlu didokumentasikan).
+### 7.3 User Experience
+- Students can explain the order of the preprocessing stages after using the prototype, tested through a short session with at least three students (method and results must be documented).
 
-## 8. Di Luar Lingkup
-Sesuai SPEC.md bagian 2, ditambah:
-- Visualisasi aktivasi lapisan CNN (U6).
-- Perbandingan dengan label asli di antarmuka (U7).
+## 8. Out of Scope
+According to SPEC.md section 2, plus:
+- Visualization of CNN layer activations (U6).
+- Comparison with the true label in the interface (U7).
 
-## 9. Risiko
+## 9. Risks
 
-| Risiko | Dampak | Mitigasi |
+| Risk | Impact | Mitigation |
 |--------|--------|----------|
-| Pembagian acak melebih-lebihkan performa | hasil tidak mencerminkan galur baru | dicatat sebagai keterbatasan, uji eksternal sebagai pengembangan |
-| Prediksi per citra kehilangan citra campuran | label tidak lengkap | dicatat sebagai keterbatasan |
-| Salah pakai sebagai diagnosis | risiko klinis | peringatan di antarmuka, batasan di SPEC |
-| Watershed gagal pada citra padat | segmentasi buruk | tahap ditandai gagal, alur tetap ditampilkan (U3) |
-| Panel tahap terlalu teknis untuk pemula | pemahaman rendah | keterangan singkat per tahap (U4) |
+| Random split overstates performance | results do not reflect new strains | recorded as a limitation, external testing as development |
+| Per-image prediction loses mixed images | incomplete labels | recorded as a limitation |
+| Misuse as a diagnosis | clinical risk | warning in the interface, limitation in SPEC |
+| Watershed fails on dense images | poor segmentation | the stage is marked failed, the flow is still displayed (U3) |
+| The stage panel is too technical for beginners | low comprehension | short caption per stage (U4) |
 
-## 10. Keputusan yang Sudah Disepakati
-| Keputusan | Sumber |
+## 10. Decisions Already Agreed
+| Decision | Source |
 |-----------|--------|
-| Prioritas konflik: laporan didahulukan | Sesi product-brainstorming |
-| Batas demo: satu citra, label, confidence, visualisasi | Sesi product-brainstorming |
-| Pengguna utama: mahasiswa | Sesi product-brainstorming |
-| Urutan kebutuhan mahasiswa: alur, kode, hasil cepat, label asli | Sesi product-brainstorming |
-| Tampilan tahap pra-pemrosesan berurutan, tanpa Grad-CAM | Sesi product-brainstorming |
-| Tahap gagal ditampilkan dengan keterangan khusus | Sesi product-brainstorming |
+| Conflict priority: the report comes first | product-brainstorming session |
+| Demo bar: one image, labels, confidence, visualization | product-brainstorming session |
+| Primary user: students | product-brainstorming session |
+| Student requirement order: flow, code, fast results, true label | product-brainstorming session |
+| Sequential preprocessing stage display, without Grad-CAM | product-brainstorming session |
+| Failed stage displayed with a specific caption | product-brainstorming session |

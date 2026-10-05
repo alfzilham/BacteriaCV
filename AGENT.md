@@ -1,122 +1,122 @@
-# AGENT.md: Instruksi untuk Agen di Repositori
+# AGENT.md: Instructions for Agents in this Repository
 
-## 1. Peran
-| Agen | Alat | Peran | Kewenangan |
+## 1. Roles
+| Agent | Tool | Role | Authority |
 |------|------|-------|------------|
-| opencode | opencode | Penulis kode | Menulis dan mengubah kode sesuai SPEC, ARCHITECTURE, DESIGN |
-| Codex CLI | OpenAI Codex CLI | Auditor read-only | Memverifikasi klaim dengan menghitung ulang angka dari sumber; melaporkan temuan dengan verdict LULUS atau BELUM LULUS; tidak mengubah kode produksi |
-| Antigravity CLI | Antigravity IDE 1.107.0, mode chat --mode agent | Penulis antarmuka | Menulis dan mengubah app/static/index.html dan docs/DESIGN.md sesuai DESIGN.md dan setelah persetujuan pemilik |
+| opencode | opencode | Code author | Writes and modifies code according to SPEC, ARCHITECTURE, DESIGN |
+| Codex CLI | OpenAI Codex CLI | Read-only auditor | Verifies claims by recomputing the numbers from the source; reports findings with a PASS or FAIL verdict; does not modify production code |
+| Antigravity CLI | Antigravity IDE 1.107.0, chat mode --mode agent | Interface author | Writes and modifies app/static/index.html and docs/DESIGN.md according to DESIGN.md and after owner approval |
 
-Auditor dan penulis tidak boleh sama untuk satu tugas yang sama.
+The auditor and the author must not be the same for a single task.
 
-Redesign antarmuka industrial brutalist dilaksanakan oleh Antigravity CLI versi 1.107.0, bukan oleh opencode.
+The industrial brutalist interface redesign was carried out by Antigravity CLI version 1.107.0, not by opencode.
 
-Nomor versi Codex CLI tidak dicatat karena perintah `codex --version` tidak tersedia di mesin tempat audit Task F dijalankan. Perannya tetap read-only dan tidak berubah.
+The Codex CLI version number is not recorded because the `codex --version` command was unavailable on the machine where the Task F audit ran. Its role remains read-only and unchanged.
 
-## 2. Sumber Kebenaran
-Urutan prioritas bila terjadi konflik:
+## 2. Sources of truth
+Priority order when a conflict arises:
 1. SPEC.md
 2. ARCHITECTURE.md
 3. DESIGN.md
-4. PRD.md dan CONTEXT.md (berstatus draf hingga divalidasi)
+4. PRD.md and CONTEXT.md (draft status until validated)
 5. AGENT.md
-6. Kode yang ada
+6. Existing code
 
-Agen tidak boleh mengubah keputusan yang tercatat di SPEC.md tanpa persetujuan eksplisit dari pemilik proyek.
+An agent must not change a decision recorded in SPEC.md without explicit approval from the project owner.
 
-## 3. Aturan untuk opencode (Penulis)
-1. Kerjakan satu tugas per perubahan. Jangan menggabungkan refactor dengan fitur baru.
-2. Ikuti antarmuka pada DESIGN.md. Bila perlu mengubah antarmuka, tulis usulan perubahan dan tunggu persetujuan.
-3. Jangan mengubah lookup table [L] atau aturan class weighting tanpa persetujuan.
-4. Jangan memakai data uji untuk keputusan apa pun selama pelatihan.
-5. Jangan menyimpan kredensial, token, atau path absolut di kode.
-6. Setiap tugas selesai harus disertai tes sesuai DESIGN.md Bagian 5.
-7. Setelah selesai, serahkan ringkasan perubahan, daftar berkas, dan prompt audit kepada pemilik proyek.
-8. Prompt audit memuat konteks, acuan, daftar berkas, dan fokus pemeriksaan. Prompt harus cukup
-   lengkap agar auditor tidak perlu menebak ruang lingkup tugas.
-9. Jangan menyatakan tugas selesai sebelum laporan final auditor menyatakan LULUS.
+## 3. Rules for opencode (author)
+1. Do one task per change. Never combine a refactor with a new feature.
+2. Follow the interface in DESIGN.md. If the interface must change, write up the proposal and wait for approval.
+3. Never change the lookup table [L] or the class weighting rules without approval.
+4. Never use test data for any decision during training.
+5. Never store credentials, tokens, or absolute paths in code.
+6. Every finished task must come with tests according to DESIGN.md Section 5.
+7. When done, hand over the change summary, file list, and audit prompt to the project owner.
+8. The audit prompt contains context, references, file list, and inspection focus. The prompt must be
+   complete enough that the auditor does not need to guess the task scope.
+9. Never declare a task finished before the auditor's final report states PASS.
 
-## 4. Aturan untuk Codex CLI (Auditor)
-1. Audit wajib dilakukan sebelum tugas dianggap selesai.
-2. Periksa kesesuaian dengan SPEC.md dan ARCHITECTURE.md.
-3. Periksa kualitas dengan rubrik penilaian laporan: pemahaman konsep, inovasi dan relevansi, kedalaman teknis, dan sistematika.
-4. Periksa secara khusus:
-   - kebocoran data antara latih, validasi, dan uji;
-   - penggunaan bobot kelas yang dihitung dari data selain data latih;
-   - lookup table diterapkan hanya pada tahap pelatihan;
-   - F1-score makro dihitung dan dilaporkan.
-5. Format temuan: `[severity] berkas:baris - deskripsi - usulan perbaikan`.
-   Severity: `kritis`, `mayor`, `minor`.
-6. Auditor tidak mengubah kode produksi. Kode produksi hanya diubah oleh penulis, karena bila
-   auditor mengubah berkas yang baru diaudit, kesalahannya bisa tertutupi sendiri dan hasil
-   audit tidak lagi independen.
-7. Auditor boleh memperbaiki berkas tes setelah pemilik proyek menyetujui usulannya secara
-   eksplisit. Berkas tes bukan objek yang dinilai kelayakannya oleh audit.
-8. Setelah audit selesai, auditor langsung menyusun daftar temuan dan meminta verifikasi kepada
-   pemilik proyek. Auditor tidak menunggu diminta ulang.
-9. Setiap permintaan verifikasi memuat per temuan: severity, berkas:baris, dampak atau risiko,
-   dan usulan perbaikan konkret. Pemilik harus dapat memutuskan tanpa membaca kode.
-10. Temuan kritis memblokir penyelesaian tugas hingga diperbaiki.
-11. Verdict hanya dua: LULUS atau BELUM LULUS. LULUS diberikan bila tidak ada temuan kritis
-    maupun mayor. Minor tidak memblokir, tetapi tetap wajib dicatat.
-12. Setelah semua temuan yang disetujui diperbaiki, auditor menyusun satu laporan final yang
-    menyebutkan status tiap temuan dan verdict akhir. Laporan inilah yang diteruskan pemilik
-    kepada penulis.
+## 4. Rules for Codex CLI (auditor)
+1. The audit must happen before a task is considered finished.
+2. Check conformance with SPEC.md and ARCHITECTURE.md.
+3. Check quality using the report grading rubric: conceptual understanding, novelty and relevance, technical depth, and systematicity.
+4. Check specifically:
+   - data leakage between train, validation, and test;
+   - use of class weights computed from data other than train data;
+   - the lookup table being applied only at the training stage;
+   - macro F1-score being computed and reported.
+5. Finding format: `[severity] file:line - description - proposed fix`.
+   Severity: `critical`, `major`, `minor`.
+6. The auditor does not modify production code. Production code is changed only by the author, because if
+   the auditor modifies the file they just audited, their own mistakes can be covered up and the audit
+   result is no longer independent.
+7. The auditor may modify test files after the project owner explicitly approves the proposal. Test files
+   are not objects whose soundness the audit evaluates.
+8. After the audit is done, the auditor immediately compiles the finding list and requests verification from
+   the project owner. The auditor does not wait to be asked again.
+9. Each verification request states per finding: severity, file:line, impact or risk, and a concrete
+   proposed fix. The owner must be able to decide without reading the code.
+10. Critical findings block task completion until fixed.
+11. There are only two verdicts: PASS or FAIL. PASS is given when there are no critical
+    or major findings. Minor findings do not block, but must still be recorded.
+12. After all approved findings are fixed, the auditor compiles one final report stating
+    the status of each finding and the final verdict. That report is what the owner forwards
+    to the author.
 
-## 5. Alur Kerja
+## 5. Workflow
 ```
-Tugas dari pemilik
+Task from the owner
       |
       v
-opencode: implementasi + tes
+opencode: implementation + tests
       |
       v
-opencode: serah terima ringkasan, daftar berkas, dan prompt audit
+opencode: hand over summary, file list, and audit prompt
       |
       v
-Codex CLI: audit, hasilkan temuan
+Codex CLI: audit, produce findings
       |
       v
-Codex CLI: minta verifikasi temuan kepada pemilik
+Codex CLI: request verification of findings from the owner
       |
       v
-Pemilik: setujui atau tolak tiap temuan
+Owner: approve or reject each finding
       |
       v
-Codex CLI: terapkan perbaikan tes yang disetujui
+Codex CLI: apply approved test fixes
       |
       v
-Codex CLI: audit ulang bila ada temuan kritis atau mayor
+Codex CLI: re-audit if there are critical or major findings
       |
       v
-Codex CLI: laporan final beserta verdict
+Codex CLI: final report with verdict
       |
       v
-Pemilik: teruskan laporan final kepada opencode
+Owner: forward the final report to opencode
       |
       v
-Tugas selesai bila verdict LULUS
+Task is done when the verdict is PASS
 ```
 
-Bila verdict BELUM LULUS, alur kembali ke tahap audit. Tidak ada batas jumlah putaran, tetapi
-tiap putaran harus menghasilkan perubahan nyata atau penjelasan alasan temuan itu ditutup.
+If the verdict is FAIL, the flow returns to the audit stage. There is no limit on the number of rounds, but
+each round must produce a real change or an explanation of why that finding was closed.
 
-## 6. Batasan Umum
-- Tidak ada agen yang mengunggah data DIBaS ke layanan eksternal.
-- Tidak ada agen yang menjalankan pelatihan penuh tanpa konfirmasi, karena beban GPU konsumen.
-- Setiap perubahan dicatat dalam riwayat git dengan pesan commit yang merujuk tugas.
-- Data mentah DIBaS tidak di-commit. Yang di-commit hanya `data/index.csv` dan
-  `data/raw/zips_manifest.csv` sebagai bukti provenance.
+## 6. General limits
+- No agent uploads DIBaS data to an external service.
+- No agent runs full training without confirmation, because of the consumer GPU load.
+- Every change is recorded in git history with a commit message that references the task.
+- Raw DIBaS data is not committed. Only `data/index.csv` and
+  `data/raw/zips_manifest.csv` are committed as provenance evidence.
 
-## 7. Format Pesan Commit
-`[tipe] ringkasan singkat` dengan tipe: feat, fix, test, docs, refactor.
+## 7. Commit Message Format
+`[type] short summary` with types: feat, fix, test, docs, refactor.
 
-## 8. Format Laporan Final Auditor
-Laporan final memuat lima bagian dengan urutan tetap:
-1. **Ringkasan hasil** — apa yang sudah diverifikasi dan bagaimana cara memverifikasinya.
-2. **Temuan** — temuan tersisa dengan format `[severity] berkas:baris - deskripsi - usulan`.
-   Bila tidak ada, tulis "Tidak ada temuan".
-3. **Status tiap temuan sebelumnya** — untuk setiap temuan dari putaran sebelumnya, sebutkan
-   statusnya: ditutup, ditolak dengan alasan, atau masih terbuka.
-4. **Kesuaian spesifikasi** — penilaian terhadap SPEC.md dan aturan di AGENT.md ini.
-5. **Verdict** — LULUS atau BELUM LULUS, disertai alasan ringkas.
+## 8. Auditor Final Report Format
+The final report contains five sections in a fixed order:
+1. **Result summary** — what was verified and how it was verified.
+2. **Findings** — remaining findings in `[severity] file:line - description - proposal` format.
+   If there are none, write "No findings".
+3. **Status of each previous finding** — for each finding from the previous round, state its
+   status: closed, rejected with a reason, or still open.
+4. **Specification conformance** — assessment against SPEC.md and the rules in this AGENT.md.
+5. **Verdict** — PASS or FAIL, with a brief reason.

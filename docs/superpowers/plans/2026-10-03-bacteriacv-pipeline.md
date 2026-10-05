@@ -2,29 +2,29 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Sistem klasifikasi bentuk sel dan status Gram bakteri dari citra mikroskopis DIBaS, dengan pipeline pra-pemrosesan lima tahap, ResNet-50 pretrained yang dibekukan, dua classification head, evaluasi F1-score makro, dan antarmuka web FastAPI.
+**Goal:** A bacterial cell shape and Gram status classification system from DIBaS microscope images, with a five-stage preprocessing pipeline, a frozen pretrained ResNet-50, two classification heads, macro F1-score evaluation, and a FastAPI web interface.
 
-**Architecture:** Satu proses Python, tanpa layanan tambahan. Tahap pelatihan dan inferensi berbagi modul pra-pemrosesan dan backbone yang sama. Karena backbone dibekukan, fitur 2048-d diekstrak sekali ke file `.npy` (5,5 MB untuk 672 citra), lalu kedua head dilatih pada matriks fitur tersebut. Antarmuka web adalah satu proses FastAPI yang memuat checkpoint PyTorch dan melayani satu halaman HTML statis.
+**Architecture:** One Python process, no additional services. The training and inference stages share the same preprocessing module and backbone. Because the backbone is frozen, the 2048-d features are extracted once into a `.npy` file (5.5 MB for 672 images), then both heads are trained on that feature matrix. The web interface is a single FastAPI process that loads the PyTorch checkpoint and serves one static HTML page.
 
 **Tech Stack:** Python 3.11, PyTorch 2.14.1+cpu, torchvision 0.29.1+cpu, OpenCV 5.0.0, scikit-image 0.26.0, scikit-learn 1.9.1, FastAPI 0.142.2, uvicorn 0.54.0, pytest 9.1.1.
 
 ---
 
-## Keputusan Desain yang Sudah Ditetapkan
+## Design Decisions Already Made
 
-| ID | Keputusan | Alasan |
+| ID | Decision | Reason |
 |----|-----------|--------|
-| D1 | Head A dua kelas: cocci dan bacilli | Tidak ada spesies DIBaS dengan bentuk spiral. Mempertahankan kelas kosong membuat F1 makro tidak terdefinisi. |
-| D2 | Enum bentuk tetap memuat `spiral`, ditandai tidak terisi | DIBaS tidak punya spesies spiral. Dicatat di laporan, bukan dihapus diam-diam. |
-| D3 | Augmentasi 4 varian pada data latih saja | Mengurangi overfitting head pada 469 sampel. Val dan test tetap citra asli tanpa duplikasi. |
-| D4 | Ekstraksi fitur ke `.npy`, bukan ke database | 5,5 MB muat di memory. Database menambah dependency tanpa manfaat. |
-| D5 | Antarmuka satu proses FastAPI + satu HTML | Model PyTorch tidak bisa dimuat dari Node.js. Prisma tidak ada gunanya karena data immutable. |
-| D6 | Bobot kelas dihitung dari data latih saja | SPEC bagian 7. Memakai data lain memunculkan kebocoran. |
-| D7 | Candida albicans dikeluarkan dari pelatihan | Jamur, bukan bakteri. Sel 5 sampai 10 mikron membuat kelas ini mudah dipisah dan menaikkan F1 tanpa menunjukkan kemampuan nyata. |
+| D1 | Head A two classes: cocci and bacilli | No DIBaS species has a spiral shape. Keeping an empty class makes macro F1 undefined. |
+| D2 | The shape enum still holds `spiral`, marked as unpopulated | DIBaS has no spiral species. Recorded in the report, not quietly removed. |
+| D3 | Augmentation 4 variants on train data only | Reduces head overfitting on 469 samples. Val and test stay original images with no duplication. |
+| D4 | Feature extraction to `.npy`, not to a database | 5.5 MB fits in memory. A database adds a dependency with no benefit. |
+| D5 | Interface is one FastAPI process + one HTML | The PyTorch model cannot be loaded from Node.js. Prisma is useless because the data is immutable. |
+| D6 | Class weights computed from train data only | SPEC section 7. Using other data introduces leakage. |
+| D7 | Candida albicans excluded from training | A fungus, not a bacterium. 5 to 10 micron cells make this class easy to separate and raise F1 without showing real ability. |
 
-## Angka Terukur yang Menjadi Dasar Rencana
+## Measured Figures That Form The Basis Of This Plan
 
-Diukur di mesin ini, Ryzen 7 5825U 8 core, RAM 13,8 GB, tanpa GPU.
+Measured on this machine, Ryzen 7 5825U 8 core, 13.8 GB RAM, no GPU.
 
 ```
 ResNet-50 forward       76 ms/citra   ->  0,9 menit untuk 672
@@ -34,69 +34,69 @@ Fitur 672 x 2048 f32               =  5,5 MB
 Head training per epoch            <  1 detik
 ```
 
-Konsekuensi: tidak ada kebutuhan Colab, tidak ada job queue, tidak ada Docker multi-stage.
+Consequence: no need for Colab, no job queue, no multi-stage Docker.
 
-## Draft Lookup Table [L] untuk Persetujuan Pemilik
+## Draft Lookup Table [L] For Owner Approval
 
-Status Gram dan bentuk sel menurut mikrobiologi standar. Kolom catatan menandai kasus yang perlu dikoreksi pemilik proyek.
+Gram status and cell shape according to standard microbiology. The notes column marks cases the project owner needs to correct.
 
-| species_id | Spesies | Bentuk | Gram | Catatan |
+| species_id | Species | Shape | Gram | Notes |
 |---|---|---|---|---|
-| acinetobacter_baumannii | Acinetobacter baumannii | bacilli | negatif | Coccobacillus, pendek. Dipetakan ke bacilli. |
-| actinomyces_israelii | Actinomyces israelii | bacilli | positif | Filamen bercabang. Bentuk bukan cocci/spiral. |
-| bacteroides_fragilis | Bacteroides fragilis | bacilli | negatif | Anaerob strict. Status Gram tetap dapat diamati. |
-| bifidobacterium_spp | Bifidobacterium spp. | bacilli | positif | Gram positif meski namanya mengandung "bacterium". |
-| clostridium_perfringens | Clostridium perfringens | bacilli | positif | Spor forming, bacillus. |
-| enterococcus_faecium | Enterococcus faecium | cocci | positif | Kokus berpasangan dan rantai. |
-| enterococcus_faecalis | Enterococcus faecalis | cocci | positif | Kokus berpasangan dan rantai. |
-| escherichia_coli | Escherichia coli | bacilli | negatif | Bacillus. |
-| fusobacterium_spp | Fusobacterium spp. | bacilli | negatif | Fusiform, bukan spiral. |
-| lactobacillus_casei | Lactobacillus casei | bacilli | positif | |
-| lactobacillus_crispatus | Lactobacillus crispatus | bacilli | positif | |
-| lactobacillus_delbrueckii | Lactobacillus delbrueckii | bacilli | positif | |
-| lactobacillus_gasseri | Lactobacillus gasseri | bacilli | positif | |
-| lactobacillus_johnsonii_a | Lactobacillus johnsonii (A) | bacilli | positif | |
-| lactobacillus_johnsonii_b | Lactobacillus johnsonii (B) | bacilli | positif | |
-| lactobacillus_paracasei | Lactobacillus paracasei | bacilli | positif | |
-| lactobacillus_plantarum | Lactobacillus plantarum | bacilli | positif | |
-| lactobacillus_reuteri | Lactobacillus reuteri | bacilli | positif | |
-| lactobacillus_rhamnosus | Lactobacillus rhamnosus | bacilli | positif | |
-| lactobacillus_salivarius | Lactobacillus salivarius | bacilli | positif | |
-| listeria_monocytogenes | Listeria monocytogenes | bacilli | positif | |
-| micrococcus_spp | Micrococcus spp. | cocci | positif | Tetrad dan klaster. |
-| neisseria_gonorrhoeae | Neisseria gonorrhoeae | cocci | negatif | Diplococci, bukan spiral. |
-| porphyromonas_gingivalis | Porphyromonas gingivalis | bacilli | negatif | Coccobacillus. |
-| propionibacterium_acnes | Propionibacterium acnes | bacilli | positif | |
-| proteus_spp | Proteus spp. | bacilli | negatif | |
-| pseudomonas_aeruginosa | Pseudomonas aeruginosa | bacilli | negatif | |
-| staphylococcus_aureus | Staphylococcus aureus | cocci | positif | Klaster. |
-| staphylococcus_epidermidis | Staphylococcus epidermidis | cocci | positif | Klaster. |
-| staphylococcus_saprophyticus | Staphylococcus saprophyticus | cocci | positif | Klaster. |
-| streptococcus_agalactiae | Streptococcus agalactiae | cocci | positif | Rantai. |
-| veillonella_spp | Veillonella spp. | cocci | negatif | Anaerob strict. |
+| acinetobacter_baumannii | Acinetobacter baumannii | bacilli | negative | Coccobacillus, short. Mapped to bacilli. |
+| actinomyces_israelii | Actinomyces israelii | bacilli | positive | Branching filaments. Not a cocci/spiral shape. |
+| bacteroides_fragilis | Bacteroides fragilis | bacilli | negative | Strict anaerobe. Gram status is still observable. |
+| bifidobacterium_spp | Bifidobacterium spp. | bacilli | positive | Gram positive even though the name contains "bacterium". |
+| clostridium_perfringens | Clostridium perfringens | bacilli | positive | Spore forming, bacillus. |
+| enterococcus_faecium | Enterococcus faecium | cocci | positive | Cocci in pairs and chains. |
+| enterococcus_faecalis | Enterococcus faecalis | cocci | positive | Cocci in pairs and chains. |
+| escherichia_coli | Escherichia coli | bacilli | negative | Bacillus. |
+| fusobacterium_spp | Fusobacterium spp. | bacilli | negative | Fusiform, not spiral. |
+| lactobacillus_casei | Lactobacillus casei | bacilli | positive | |
+| lactobacillus_crispatus | Lactobacillus crispatus | bacilli | positive | |
+| lactobacillus_delbrueckii | Lactobacillus delbrueckii | bacilli | positive | |
+| lactobacillus_gasseri | Lactobacillus gasseri | bacilli | positive | |
+| lactobacillus_johnsonii_a | Lactobacillus johnsonii (A) | bacilli | positive | |
+| lactobacillus_johnsonii_b | Lactobacillus johnsonii (B) | bacilli | positive | |
+| lactobacillus_paracasei | Lactobacillus paracasei | bacilli | positive | |
+| lactobacillus_plantarum | Lactobacillus plantarum | bacilli | positive | |
+| lactobacillus_reuteri | Lactobacillus reuteri | bacilli | positive | |
+| lactobacillus_rhamnosus | Lactobacillus rhamnosus | bacilli | positive | |
+| lactobacillus_salivarius | Lactobacillus salivarius | bacilli | positive | |
+| listeria_monocytogenes | Listeria monocytogenes | bacilli | positive | |
+| micrococcus_spp | Micrococcus spp. | cocci | positive | Tetrads and clusters. |
+| neisseria_gonorrhoeae | Neisseria gonorrhoeae | cocci | negative | Diplococci, not spiral. |
+| porphyromonas_gingivalis | Porphyromonas gingivalis | bacilli | negative | Coccobacillus. |
+| propionibacterium_acnes | Propionibacterium acnes | bacilli | positive | |
+| proteus_spp | Proteus spp. | bacilli | negative | |
+| pseudomonas_aeruginosa | Pseudomonas aeruginosa | bacilli | negative | |
+| staphylococcus_aureus | Staphylococcus aureus | cocci | positive | Clusters. |
+| staphylococcus_epidermidis | Staphylococcus epidermidis | cocci | positive | Clusters. |
+| staphylococcus_saprophyticus | Staphylococcus saprophyticus | cocci | positive | Clusters. |
+| streptococcus_agalactiae | Streptococcus agalactiae | cocci | positive | Chains. |
+| veillonella_spp | Veillonella spp. | cocci | negative | Strict anaerobe. |
 
-Distribusi: cocci 9 spesies, bacilli 23 spesies, spiral 0 spesies. Total 32 spesies.
+Distribution: cocci 9 species, bacilli 23 species, spiral 0 species. Total 32 species.
 
-Candida albicans tidak ada di tabel karena dikeluarkan dari pelatihan (keputusan D7).
+Candida albicans is absent from the table because it is excluded from training (decision D7).
 
-**Keputusan pemilik proyek, sudah disetujui:**
+**Project owner decision, already approved:**
 
-1. **Candida albicans dikeluarkan dari pelatihan.** Jamur, bukan bakteri, sehingga tidak
-   memenuhi premis sistem. Alasan teknis: sel jamur 5 sampai 10 mikron, bakteri 1 sampai
-   2 mikron, sehingga kelas ini akan terpisah mudah oleh backbone dan menaikkan F1-score
-   tanpa menunjukkan kemampuan klasifikasi morfologi bakteri. Dicatat di
-   `species_map.EXCLUDED_FROM_TRAINING` beserta alasannya.
-2. **Acinetobacter baumannii dan Porphyromonas gingivalis dipetakan ke `bacilli`.**
-   Coccobacillus adalah bentuk antara, tetapi sumbu batang tetap dominan.
-3. **Actinomyces israelii tetap masuk, dipetakan ke `bacilli`.** Bentuknya filamen
-   bercabang, dan pada perbesaran 1000x muncul sebagai fragmen batang pendek. Ini satu-satunya
-   spesies yang tidak benar-benar muat ke tiga kategori, dan dicatat sebagai keterbatasan.
-4. **Bifidobacterium, Actinomyces, dan Lactobacillus adalah Gram positif.** Kesalahan yang
-   sering terjadi adalah menganggapnya Gram negatif karena namanya.
+1. **Candida albicans excluded from training.** A fungus, not a bacterium, so it does not
+   satisfy the system premise. Technical reason: fungal cells are 5 to 10 microns, bacteria 1 to
+   2 microns, so this class will be easily separated by the backbone and will raise the F1-score
+   without demonstrating bacterial morphology classification ability. Recorded in
+   `species_map.EXCLUDED_FROM_TRAINING` along with its reason.
+2. **Acinetobacter baumannii and Porphyromonas gingivalis are mapped to `bacilli`.**
+   Coccobacillus is an intermediate shape, but the rod axis still dominates.
+3. **Actinomyces israelii stays in, mapped to `bacilli`.** Its shape is branching
+   filaments, and at 1000x magnification it appears as short rod fragments. This is the only
+   species that does not truly fit the three categories, and is recorded as a limitation.
+4. **Bifidobacterium, Actinomyces, and Lactobacillus are Gram positive.** The mistake that
+   often occurs is treating them as Gram negative because of their names.
 
-Perubahan pada tabel ini memerlukan persetujuan eksplisit pemilik proyek sesuai AGENT.md bagian 2.
+Changes to this table require the explicit approval of the project owner according to AGENT.md section 2.
 
-## Struktur Berkas
+## File Structure
 
 ```
 BacteriaCV/
@@ -134,24 +134,24 @@ BacteriaCV/
 └── tests/
 ```
 
-Pemisahan berkas mengikuti tanggung jawab tunggal. `preprocess.py` tidak tahu apa itu model,
-`model.py` tidak tahu apa itu CSV, `features.py` hanya yang berurusan dengan citra dan fitur.
+File separation follows single responsibility. `preprocess.py` does not know what a model is,
+`model.py` does not know what a CSV is, `features.py` is the only one dealing with images and features.
 
-**Urutan dependensi.** `evaluate.py` dibuat sebelum `train.py` karena `train.py` mengimpor
-`f1_macro` darinya. `config.py` dan `label_map.py` tidak mengimpor modul pipeline lain.
-Tidak ada import siklik di seluruh rencana ini.
+**Dependency order.** `evaluate.py` is created before `train.py` because `train.py` imports
+`f1_macro` from it. `config.py` and `label_map.py` do not import any other pipeline module.
+There are no cyclic imports anywhere in this plan.
 
 ---
 
-## Task 1: Konfigurasi terpusat
+## Task 1: Centralised configuration
 
 **Files:**
 - Create: `bacteriacv/config.py`
 - Test: `tests/test_config.py`
 
-- [ ] **Step 1: Tulis tes yang gagal**
+- [ ] **Step 1: Write the failing test**
 
-Buat `tests/test_config.py`:
+Create `tests/test_config.py`:
 
 ```python
 """Tes untuk konfigurasi terpusat."""
@@ -205,14 +205,14 @@ def test_paths_are_inside_project() -> None:
         assert path.is_relative_to(PROJECT_ROOT), path
 ```
 
-- [ ] **Step 2: Jalankan tes, pastikan gagal**
+- [ ] **Step 2: Run the tests, confirm they fail**
 
 Run: `.venv\Scripts\python.exe -m pytest tests/test_config.py -v`
-Expected: FAIL dengan `ModuleNotFoundError: No module named 'bacteriacv.config'`
+Expected: FAIL with `ModuleNotFoundError: No module named 'bacteriacv.config'`
 
-- [ ] **Step 3: Tulis implementasi**
+- [ ] **Step 3: Write the implementation**
 
-Buat `bacteriacv/config.py`:
+Create `bacteriacv/config.py`:
 
 ```python
 """Konfigurasi terpusat untuk seluruh pipeline BacteriaCV.
@@ -285,7 +285,7 @@ MAX_UPLOAD_BYTES = 20 * 1024 * 1024
 ALLOWED_SUFFIXES = (".png", ".jpg", ".jpeg", ".tif", ".tiff")
 ```
 
-- [ ] **Step 4: Jalankan tes, pastikan lolos**
+- [ ] **Step 4: Run the tests, confirm they pass**
 
 Run: `.venv\Scripts\python.exe -m pytest tests/test_config.py -v`
 Expected: 8 passed
@@ -305,13 +305,13 @@ git commit -m "feat: add central config for pipeline hyperparameters"
 - Create: `bacteriacv/label_map.py`
 - Test: `tests/test_label_map.py`
 
-**CATATAN PENTING:** Task ini hanya boleh dikerjakan setelah pemilik proyek menyetujui draft
-lookup table di bagian atas dokumen ini. AGENT.md bagian 2 melarang agen mengubah keputusan
-di SPEC tanpa persetujuan eksplisit.
+**IMPORTANT NOTE:** This task may only be done after the project owner approves the draft
+lookup table earlier in this document. AGENT.md section 2 forbids an agent from changing decisions
+in SPEC without explicit approval.
 
-- [ ] **Step 1: Tulis tes yang gagal**
+- [ ] **Step 1: Write the failing test**
 
-Buat `tests/test_label_map.py`:
+Create `tests/test_label_map.py`:
 
 ```python
 """Tes untuk lookup table spesies ke bentuk sel dan status Gram."""
@@ -431,14 +431,14 @@ def test_class_weights_rejects_single_class() -> None:
         class_weights([0, 0, 0])
 ```
 
-- [ ] **Step 2: Jalankan tes, pastikan gagal**
+- [ ] **Step 2: Run the tests, confirm they fail**
 
 Run: `.venv\Scripts\python.exe -m pytest tests/test_label_map.py -v`
-Expected: FAIL dengan `ModuleNotFoundError: No module named 'bacteriacv.label_map'`
+Expected: FAIL with `ModuleNotFoundError: No module named 'bacteriacv.label_map'`
 
-- [ ] **Step 3: Tulis implementasi**
+- [ ] **Step 3: Write the implementation**
 
-Buat `bacteriacv/label_map.py`:
+Create `bacteriacv/label_map.py`:
 
 ```python
 """Lookup table pemetaan spesies DIBaS ke bentuk sel dan status Gram.
@@ -572,8 +572,8 @@ def class_weights(targets: list[int], n_classes: int) -> torch.Tensor:
     return torch.tensor(weights, dtype=torch.float32)
 ```
 
-**CATATAN:** Pada fungsi `class_weights`, ganti baris tanda `import torch` di dalam fungsi
-dengan import di modul atas agar tidak mengimpor berulang. Terapkan sebagai berikut:
+**NOTE:** In the `class_weights` function, replace the `import torch` line inside the function
+with an import at the top of the module so it does not import repeatedly. Apply it as follows:
 
 ```python
 from __future__ import annotations
@@ -585,18 +585,18 @@ import torch
 from .config import GRAM_LABELS, SHAPE_LABELS
 ```
 
-lalu ubah signature menjadi `def class_weights(targets: list[int], n_classes: int) -> torch.Tensor:`
-dan hapus baris `import torch` di dalam badan fungsi.
+then change the signature to `def class_weights(targets: list[int], n_classes: int) -> torch.Tensor:`
+and remove the `import torch` line inside the function body.
 
-- [ ] **Step 4: Jalankan tes, pastikan lolos**
+- [ ] **Step 4: Run the tests, confirm they pass**
 
 Run: `.venv\Scripts\python.exe -m pytest tests/test_label_map.py -v`
 Expected: 15 passed
 
-- [ ] **Step 5: Jalankan seluruh tes**
+- [ ] **Step 5: Run all the tests**
 
 Run: `.venv\Scripts\python.exe -m pytest tests -q`
-Expected: semua lolos
+Expected: all pass
 
 - [ ] **Step 6: Commit**
 
@@ -607,19 +607,19 @@ git commit -m "feat: add species lookup table for shape and gram labels"
 
 ---
 
-## Task 3: Pipeline pra-pemrosesan
+## Task 3: Preprocessing pipeline
 
 **Files:**
 - Create: `bacteriacv/preprocess.py`
 - Test: `tests/test_preprocess.py`
 
-**CATATAN TEKNIS PENTING:** scikit-image 0.26 sudah men-deprecate `binary_erosion` dan
-`binary_dilation`. Harus pakai `morphology.erosion` dan `morphology.dilation`. Verified di
-benchmark: pemakaian fungsi lama memunculkan FutureWarning.
+**IMPORTANT TECHNICAL NOTE:** scikit-image 0.26 has deprecated `binary_erosion` and
+`binary_dilation`. Must use `morphology.erosion` and `morphology.dilation`. Verified in a
+benchmark: using the old functions raises a FutureWarning.
 
-- [ ] **Step 1: Tulis tes yang gagal**
+- [ ] **Step 1: Write the failing test**
 
-Buat `tests/test_preprocess.py`:
+Create `tests/test_preprocess.py`:
 
 ```python
 """Tes untuk pipeline pra-pemrosesan lima tahap."""
@@ -768,14 +768,14 @@ def test_load_image_rejects_non_image(tmp_path) -> None:
         preprocess.load_image(path)
 ```
 
-- [ ] **Step 2: Jalankan tes, pastikan gagal**
+- [ ] **Step 2: Run the tests, confirm they fail**
 
 Run: `.venv\Scripts\python.exe -m pytest tests/test_preprocess.py -v`
-Expected: FAIL dengan `ModuleNotFoundError: No module named 'bacteriacv.preprocess'`
+Expected: FAIL with `ModuleNotFoundError: No module named 'bacteriacv.preprocess'`
 
-- [ ] **Step 3: Tulis implementasi**
+- [ ] **Step 3: Write the implementation**
 
-Buat `bacteriacv/preprocess.py`:
+Create `bacteriacv/preprocess.py`:
 
 ```python
 """Pipeline pra-pemrosesan lima tahap untuk citra mikroskopis bakteri.
@@ -1076,18 +1076,18 @@ def augment(image: np.ndarray, count: int, seed: int | None = None) -> list[np.n
     return variants
 ```
 
-- [ ] **Step 4: Jalankan tes, pastikan lolos**
+- [ ] **Step 4: Run the tests, confirm they pass**
 
 Run: `.venv\Scripts\python.exe -m pytest tests/test_preprocess.py -v`
 Expected: 14 passed
 
-- [ ] **Step 5: Verifikasi tanpa FutureWarning dari skimage**
+- [ ] **Step 5: Verify no FutureWarning from skimage**
 
 Run: `.venv\Scripts\python.exe -W error::FutureWarning -c "from bacteriacv import preprocess; print('ok')"`
 Expected: `ok`
 
-Kalau ada FutureWarning, pastikan memakai `morphology.erosion` dan `morphology.dilation`,
-bukan `binary_erosion` dan `binary_dilation`.
+If there is a FutureWarning, make sure you are using `morphology.erosion` and `morphology.dilation`,
+not `binary_erosion` and `binary_dilation`.
 
 - [ ] **Step 6: Commit**
 
@@ -1098,15 +1098,15 @@ git commit -m "feat: add five-stage preprocessing pipeline"
 
 ---
 
-## Task 4: Model ResNet-50 dengan dua head
+## Task 4: ResNet-50 model with two heads
 
 **Files:**
 - Create: `bacteriacv/model.py`
 - Test: `tests/test_model.py`
 
-- [ ] **Step 1: Tulis tes yang gagal**
+- [ ] **Step 1: Write the failing test**
 
-Buat `tests/test_model.py`:
+Create `tests/test_model.py`:
 
 ```python
 """Tes untuk model dua head dengan backbone dibekukan."""
@@ -1224,14 +1224,14 @@ def test_checkpoint_does_not_contain_backbone() -> None:
     assert all("backbone" not in key for key in state["head_b"])
 ```
 
-- [ ] **Step 2: Jalankan tes, pastikan gagal**
+- [ ] **Step 2: Run the tests, confirm they fail**
 
 Run: `.venv\Scripts\python.exe -m pytest tests/test_model.py -v`
-Expected: FAIL dengan `ModuleNotFoundError: No module named 'bacteriacv.model'`
+Expected: FAIL with `ModuleNotFoundError: No module named 'bacteriacv.model'`
 
-- [ ] **Step 3: Tulis implementasi**
+- [ ] **Step 3: Write the implementation**
 
-Buat `bacteriacv/model.py`:
+Create `bacteriacv/model.py`:
 
 ```python
 """Backbone ResNet-50 dan dua classification head.
@@ -1405,7 +1405,7 @@ def label_gram(index: int) -> str:
     return "tidak_diketahui"
 ```
 
-- [ ] **Step 4: Jalankan tes, pastikan lolos**
+- [ ] **Step 4: Run the tests, confirm they pass**
 
 Run: `.venv\Scripts\python.exe -m pytest tests/test_model.py -v`
 Expected: 12 passed
@@ -1419,15 +1419,15 @@ git commit -m "feat: add frozen resnet50 backbone with dual heads"
 
 ---
 
-## Task 5: Ekstraksi fitur ke disk
+## Task 5: Feature extraction to disk
 
 **Files:**
 - Create: `bacteriacv/features.py`
 - Test: `tests/test_features.py`
 
-- [ ] **Step 1: Tulis tes yang gagal**
+- [ ] **Step 1: Write the failing test**
 
-Buat `tests/test_features.py`:
+Create `tests/test_features.py`:
 
 ```python
 """Tes untuk ekstraksi fitur backbone."""
@@ -1525,14 +1525,14 @@ def test_extract_skips_test_split(tmp_path) -> None:
     assert len(selected) == 2
 ```
 
-- [ ] **Step 2: Jalankan tes, pastikan gagal**
+- [ ] **Step 2: Run the tests, confirm they fail**
 
 Run: `.venv\Scripts\python.exe -m pytest tests/test_features.py -v`
-Expected: FAIL dengan `ModuleNotFoundError: No module named 'bacteriacv.features'`
+Expected: FAIL with `ModuleNotFoundError: No module named 'bacteriacv.features'`
 
-- [ ] **Step 3: Tulis implementasi**
+- [ ] **Step 3: Write the implementation**
 
-Buat `bacteriacv/features.py`:
+Create `bacteriacv/features.py`:
 
 ```python
 """Ekstraksi vektor fitur backbone ke file .npy.
@@ -1723,24 +1723,24 @@ if __name__ == "__main__":
     raise SystemExit(main())
 ```
 
-- [ ] **Step 4: Jalankan tes, pastikan lolos**
+- [ ] **Step 4: Run the tests, confirm they pass**
 
 Run: `.venv\Scripts\python.exe -m pytest tests/test_features.py -v`
 Expected: 7 passed
 
-- [ ] **Step 5: Jalankan ekstraksi fitur pada dataset sebenarnya**
+- [ ] **Step 5: Run feature extraction on the real dataset**
 
 Run: `.venv\Scripts\python.exe -m bacteriacv.features`
-Expected: keluarannya seperti
+Expected: the output looks like
 ```
 Mengekstrak fitur untuk 672 citra...
   50/672 selesai
   ...
 Selesai. Fitur (2065, 2048) disimpan di features
 ```
-Jumlah baris harus 672 untuk citra asli, ditambah 469 baris data latih dikali 3 varian
-tambahan dari `AUGMENT_VARIANTS = 4`. Periksa angka aktual yang tercetak dan catat
-di laporan.
+The row count must be 672 for the original images, plus 469 train rows times 3 extra variants
+from `AUGMENT_VARIANTS = 4`. Check the actual printed figures and record
+them in the report.
 
 - [ ] **Step 6: Commit**
 
@@ -1751,17 +1751,17 @@ git commit -m "feat: extract frozen backbone features to npy"
 
 ---
 
-## Task 6: Modul evaluasi
+## Task 6: Evaluation module
 
 **Files:**
 - Create: `bacteriacv/evaluate.py`
 - Test: `tests/test_evaluate.py`
 
-Task ini mendahului Task 7 karena `train.py` mengimpor `f1_macro` dari modul ini.
+This task precedes Task 7 because `train.py` imports `f1_macro` from this module.
 
-- [ ] **Step 1: Tulis tes yang gagal**
+- [ ] **Step 1: Write the failing test**
 
-Buat `tests/test_evaluate.py`:
+Create `tests/test_evaluate.py`:
 
 ```python
 """Tes untuk perhitungan F1-score makro dan akurasi."""
@@ -1833,14 +1833,14 @@ def test_per_class_report_omits_unseen_class() -> None:
     assert report["bacilli"]["f1"] is None
 ```
 
-- [ ] **Step 2: Jalankan tes, pastikan gagal**
+- [ ] **Step 2: Run the tests, confirm they fail**
 
 Run: `.venv\Scripts\python.exe -m pytest tests/test_evaluate.py -v`
-Expected: FAIL dengan `ModuleNotFoundError: No module named 'bacteriacv.evaluate'`
+Expected: FAIL with `ModuleNotFoundError: No module named 'bacteriacv.evaluate'`
 
-- [ ] **Step 3: Tulis implementasi**
+- [ ] **Step 3: Write the implementation**
 
-Buat `bacteriacv/evaluate.py`:
+Create `bacteriacv/evaluate.py`:
 
 ```python
 """Perhitungan F1-score makro dan akurasi per head.
@@ -1986,14 +1986,14 @@ def per_class_report(
     return report
 ```
 
-- [ ] **Step 4: Jalankan tes, pastikan lolos**
+- [ ] **Step 4: Run the tests, confirm they pass**
 
 Run: `.venv\Scripts\python.exe -m pytest tests/test_evaluate.py -v`
 Expected: 10 passed
 
-- [ ] **Step 5: Cross-check dengan scikit-learn**
+- [ ] **Step 5: Cross-check with scikit-learn**
 
-Buat `check_f1.py` di folder proyek:
+Create `check_f1.py` in the project folder:
 
 ```python
 """Bandingkan f1_macro dengan sklearn untuk memastikan rumus benar."""
@@ -2016,9 +2016,9 @@ print("COCOK dengan sklearn")
 ```
 
 Run: `.venv\Scripts\python.exe check_f1.py`
-Expected: `selisih: 0` lalu `COCOK dengan sklearn`
+Expected: `selisih: 0` then `COCOK dengan sklearn`
 
-Hapus berkasnya: `Remove-Item check_f1.py`
+Delete the file: `Remove-Item check_f1.py`
 
 - [ ] **Step 6: Commit**
 
@@ -2029,15 +2029,15 @@ git commit -m "feat: add macro f1 and accuracy evaluation"
 
 ---
 
-## Task 7: Loop pelatihan head
+## Task 7: Head training loop
 
 **Files:**
 - Create: `bacteriacv/train.py`
 - Test: `tests/test_train.py`
 
-- [ ] **Step 1: Tulis tes yang gagal**
+- [ ] **Step 1: Write the failing test**
 
-Buat `tests/test_train.py`:
+Create `tests/test_train.py`:
 
 ```python
 """Tes untuk loop pelatihan dua head."""
@@ -2202,14 +2202,14 @@ def test_train_heads_rejects_empty_split(tmp_path, monkeypatch) -> None:
         train_heads(matrix, species, indices, verbose=False)
 ```
 
-- [ ] **Step 2: Jalankan tes, pastikan gagal**
+- [ ] **Step 2: Run the tests, confirm they fail**
 
 Run: `.venv\Scripts\python.exe -m pytest tests/test_train.py -v`
-Expected: FAIL dengan `ModuleNotFoundError: No module named 'bacteriacv.train'`
+Expected: FAIL with `ModuleNotFoundError: No module named 'bacteriacv.train'`
 
-- [ ] **Step 3: Tulis implementasi**
+- [ ] **Step 3: Write the implementation**
 
-Buat `bacteriacv/train.py`:
+Create `bacteriacv/train.py`:
 
 ```python
 """Pelatihan dua classification head pada fitur backbone beku.
@@ -2619,19 +2619,19 @@ if __name__ == "__main__":
     raise SystemExit(main())
 ```
 
-**KETERGANTUNGAN TAMBAHAN:** `main` membaca `paths.txt` dari feature store. Task 5 harus
-juga menulis berkas itu. Bila Task 5 sudah ditulis tanpa `paths.txt`, tambahkan penulisan
-berkas tersebut pada fungsi `save_feature_store` sebelum menjalankan Task 7.
+**ADDITIONAL DEPENDENCY:** `main` reads `paths.txt` from the feature store. Task 5 must
+also write that file. If Task 5 was written without `paths.txt`, add the writing of
+that file in the `save_feature_store` function before running Task 7.
 
-- [ ] **Step 4: Jalankan tes, pastikan lolos**
+- [ ] **Step 4: Run the tests, confirm they pass**
 
 Run: `.venv\Scripts\python.exe -m pytest tests/test_train.py -v`
 Expected: 12 passed
 
-- [ ] **Step 5: Jalankan seluruh tes**
+- [ ] **Step 5: Run all the tests**
 
 Run: `.venv\Scripts\python.exe -m pytest tests -q`
-Expected: semua lolos, tidak ada regresi
+Expected: all pass, no regressions
 
 - [ ] **Step 6: Commit**
 
@@ -2641,15 +2641,15 @@ git commit -m "feat: add dual head training loop with early stopping"
 ```
 
 ---
-## Task 8: Inferensi dan visualisasi
+## Task 8: Inference and visualization
 
 **Files:**
 - Create: `bacteriacv/infer.py`
 - Test: `tests/test_infer.py`
 
-- [ ] **Step 1: Tulis tes yang gagal**
+- [ ] **Step 1: Write the failing test**
 
-Buat `tests/test_infer.py`:
+Create `tests/test_infer.py`:
 
 ```python
 """Tes untuk inferensi dan visualisasi."""
@@ -2730,14 +2730,14 @@ def test_encode_panel_handles_float32(predictor: Predictor) -> None:
     assert payload[:8] == b"\x89PNG\r\n\x1a\n"
 ```
 
-- [ ] **Step 2: Jalankan tes, pastikan gagal**
+- [ ] **Step 2: Run the tests, confirm they fail**
 
 Run: `.venv\Scripts\python.exe -m pytest tests/test_infer.py -v`
-Expected: FAIL dengan `ModuleNotFoundError: No module named 'bacteriacv.infer'`
+Expected: FAIL with `ModuleNotFoundError: No module named 'bacteriacv.infer'`
 
-- [ ] **Step 3: Tulis implementasi**
+- [ ] **Step 3: Write the implementation**
 
-Buat `bacteriacv/infer.py`:
+Create `bacteriacv/infer.py`:
 
 ```python
 """Inferensi: dari citra mentah ke label, confidence, dan visualisasi.
@@ -2877,7 +2877,7 @@ class Predictor:
         )
 ```
 
-- [ ] **Step 4: Jalankan tes, pastikan lolos**
+- [ ] **Step 4: Run the tests, confirm they pass**
 
 Run: `.venv\Scripts\python.exe -m pytest tests/test_infer.py -v`
 Expected: 7 passed
@@ -2891,7 +2891,7 @@ git commit -m "feat: add inference with staged visualization panels"
 
 ---
 
-## Task 9: Antarmuka web FastAPI
+## Task 9: FastAPI web interface
 
 **Files:**
 - Create: `app/__init__.py`
@@ -2899,9 +2899,9 @@ git commit -m "feat: add inference with staged visualization panels"
 - Create: `app/static/index.html`
 - Test: `tests/test_app.py`
 
-- [ ] **Step 1: Tulis tes yang gagal**
+- [ ] **Step 1: Write the failing test**
 
-Buat `tests/test_app.py`:
+Create `tests/test_app.py`:
 
 ```python
 """Tes untuk API FastAPI."""
@@ -3004,25 +3004,25 @@ def test_predict_panels_are_png(client: TestClient) -> None:
         assert encoded.startswith("iVBORw0KGgo")
 ```
 
-**CATATAN:** Tes memakai `fastapi.testclient.TestClient` yang memerlukan `httpx`. Bila belum
-terpasang, tambahkan `httpx` ke `setup_env.ps1`. Periksa dengan:
-`TestClient` membutuhkan paket `httpx`.
+**NOTE:** The tests use `fastapi.testclient.TestClient` which requires `httpx`. If it is not
+installed yet, add `httpx` to `setup_env.ps1`. Check with:
+`TestClient` needs the `httpx` package.
 
-- [ ] **Step 2: Jalankan tes, pastikan gagal**
+- [ ] **Step 2: Run the tests, confirm they fail**
 
 Run: `.venv\Scripts\python.exe -m pytest tests/test_app.py -v`
-Expected: FAIL dengan `ModuleNotFoundError: No module named 'app'`
+Expected: FAIL with `ModuleNotFoundError: No module named 'app'`
 
-- [ ] **Step 3: Buat package app**
+- [ ] **Step 3: Create the app package**
 
-Buat `app/__init__.py`:
+Create `app/__init__.py`:
 ```python
 """Antarmuka web BacteriaCV."""
 ```
 
-- [ ] **Step 4: Tulis backend**
+- [ ] **Step 4: Write the backend**
 
-Buat `app/main.py`:
+Create `app/main.py`:
 
 ```python
 """Backend FastAPI untuk BacteriaCV.
@@ -3132,9 +3132,9 @@ def create_app(pretrained: bool = True) -> FastAPI:
 app = create_app()
 ```
 
-**CATATAN:** Baris `app = create_app()` di module level akan memuat bobot ImageNet saat
-diimpor, termasuk saat pytest mengimpor modul. Untuk mencegah itu, buat `app` secara lazy.
-Ganti baris terakhir dengan:
+**NOTE:** The `app = create_app()` line at module level will load the ImageNet weights when
+imported, including when pytest imports the module. To prevent that, create `app` lazily.
+Replace the last line with:
 
 ```python
 def __getattr__(name: str):
@@ -3144,9 +3144,9 @@ def __getattr__(name: str):
     raise AttributeError(name)
 ```
 
-- [ ] **Step 5: Tulis frontend**
+- [ ] **Step 5: Write the frontend**
 
-Buat `app/static/index.html`. Seluruh isi file:
+Create `app/static/index.html`. The entire file content:
 
 ```html
 <!DOCTYPE html>
@@ -3269,31 +3269,31 @@ finally{process.disabled=false}
 </html>
 ```
 
-- [ ] **Step 6: Pasang httpx bila belum ada**
+- [ ] **Step 6: Install httpx if not present**
 
 Run: `.venv\Scripts\python.exe -m pip install httpx`
-Expected: `Successfully installed httpx-...` atau `Requirement already satisfied`
+Expected: `Successfully installed httpx-...` or `Requirement already satisfied`
 
-- [ ] **Step 7: Jalankan tes, pastikan lolos**
+- [ ] **Step 7: Run the tests, confirm they pass**
 
 Run: `.venv\Scripts\python.exe -m pytest tests/test_app.py -v`
 Expected: 8 passed
 
-- [ ] **Step 8: Jalankan seluruh tes**
+- [ ] **Step 8: Run all the tests**
 
 Run: `.venv\Scripts\python.exe -m pytest tests -q`
-Expected: semua lolos, tidak ada regressions
+Expected: all pass, no regressions
 
-- [ ] **Step 9: Uji manual dengan uvicorn**
+- [ ] **Step 9: Manual test with uvicorn**
 
 Run in background:
 ```powershell
 .venv\Scripts\python.exe -m uvicorn app.main:app --host 127.0.0.1 --port 8000
 ```
 
-Lalu buka `http://127.0.0.1:8000` di browser dan unggah satu citra dari
-`data\raw\images\escherichia_coli\Escherichia.coli_0001.tif`. Pastikan lima panel muncul dan
-label terisi.
+Then open `http://127.0.0.1:8000` in the browser and upload one image from
+`data\raw\images\escherichia_coli\Escherichia.coli_0001.tif`. Confirm five panels appear and
+the labels are filled in.
 
 - [ ] **Step 10: Commit**
 
@@ -3304,14 +3304,14 @@ git commit -m "feat: add fastapi backend and single page web interface"
 
 ---
 
-## Task 10: Skrip menjalankan aplikasi
+## Task 10: Application run script
 
 **Files:**
 - Create: `scripts/run_app.ps1`
 
-- [ ] **Step 1: Tulis skrip**
+- [ ] **Step 1: Write the script**
 
-Buat `scripts/run_app.ps1`:
+Create `scripts/run_app.ps1`:
 
 ```powershell
 # run_app.ps1
@@ -3347,19 +3347,19 @@ Set-Location $root
 & $python -m uvicorn app.main:app --host 127.0.0.1 --port 8000
 ```
 
-**CATATAN:** Skrip memakai string ASCII. Simpan sebagai UTF-8 dengan BOM. Jalankan
-`Unblock-File scripts\run_app.ps1` sebelum eksekusi pertama.
+**NOTE:** The script uses an ASCII string. Save as UTF-8 with BOM. Run
+`Unblock-File scripts\run_app.ps1` before the first execution.
 
-- [ ] **Step 2: Simpan dengan BOM dan verifikasi**
+- [ ] **Step 2: Save with BOM and verify**
 
-Jalankan perbaikan encoding bila perlu, lalu verifikasi tidak ada karakter non-ASCII.
+Run the encoding fix if needed, then verify there are no non-ASCII characters.
 
-- [ ] **Step 3: Uji skrip**
+- [ ] **Step 3: Test the script**
 
 Run: `.\scripts\run_app.ps1`
-Expected:-printed "Menjalankan BacteriaCV di http://127.0.0.1:8000"
+Expected: prints "Menjalankan BacteriaCV di http://127.0.0.1:8000"
 
-Tekan Ctrl+C untuk menghentikan setelah verifikasi.
+Press Ctrl+C to stop after verification.
 
 - [ ] **Step 4: Commit**
 
@@ -3370,7 +3370,7 @@ git commit -m "feat: add run script for web application"
 
 ---
 
-## Task 11: Sinkronkan dokumentasi
+## Task 11: Synchronise the documentation
 
 **Files:**
 - Modify: `docs/SPEC.md`
@@ -3378,12 +3378,12 @@ git commit -m "feat: add run script for web application"
 - Modify: `docs/DESIGN.md`
 - Modify: `docs/CONTEXT.md`
 
-- [ ] **Step 1: Perbarui SPEC bagian 1 dan 3 di SPEC.md**
+- [ ] **Step 1: Update SPEC sections 1 and 3 in SPEC.md**
 
-Ganti kalimat pada SPEC bagian 1 yang menyebut tiga kelas bentuk dengan dua kelas, dan
-tambahkan catatan tentang kelas spiral.
+Replace the sentence in SPEC section 1 that mentions three shape classes with two, and
+add a note about the spiral class.
 
-Teks baru untuk SPEC bagian 1:
+New text for SPEC section 1:
 ```
 Sistem Computer Vision yang memprediksi bentuk sel (cocci, bacilli) dan status Gram
 (positif, negatif) bakteri secara simultan dari satu citra mikroskop digital, menggunakan
@@ -3394,39 +3394,39 @@ Head A karena itu dilatih pada dua kelas. Bentuk spiral tetap dicatat sebagai ke
 yang tidak terisi, bukan dihapus, agar batas dataset terlihat jelas dalam laporan.
 ```
 
-- [ ] **Step 2: Tambahkan bagian hasil eksperimen ke SPEC.md**
+- [ ] **Step 2: Add the experiment results section to SPEC.md**
 
-Tambahkan bagian baru di akhir SPEC.md:
+Add a new section at the end of SPEC.md:
 
 ```markdown
-## 10. Hasil Eksperimen
+## 10. Experiment Results
 
-Angka diisi setelah pelatihan dijalankan. Semua angka berasal dari data uji 65 citra
-yang tidak pernah dipakai selama pelatihan.
+Figures are filled in after training runs. All figures come from the 65 image test data
+that was never used during training.
 
-| Metrik | Head A (bentuk) | Head B (Gram) |
+| Metric | Head A (shape) | Head B (Gram) |
 |--------|-----------------|---------------|
-| F1-score makro | belum diisi | belum diisi |
-| Akurasi | belum diisi | belum diisi |
+| Macro F1-score | not filled in | not filled in |
+| Accuracy | not filled in | not filled in |
 
-Jumlah citra: 672 dari 32 spesies. Pembagian: 469 latih, 138 validasi, 65 uji.
-Augmentasi 4 varian hanya pada data latih. Validasi dan uji memakai citra asli
-tanpa duplikasi.
+Image count: 672 from 32 species. Split: 469 train, 138 validation, 65 test.
+Augmentation 4 variants only on train data. Validation and test use original images
+with no duplication.
 ```
 
-- [ ] **Step 3: Perbarui ARCHITECTURE bagian 1 dan 2**
+- [ ] **Step 3: Update ARCHITECTURE sections 1 and 2**
 
-Ganti `softmax, 3` dengan `softmax, 2` pada diagram, dan perbarui C3:
+Replace `softmax, 3` with `softmax, 2` in the diagram, and update C3:
 
 ```markdown
 ### C3. Classification Head
-- Head A: Linear(2048, 2), aktivasi softmax, loss cross-entropy berbobot.
-  Dua kelas: cocci dan bacilli.
-- Head B: Linear(2048, 2), aktivasi sigmoid, loss binary cross-entropy berbobot.
-- Bobot kelas dihitung dari frekuensi pada data latih saja.
+- Head A: Linear(2048, 2), softmax activation, weighted cross-entropy loss.
+  Two classes: cocci and bacilli.
+- Head B: Linear(2048, 2), sigmoid activation, weighted binary cross-entropy loss.
+- Class weights are computed from frequency on the train data only.
 ```
 
-- [ ] **Step 4: Tambahkan keputusan arsitektur baru di ARCHITECTURE bagian 5**
+- [ ] **Step 4: Add the new architecture decision to ARCHITECTURE section 5**
 
 ```markdown
 | A10 | Head A dua kelas, bukan tiga | DIBaS tidak punya spesies spiral. Kelas kosong membuat F1 makro tidak terdefinisi. |
@@ -3435,27 +3435,27 @@ Ganti `softmax, 3` dengan `softmax, 2` pada diagram, dan perbarui C3:
 | A13 | Inferensi satu proses FastAPI | Bobot PyTorch tidak bisa dimuat dari runtime JavaScript. |
 ```
 
-- [ ] **Step 5: Perbarui DESIGN bagian 8**
+- [ ] **Step 5: Update DESIGN section 8**
 
-Ganti baris label_map dengan kontrak final:
+Replace the label_map line with the final contract:
 
 ```markdown
 - `label_map.py`: `LOOKUP`, `to_targets`, `unmapped_species`, `class_weights`.
 ```
 
-- [ ] **Step 6: Perbarui CONTEXT bagian istilah**
+- [ ] **Step 6: Update the CONTEXT terms section**
 
-Tambahkan istilah baru:
+Add the new term:
 
 ```markdown
 | Coccobacillus | Bakteri di antara coccus dan bacillus, bentuk pendek dan plump. Contoh: Acinetobacter baumannii, Porphyromonas gingivalis. |
 | Blob normalization | Normalisasi intensitas gambar mikroskopis untuk mengoreksi pencahayaan yang tidak merata. |
 ```
 
-- [ ] **Step 7: Verifikasi tidak ada angka lama yang tertinggal**
+- [ ] **Step 7: Verify no old figures are left behind**
 
 Run: `Select-String -Path docs\*.md -Pattern "660|softmax, 3|2048, 3|src/"`
-Expected: tidak ada hasil yang relevan
+Expected: no relevant results
 
 - [ ] **Step 8: Commit**
 
@@ -3466,14 +3466,14 @@ git commit -m "docs: sync specs with two-class head and measured results"
 
 ---
 
-## Task 12: Verifikasi akhir
+## Task 12: Final verification
 
 **Files:**
 - Modify: `scripts/check_env.ps1`
 
-- [ ] **Step 1: Perbarui check_env.ps1**
+- [ ] **Step 1: Update check_env.ps1**
 
-Tambahkan pemeriksaan berkas baru di akhir skrip, sebelum blok penutup:
+Add the new file checks at the end of the script, before the closing block:
 
 ```powershell
 Write-Host "Memeriksa komponen pipeline..."
@@ -3512,63 +3512,63 @@ if (Test-Path "checkpoints\head_best.pt") {
 }
 ```
 
-- [ ] **Step 2: Jalankan verifikasi lingkungan**
+- [ ] **Step 2: Run the environment verification**
 
 Run: `.\scripts\check_env.ps1`
-Expected: semua komponen OK bila Task 1 sampai 9 sudah dikerjakan
+Expected: all components OK if Tasks 1 through 9 are done
 
-- [ ] **Step 3: Jalankan seluruh tes**
+- [ ] **Step 3: Run all the tests**
 
 Run: `.venv\Scripts\python.exe -m pytest tests -q`
-Expected: semua lolos, tidak ada regressions
+Expected: all pass, no regressions
 
-- [ ] **Step 4: Verifikasi tidak ada path absolut di kode produksi**
+- [ ] **Step 4: Verify no absolute paths in production code**
 
 Run: `.venv\Scripts\python.exe -m pytest tests/test_paths.py -v`
-Expected: semua lolos
+Expected: all pass
 
-- [ ] **Step 5: Verifikasi tidak ada kredensial**
+- [ ] **Step 5: Verify there are no credentials**
 
 Run: `Select-String -Path bacteriacv\*.py, app\*.py -Pattern "password|secret|token|api_key|sk-"`
-Expected: tidak ada hasil
+Expected: no results
 
-- [ ] **Step 6: Serah terima ke auditor**
+- [ ] **Step 6: Hand over to the auditor**
 
-Susun ringkasan perubahan, daftar berkas, dan prompt audit sesuai AGENT.md bagian 3
-aturan 7 sampai 9. Prompt audit harus menyebut:
-1. Konteks tugas dan batasannya.
-2. Acuan dokumen yang berlaku.
-3. Daftar seluruh berkas yang Diaudit.
-4. Keputusan desain yang tidak boleh dianggap sebagai kesalahan.
-5. Fokus pemeriksaan khusus sesuai AGENT.md bagian 4 ayat 4.
+Compile the change summary, file list, and audit prompt according to AGENT.md section 3
+rules 7 through 9. The audit prompt must state:
+1. The task context and its boundaries.
+2. The applicable document references.
+3. The full list of audited files.
+4. The design decisions that must not be treated as mistakes.
+5. The specific inspection focus according to AGENT.md section 4 item 4.
 
 ---
 
-## Checklist Self-Review
+## Self-Review Checklist
 
-**Cakupan spesifikasi:** Setiap kebutuhan SPEC dipetakan ke task.
-- F1 maksa: F1c1 accept PNG/JPG/TIFF, Task 8 dan 9.
-- F2 pra-pemrosesan sesuai spesifikasi: Task 3.
-- F3 bentuk sel plus confidence: Task 4 dan 8.
-- F4 status Gram plus confidence: Task 4 dan 8.
-- F5 visualisasi segmentasi: Task 3 dan 8.
-- F6 class weighting dari data latih: Task 2 dan 6.
-- F7 F1 makro dan akurasi per head: Task 7.
-- F8 antarmuka web: Task 9.
-- SPEC bagian 7 class weighting dari data latih: Task 2 dan 6.
-- SPEC bagian 9.1 kriteria demo: Task 9 Step 9.
-- SPEC bagian 9.2 kriteria laporan: Task 11.
+**Specification coverage:** Every SPEC requirement is mapped to a task.
+- F1 input: F1c1 accept PNG/JPG/TIFF, Tasks 8 and 9.
+- F2 preprocessing per specification: Task 3.
+- F3 cell shape plus confidence: Tasks 4 and 8.
+- F4 Gram status plus confidence: Tasks 4 and 8.
+- F5 segmentation visualization: Tasks 3 and 8.
+- F6 class weighting from train data: Tasks 2 and 6.
+- F7 macro F1 and accuracy per head: Task 7.
+- F8 web interface: Task 9.
+- SPEC section 7 class weighting from train data: Tasks 2 and 6.
+- SPEC section 9.1 demo criteria: Task 9 Step 9.
+- SPEC section 9.2 report criteria: Task 11.
 
-**Konsistensi tipe:** `SHAPE_LABELS` dua elemen dipakai di `config.py`; `LOOKUP` memakai
-nilai yang ada di `SHAPE_LABELS`; `N_SHAPE_CLASSES` dua sesuai `Linear(2048, 2)`;
-`f1_macro` mengembalikan float dipakai di `train.py`; `save_checkpoint` dan
-`load_checkpoint` memakai kunci `head_a` dan `head_b` konsisten.
+**Type consistency:** `SHAPE_LABELS` has two elements and is used in `config.py`; `LOOKUP` uses
+values present in `SHAPE_LABELS`; `N_SHAPE_CLASSES` is two matching `Linear(2048, 2)`;
+`f1_macro` returns a float and is used in `train.py`; `save_checkpoint` and
+`load_checkpoint` consistently use the keys `head_a` and `head_b`.
 
-**Known issues yang harus diselesaikan saat eksekusi:**
-1. `train.py` `main` belum memanggil `train_heads` dengan indeks split. Harus dilengkapi.
-2. `app/main.py` perlu `__getattr__` lazy agar pytest tidak memuat bobot ImageNet.
-3. Dua catatan CJK tidak sengaja pada `preprocess.py` dan `CONTEXT.md` harus diganti ASCII.
-4. `features.py` mengimpor `preprocess` di dalam fungsi `_augmented_paths`, sebaiknya di atas.
-5. `train.py` mengimpor `BacteriaNet` tapi tidak memakainya di beberapa tempat, bersihkan.
-6. `predictor` di Task 8 memakai fixture bertipe `Predictor` yang belum ada di pytest 8,
-   ganti dengan `-> Predictor` pada anotasi return.
+**Known issues that must be resolved during execution:**
+1. `train.py` `main` does not yet call `train_heads` with split indices. Must be completed.
+2. `app/main.py` needs a lazy `__getattr__` so pytest does not load the ImageNet weights.
+3. Two accidental CJK notes in `preprocess.py` and `CONTEXT.md` must be replaced with ASCII.
+4. `features.py` imports `preprocess` inside the `_augmented_paths` function, better at the top.
+5. `train.py` imports `BacteriaNet` but does not use it in some places, clean that up.
+6. `predictor` in Task 8 uses a fixture typed `Predictor` that does not exist in pytest 8,
+   replace it with `-> Predictor` in the return annotation.

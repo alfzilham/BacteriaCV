@@ -1,17 +1,17 @@
 # BacteriaCV
 
-BacteriaCV adalah proyek computer vision untuk klasifikasi bentuk sel bakteri dan status Gram dari citra mikroskop. Repositori saat ini berfokus pada penyiapan dataset DIBaS: pengunduhan arsip, ekstraksi citra, pemetaan spesies, dan pembangunan `data/index.csv` yang bebas kebocoran data.
+BacteriaCV is a computer vision project for classifying bacterial cell shape and Gram status from microscope images. The repository currently focuses on preparing the DIBaS dataset: downloading the archives, extracting images, mapping species, and building a leak-free `data/index.csv`.
 
-## Status proyek
+## Project status
 
-- Ekstraksi penuh menghasilkan 692 citra dari 33 label spesies.
-- `Candida albicans` dikecualikan dari pelatihan karena jamur, bukan bakteri, sehingga tersisa 32 spesies yang dapat dilatih.
-- `data/index.csv` memuat 669 citra: 467 train, 136 validation, dan 66 test.
-- Lima lipatan hanya dibuat dari data train.
-- Nama spesies dipetakan melalui `bacteriacv/datasets/species_map.py`, bukan ditebak dari nama berkas.
-- Modul pelatihan dan antarmuka web belum menjadi bagian dari tahap dataset ini.
+- Full extraction yields 692 images from 33 species labels.
+- `Candida albicans` is excluded from training because it is a fungus, not a bacterium, leaving 32 trainable species.
+- `data/index.csv` holds 669 images: 467 train, 136 validation, and 66 test.
+- The five folds are built from train data only.
+- Species names are mapped through `bacteriacv/datasets/species_map.py` rather than guessed from filenames.
+- The training module and the web interface are not yet part of this dataset stage.
 
-## Struktur utama
+## Main structure
 
 ```text
 BacteriaCV/
@@ -33,20 +33,20 @@ BacteriaCV/
 └── tests/
 ```
 
-## Persiapan lingkungan
+## Environment setup
 
-Di PowerShell dari root repositori:
+In PowerShell from the repository root:
 
 ```powershell
 .\scripts\setup_env.ps1
 .\scripts\check_env.ps1
 ```
 
-Atau gunakan Python environment yang sudah tersedia dan pasang dependensi proyek sesuai kebutuhan.
+Or use an existing Python environment and install the project dependencies as needed.
 
-## Pemasangan
+## Installation
 
-Butuh Python 3.11.0. Dari root repositori:
+Requires Python 3.11.0. From the repository root:
 
 ```powershell
 python -m venv .venv
@@ -55,99 +55,99 @@ python -m pip install --upgrade pip
 python -m pip install -r requirements.txt
 ```
 
-Indeks CPU untuk torch sudah tertangani di dalam `requirements.txt` lewat `--extra-index-url`, jadi tidak ada perintah tambahan. `torch` dan `torchvision` memakai local version suffix `+cpu` yang tidak ada di PyPI, dan tanpa indeks tambahan itu `pip install` gagal dengan `No matching distribution found`.
+The CPU index for torch is already handled inside `requirements.txt` through `--extra-index-url`, so there is no extra command. `torch` and `torchvision` use the local version suffix `+cpu` which does not exist on PyPI, and without that extra index `pip install` fails with `No matching distribution found`.
 
-Aplikasi juga butuh folder `checkpoints/` yang berisi `heads.pt` dan `evaluation.json`. Tanpa `heads.pt` aplikasi berhenti saat start dengan `FileNotFoundError`. Tanpa `evaluation.json`, `/api/report` mengembalikan 404 "Evaluasi belum dijalankan".
+The application also needs a `checkpoints/` folder containing `heads.pt` and `evaluation.json`. Without `heads.pt` the application stops at startup with `FileNotFoundError`. Without `evaluation.json`, `/api/report` returns 404 "Evaluation has not been run yet".
 
-## Menjalankan aplikasi
+## Running the application
 
 ```sh
 uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}
 ```
 
-`${PORT:-8000}` disengaja. Railway menyuntikkan variabel `PORT` secara dinamis lalu mengarahkan trafik ke nomor itu, dan bentuk `:-8000` memakai nilai cadangan 8000 kalau `PORT` tidak ada, sehingga perintah yang sama jalan di server maupun di mesin lokal. Karena itu jangan menulis `--port 8000` polos di mana pun; port yang dipatok membuat Railway tidak mencapai aplikasinya. Bentuk `${PORT:-8000}` adalah ekspansi shell POSIX. Di PowerShell, setel portnya lebih dulu: `$env:PORT = "8123"`.
+`${PORT:-8000}` is deliberate. Railway injects the `PORT` variable dynamically and then routes traffic to that number, and the `:-8000` form falls back to 8000 when `PORT` is absent, so the same command works on the server and on a local machine. Therefore never write a bare `--port 8000` anywhere; a hardcoded port means Railway cannot reach the application. The `${PORT:-8000}` form is POSIX shell expansion. In PowerShell, set the port first: `$env:PORT = "8123"`.
 
-Periksa kesehatan:
+Check health:
 
 ```
 http://127.0.0.1:8000/api/health
 ```
 
-Jawaban yang benar saat model sudah termuat:
+The expected response once the model is loaded:
 
 ```json
 {"status":"siap","checkpoint":"heads.pt","max_upload_bytes":20971520}
 ```
 
-Batas unggahan 20 MB. Aplikasi menerima berkas lebih besar dari 5 MB, jadi jangan menulis 5 MB di mana pun. Format yang diterima: `png`, `jpg`, `jpeg`, `tif`, `tiff`.
+Upload limit is 20 MB. The application accepts files larger than 5 MB, so never write 5 MB anywhere. Accepted formats: `png`, `jpg`, `jpeg`, `tif`, `tiff`.
 
-Berkas `heads.pt` di root repositori bukan model yang dipakai dan sudah dihapus. Bobotnya berbeda dari `checkpoints/heads.pt` dan tidak pernah dibaca aplikasi. Yang dimuat selalu `checkpoints/heads.pt`.
+The `heads.pt` file in the repository root is not the model in use and has been deleted. Its weights differ from `checkpoints/heads.pt` and were never read by the application. What gets loaded is always `checkpoints/heads.pt`.
 
-## Pipeline dataset
+## Dataset pipeline
 
-Unduh 33 arsip DIBaS dan catat manifest SHA-256:
+Download the 33 DIBaS archives and record the SHA-256 manifest:
 
 ```powershell
 python -m bacteriacv.datasets.download
 ```
 
-Ekstrak citra dan verifikasi hasilnya:
+Extract the images and verify the result:
 
 ```powershell
 python -m bacteriacv.datasets.extract
 python -m bacteriacv.datasets.extract --verify-only
 ```
 
-Bangun index dataset:
+Build the dataset index:
 
 ```powershell
 python -m bacteriacv.datasets.build_index
 ```
 
-`data/index.csv` berisi path relatif, nama spesies, `species_id`, split, dan fold. Data validasi serta data uji memakai `fold=-1`.
+`data/index.csv` contains relative paths, species names, `species_id`, split, and fold. Validation and test data use `fold=-1`.
 
-Catatan: server asal DIBaS memiliki sertifikat TLS kedaluwarsa. Modul unduhan menggunakan koneksi tanpa verifikasi sertifikat untuk sumber tersebut dan mencatat SHA-256 setiap arsip di `data/raw/zips_manifest.csv` sebagai bukti provenance.
+Note: the original DIBaS server has an expired TLS certificate. The download module uses a connection without certificate verification for that source and records the SHA-256 of every archive in `data/raw/zips_manifest.csv` as provenance evidence.
 
-## Pengujian
+## Testing
 
 ```powershell
 python -m pytest -q
 ```
 
-Tes mencakup pemetaan spesies, lokasi data, unduhan, ekstraksi, pembagian dataset, pemeriksaan kebocoran, fold, dan path relatif.
+Tests cover species mapping, data locations, downloading, extraction, dataset splitting, leakage checks, folds, and relative paths.
 
-## Dokumentasi
+## Documentation
 
-- [SPEC](docs/SPEC.md) — sumber kebenaran kebutuhan proyek.
-- [ARCHITECTURE](docs/ARCHITECTURE.md) — arsitektur dan keputusan teknis.
-- [DESIGN](docs/DESIGN.md) — desain antarmuka dan kontrak modul.
-- [AGENT](AGENT.md) — aturan kontribusi dan audit.
+- [SPEC](docs/SPEC.md) — source of truth for project requirements.
+- [ARCHITECTURE](docs/ARCHITECTURE.md) — architecture and technical decisions.
+- [DESIGN](docs/DESIGN.md) — interface design and module contracts.
+- [AGENT](AGENT.md) — contribution and audit rules.
 
-## Menjalankan versi daring
+## Running the online version
 
-Aplikasi versi lengkap sudah berjalan di:
+The full version of the application is running at:
 
 ```text
 https://bacteriacv-demo.up.railway.app
 ```
 
-Unggah citra berformat png, jpg, jpeg, tif, atau tiff dengan batas 20 MB. Pemeriksaan keadaan tersedia di `/api/health` dan laporan evaluasi model di `/api/report`.
+Upload images in png, jpg, jpeg, tif, or tiff format with a 20 MB limit. A health check is available at `/api/health` and the model evaluation report at `/api/report`.
 
-Untuk mencoba tanpa menyiapkan citra sendiri, folder `docs/contoh/` memuat empat citra PNG 768 x 574 yang sudah diuji dan dapat diunggah langsung ke kolom Unggah.
+To try it without preparing your own images, the `docs/contoh/` folder holds four tested PNG images at 768 x 574 that can be uploaded directly to the upload field.
 
-Citra contoh diturunkan dari dataset DIBaS (Zielinski dkk. 2017, PLOS ONE 12(9):e0184554), diperkecil ke 768 x 574 untuk keperluan demonstrasi. Status Gram yang dihasilkan platform terhadap citra contoh dapat berbeda dari hasil pada citra asli karena perbedaan skala.
+The sample images are derived from the DIBaS dataset (Zielinski et al. 2017, PLOS ONE 12(9):e0184554), reduced to 768 x 574 for demonstration purposes. The Gram status the platform reports for a sample image may differ from the result on the original image because of the scale difference.
 
-## Data citra tambahan
+## Additional image data
 
-Selain empat citra contoh di `docs/contoh/`, kumpulan citra dan arsip yang lebih lengkap tersedia di Google Drive:
+Besides the four sample images in `docs/contoh/`, a more complete set of images and archives is available on Google Drive:
 
 ```text
 https://drive.google.com/drive/folders/1dSyJUjPfyzu5GrCnH1LWZ_qRRSmnviA_?usp=drive_link
 ```
 
-Isi folder tersebut mencakup citra terklasifikasi per spesies serta arsip ZIP asal yang dipakai untuk membangun pipeline dataset. Format yang diterima aplikasi adalah png, jpg, jpeg, tif, dan tiff dengan batas 20 MB per berkas.
+That folder contains images classified per species as well as the original ZIP archives used to build the dataset pipeline. The formats the application accepts are png, jpg, jpeg, tif, and tiff with a 20 MB limit per file.
 
-Untuk membangun ulang pipeline dari arsip ZIP:
+To rebuild the pipeline from the ZIP archives:
 
 ```bash
 python -m bacteriacv.datasets.download
@@ -155,8 +155,8 @@ python -m bacteriacv.datasets.extract
 python -m bacteriacv.datasets.build_index
 ```
 
-Perintah itu mengunduh arsip dari sumber aslinya, bukan dari Google Drive. Folder Drive dipakai bila citra atau arsip sudah dimiliki sebelumnya.
+Those commands download the archives from their original source, not from Google Drive. Use the Drive folder when you already have the images or archives.
 
-## Lisensi
+## License
 
-Proyek ini dirilis di bawah [MIT License](LICENSE).
+This project is released under the [MIT License](LICENSE).
