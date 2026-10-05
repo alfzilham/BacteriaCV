@@ -293,7 +293,7 @@
       "val_accuracy_gram": 0.9926470588235294
     }
   ],
-  "checkpoint_path": "D:\\2026\\Workspace\\PersonalApps\\BacteriaCV\\checkpoints\\heads.pt",
+  "checkpoint_path": "heads.pt",
   "n_train": 1868,
   "n_val": 136,
   "n_test": 66,
@@ -315,7 +315,7 @@
     "min_delta": 0.0001,
     "batch_size": 32,
     "seed": 1337,
-    "checkpoint_dir": "D:\\2026\\Workspace\\PersonalApps\\BacteriaCV\\checkpoints"
+    "checkpoint_dir": "checkpoints"
   },
   "labels": {
     "shape": [
