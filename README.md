@@ -137,6 +137,26 @@ Untuk mencoba tanpa menyiapkan citra sendiri, folder `docs/contoh/` memuat empat
 
 Citra contoh diturunkan dari dataset DIBaS (Zielinski dkk. 2017, PLOS ONE 12(9):e0184554), diperkecil ke 768 x 574 untuk keperluan demonstrasi. Status Gram yang dihasilkan platform terhadap citra contoh dapat berbeda dari hasil pada citra asli karena perbedaan skala.
 
+## Data citra tambahan
+
+Selain empat citra contoh di `docs/contoh/`, kumpulan citra dan arsip yang lebih lengkap tersedia di Google Drive:
+
+```text
+https://drive.google.com/drive/folders/1dSyJUjPfyzu5GrCnH1LWZ_qRRSmnviA_?usp=drive_link
+```
+
+Isi folder tersebut mencakup citra terklasifikasi per spesies serta arsip ZIP asal yang dipakai untuk membangun pipeline dataset. Format yang diterima aplikasi adalah png, jpg, jpeg, tif, dan tiff dengan batas 20 MB per berkas.
+
+Untuk membangun ulang pipeline dari arsip ZIP:
+
+```bash
+python -m bacteriacv.datasets.download
+python -m bacteriacv.datasets.extract
+python -m bacteriacv.datasets.build_index
+```
+
+Perintah itu mengunduh arsip dari sumber aslinya, bukan dari Google Drive. Folder Drive dipakai bila citra atau arsip sudah dimiliki sebelumnya.
+
 ## Lisensi
 
 Proyek ini dirilis di bawah [MIT License](LICENSE).
