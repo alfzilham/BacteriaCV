@@ -7,6 +7,8 @@ dapat diassert tanpa bergantung pada inisialisasi.
 
 from __future__ import annotations
 
+import ast
+import json
 import re
 from pathlib import Path
 
@@ -22,6 +24,7 @@ GOOD_IMAGE = "citra.png"
 BAD_SUFFIX = "catatan.txt"
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
+STATIC_DIR = REPO_ROOT / "app" / "static"
 
 
 def _png_bytes(dark: bool = True) -> bytes:
@@ -583,3 +586,403 @@ def test_app_module_does_not_import_label_map() -> None:
 
     assert "label_map" not in source
     assert "LOOKUP" not in source
+
+# ===========================================================================
+# Dua bahasa dan data kanonik
+#
+# Sifat yang menopang bagian ini: server tidak pernah mengubah data mengikuti
+# bahasa pemanggil. Kalau iya, evaluation.json dan seluruh laporan bisa
+# menampilkan angka berbeda tergantung siapa yang membuka, dan itu tidak bisa
+# diterima untuk dokumen rujukan laporan studi kasus.
+#
+# Kamus dibaca dengan pembaca kecil sendiri, bukan mesin JavaScript, supaya tes
+# ini tidak butuh dependensi baru dan tidak butuh runtime.
+# ===========================================================================
+
+I18N_PATH = STATIC_DIR / "i18n.js"
+MAIN_JS_PATH = STATIC_DIR / "main.js"
+LANGUAGES = ("en", "id")
+
+
+def _i18n_object(source: str, name: str) -> dict:
+    """Parse `export const <name> = { en: {...}, id: {...} };` into a dict.
+
+    Uses ast.literal_eval on the object literal converted to Python syntax. The
+    conversion is mechanical: keys become quoted strings, values stay strings.
+    """
+    match = re.search(
+        rf"export const {re.escape(name)}\s*=\s*(\{{.*?\n\}};)", source, re.S
+    )
+    assert match, f"{name} tidak ditemukan di i18n.js"
+    body = match.group(1).rstrip(";")
+
+    # Komentar JavaScript tidak valid di Python, jadi dibuang dulu. Hanya ada
+    # komentar satu baris penuh di kamus, jadi ini tidak pernah menyentuh nilai.
+    body = re.sub(r"(?m)^\s*//.*$", "", body)
+    # Kunci tanpa tanda kutip juga tidak valid di Python.
+    python_literal = re.sub(
+        r'(?m)^(\s*)([A-Za-z_][A-Za-z0-9_]*)\s*:', r'\1"\2":', body
+    )
+    python_literal = (
+        python_literal.replace("true", "True")
+        .replace("false", "False")
+        .replace("null", "None")
+    )
+    parsed = ast.literal_eval(python_literal)
+    assert isinstance(parsed, dict), f"{name} bukan objek"
+    return parsed
+
+
+def _dictionaries() -> dict:
+    """Kembalikan kedua kamus, diindeks dengan kode bahasa."""
+    return _i18n_object(I18N_PATH.read_text(encoding="utf-8"), "I18N")
+
+
+def _dictionary_keys() -> tuple:
+    """Kembalikan (kunci bahasa Inggris, kunci bahasa Indonesia)."""
+    dicts = _dictionaries()
+    return set(dicts["en"]), set(dicts["id"])
+
+
+# --- 1. berkas kamus ada dan bisa dibaca -----------------------------------
+def test_i18n_file_exists_and_is_readable() -> None:
+    """app/static/i18n.js harus ada, tidak kosong, dan terbaca jadi dua kamus."""
+    assert I18N_PATH.is_file(), "app/static/i18n.js tidak ada"
+    assert I18N_PATH.stat().st_size > 0, "app/static/i18n.js kosong"
+
+    dicts = _dictionaries()
+
+    assert set(dicts) == set(LANGUAGES), f"harus ada dua bahasa, ada {set(dicts)}"
+    for lang in LANGUAGES:
+        assert dicts[lang], f"kamus {lang} kosong"
+        for key, value in dicts[lang].items():
+            assert isinstance(value, str), f"{lang}.{key} bukan string"
+
+
+# --- 2. kedua bahasa punya kumpulan kunci yang identik ----------------------
+def test_both_languages_have_identical_keys() -> None:
+    """Satu kunci yang hilang di satu bahasa akan lolos ke Inggris diam-diam."""
+    english, indonesian = _dictionary_keys()
+
+    assert english, "kamus bahasa Inggris kosong"
+    assert indonesian, "kamus bahasa Indonesia kosong"
+    assert english == indonesian, (
+        "kunci tidak sama di kedua bahasa. "
+        f"hanya di en: {sorted(english - indonesian)}; "
+        f"hanya di id: {sorted(indonesian - english)}"
+    )
+
+
+# --- 3. tidak ada kunci bernilai kosong ------------------------------------
+def test_no_key_has_an_empty_value() -> None:
+    """Kunci kosong membuat elemen antarmuka kosong tanpa error terlihat."""
+    dicts = _dictionaries()
+    empty = []
+
+    for lang in LANGUAGES:
+        for key, value in dicts[lang].items():
+            if not value.strip():
+                empty.append(f"{lang}.{key}")
+
+    assert not empty, f"nilai kunci kosong: {empty}"
+
+
+# --- 4. setiap kunci dari server ada di kedua bahasa -----------------------
+def test_every_server_note_and_stage_key_exists_in_both_languages() -> None:
+    """note_keys dan stage_keys dari server harus punya terjemahan."""
+    from bacteriacv.config import LOW_CONFIDENCE_WARNING_KEY
+    from bacteriacv.infer import FAILED_STAGES_NOTE_KEY
+    from bacteriacv.preprocess import SEGMENTATION_FAILURE_MESSAGE_KEY
+    from bacteriacv.visualize import SEGMENTATION_LIMITATION_KEY, STAGE_KEYS
+
+    english, indonesian = _dictionary_keys()
+
+    note_keys = {
+        SEGMENTATION_LIMITATION_KEY,
+        LOW_CONFIDENCE_WARNING_KEY,
+        SEGMENTATION_FAILURE_MESSAGE_KEY,
+        FAILED_STAGES_NOTE_KEY,
+    }
+    # Sufiks gagal dipakai sebagai bagian dari kunci bertitik, jadi harus ada
+    # sebagai kunci tersendiri juga.
+    stage_keys = set(STAGE_KEYS.values()) | {"stage_failed_suffix"}
+
+    for key in sorted(note_keys | stage_keys):
+        assert key in english, f"kunci server {key} tidak ada di en"
+        assert key in indonesian, f"kunci server {key} tidak ada di id"
+
+
+def test_stage_keys_cover_every_stage() -> None:
+    """Setiap tahap perlu kunci, kalau tidak judulnya tak bisa ditransliterasi."""
+    from bacteriacv.preprocess import STAGE_NAMES
+    from bacteriacv.visualize import STAGE_KEYS
+
+    assert set(STAGE_NAMES) == set(STAGE_KEYS), (
+        "STAGE_KEYS harus menutupi setiap tahap; "
+        f"tanpa kunci: {sorted(set(STAGE_NAMES) - set(STAGE_KEYS))}"
+    )
+
+    english, _ = _dictionary_keys()
+    outside = sorted(set(STAGE_KEYS.values()) - english)
+    assert not outside, f"ada kunci tahap di luar kamus: {outside}"
+
+
+# --- 5. respons predict mengembalikan kunci, bukan teks langsung -----------
+def test_predict_returns_note_keys_and_notes_text(client: TestClient) -> None:
+    """Server mengembalikan kunci dan teks, bukan teks saja."""
+    response = client.post(
+        "/api/predict",
+        files={"file": (GOOD_IMAGE, _png_bytes(), "image/png")},
+    )
+    payload = response.json()
+
+    for field in ("note_keys", "notes_text", "stage_keys", "stage_texts"):
+        assert field in payload, f"{field} tidak ada di respons"
+
+    assert payload["note_keys"], "note_keys kosong"
+    assert payload["notes_text"], "notes_text kosong"
+    assert len(payload["note_keys"]) == len(payload["notes_text"]), (
+        "note_keys dan notes_text harus sejajar indeks per indeks"
+    )
+    assert len(payload["stage_keys"]) == len(payload["stage_texts"]), (
+        "stage_keys dan stage_texts harus sejajar indeks per indeks"
+    )
+
+    # Field lama diganti, bukan dipertahankan dua-duanya, supaya tiap butir
+    # hanya punya satu sumber teks kanonik.
+    assert "stage_titles" not in payload, (
+        "stage_titles seharusnya digantikan stage_keys dan stage_texts, bukan "
+        "dipertahankan dua-duanya"
+    )
+
+    english, indonesian = _dictionary_keys()
+    for key in payload["note_keys"]:
+        assert key in english and key in indonesian, f"note_key {key} tak ada di kamus"
+    for key in payload["stage_keys"]:
+        base = key.split(".")[0]
+        assert base in english and base in indonesian, f"stage_key {key} tak ada di kamus"
+
+
+# --- 6. label server tetap Inggris apa pun Accept-Language-nya --------------
+@pytest.mark.parametrize(
+    "accept_language",
+    ["id-ID,id;q=0.9", "en-US,en;q=0.9", "en", "id", "*", "", "de-DE,de;q=0.8"],
+)
+def test_labels_stay_english_under_any_accept_language(
+    client: TestClient, accept_language: str
+) -> None:
+    """Data dari server tidak boleh pernah ikut berubah bahasa.
+
+    Inilah uji yang memastikan arsitektur data kanonik tidak bocor.
+    """
+    response = client.post(
+        "/api/predict",
+        headers={"Accept-Language": accept_language},
+        files={"file": (GOOD_IMAGE, _png_bytes(), "image/png")},
+    )
+    payload = response.json()
+    prediction = payload["prediction"]
+
+    assert prediction["shape_label"] in {"cocci", "bacilli"}, (
+        f"bentuk sel bukan label kanonik: {prediction['shape_label']!r}"
+    )
+    assert prediction["gram_label"] in {"positive", "negative"}, (
+        f"status Gram bukan label kanonik: {prediction['gram_label']!r}"
+    )
+    assert prediction["shape_level"] in {"high", "medium", "low"}
+    assert prediction["gram_level"] in {"high", "medium", "low"}
+
+    for key in payload["note_keys"]:
+        assert re.fullmatch(r"[a-z_]+(\.[a-z_]+)?", key), (
+            f"note_key {key!r} bukan kunci ascii sederhana"
+        )
+    for text in payload["stage_texts"]:
+        assert "gagal" not in text, f"stage_texts memuat kata Indonesia: {text!r}"
+
+
+def test_nothing_in_the_stack_reads_accept_language() -> None:
+    """Tidak boleh ada jalur kode yang membaca Accept-Language sama sekali.
+
+    Membuktikannya secara statis lebih kuat daripada sekadar percaya satu respons,
+    karena percakapan ini tidak bisa berubah tanpa menambah salah satu pola di
+    bawah ini.
+    """
+    forbidden = re.compile(r"accept[-_]?language", re.I)
+
+    checked = 0
+    for path in (
+        REPO_ROOT / "app" / "main.py",
+        MAIN_JS_PATH,
+        REPO_ROOT / "Procfile",
+        REPO_ROOT / "requirements.txt",
+    ):
+        assert path.is_file(), f"{path} tidak ada"
+        text = path.read_text(encoding="utf-8")
+        found = forbidden.search(text)
+        assert found is None, (
+            f"{path.name} membaca Accept-Language pada baris "
+            f"{text[: found.start()].count(chr(10)) + 1}; server harus selalu "
+            "mengembalikan bahasa Inggris"
+        )
+        checked += 1
+    assert checked == 4
+
+
+# --- 7. nilai respons sama persis apa pun Accept-Language-nya --------------
+def test_response_is_identical_under_any_accept_language(client: TestClient) -> None:
+    """Dua header berbeda harus menghasilkan respons yang sama persis."""
+    png = _png_bytes()
+
+    def call(accept_language: str) -> dict:
+        response = client.post(
+            "/api/predict",
+            headers={"Accept-Language": accept_language},
+            files={"file": (GOOD_IMAGE, png, "image/png")},
+        )
+        assert response.status_code == 200
+        return json.loads(response.content)
+
+    with_indonesian = call("id-ID,id;q=0.9")
+    with_english = call("en-US,en;q=0.9")
+    without_header = call("")
+
+    assert with_indonesian == with_english, (
+        "respons berbeda antara header id dan en"
+    )
+    assert with_indonesian == without_header, (
+        "respons berbeda antara header bahasa dan tanpa header"
+    )
+
+    # Ditulis satu per satu supaya kegagalan menyebut field yang sebenarnya beda.
+    assert (
+        with_indonesian["prediction"]["gram_label"]
+        == with_english["prediction"]["gram_label"]
+    )
+    assert with_indonesian["note_keys"] == with_english["note_keys"]
+    assert with_indonesian["notes_text"] == with_english["notes_text"]
+    assert with_indonesian["stage_keys"] == with_english["stage_keys"]
+    assert with_indonesian["stage_texts"] == with_english["stage_texts"]
+
+
+# --- tombol penganti -------------------------------------------------------
+def test_language_toggle_buttons_exist_in_the_header() -> None:
+    """Dua tombol kecil di header, dekat tombol navigasi yang sudah ada."""
+    page = (STATIC_DIR / "index.html").read_text(encoding="utf-8")
+
+    assert 'id="lang-en"' in page, "tombol EN tidak ada"
+    assert 'id="lang-id"' in page, "tombol ID tidak ada"
+    assert 'data-lang="en"' in page
+    assert 'data-lang="id"' in page
+
+    header = page.split("</header>")[0]
+    assert 'id="lang-en"' in header, "tombol EN tidak berada di header"
+    assert 'id="lang-id"' in header, "tombol ID tidak berada di header"
+
+    assert "lang-toggle" in page, "wadah tombol bahasa tidak ada"
+    assert 'role="group"' in page, "wadah tombol bahasa perlu role group"
+
+    js = MAIN_JS_PATH.read_text(encoding="utf-8")
+    assert "bacteriacv.lang" in js, "kunci localStorage tidak sesuai yang diminta"
+    assert "getItem" in js and "setItem" in js, "pilihan bahasa tidak disimpan"
+
+
+def test_default_language_is_english() -> None:
+    """English adalah bawaan karena README dan dokumentasi sekarang bahasa Inggris."""
+    js = MAIN_JS_PATH.read_text(encoding="utf-8")
+
+    assert 'DEFAULT_LANG = "en"' in js, "bahasa bawaan bukan English"
+    assert "indexOf(stored) === -1" in js, (
+        "nilai localStorage yang tidak dikenal harus jatuh ke English"
+    )
+
+
+def test_language_toggle_follows_the_brutalist_style_rules() -> None:
+    """Tanpa border-radius dan tanpa shadow, konsisten dengan header yang ada."""
+    css = (STATIC_DIR / "main.css").read_text(encoding="utf-8")
+
+    blocks = re.findall(r"\.lang-btn(?:\.[\w-]+)?\s*\{([^}]*)\}", css)
+    assert blocks, "blok .lang-btn tidak ditemukan di main.css"
+
+    for block in blocks:
+        assert "border-radius" not in block, "tombol bahasa tidak boleh ada radius"
+        assert "box-shadow" not in block, "tombol bahasa tidak boleh ada shadow"
+
+    # Ukuran teks tidak boleh lebih kecil dari nav-link yang sudah ada.
+    size = re.search(r"\.lang-btn\s*\{[^}]*font-size:\s*(\d+)px", css, re.S)
+    assert size, "ukuran font tombol bahasa tidak ditemukan"
+    nav = re.search(r"\.nav-link\s*\{[^}]*font-size:\s*(\d+)px", css, re.S)
+    assert nav, "ukuran font nav-link tidak ditemukan"
+    assert int(size.group(1)) >= int(nav.group(1)), (
+        f"ukuran teks tombol bahasa {size.group(1)}px lebih kecil dari nav-link "
+        f"{nav.group(1)}px; DESIGN bagian 3 melarang pengurangan ukuran teks"
+    )
+
+
+def test_confidence_level_selectors_match_the_server_values() -> None:
+    """Kelas CSS harus mengikuti nilai server, kalau tidak warnanya hilang."""
+    from bacteriacv.visualize import confidence_level
+
+    css = (STATIC_DIR / "main.css").read_text(encoding="utf-8")
+
+    for value in (0.0, 0.7, 0.95):
+        level = confidence_level(value)
+        assert f".level-{level} {{" in css, f"kelas .level-{level} tidak ada di main.css"
+
+
+def test_data_labels_are_translated_only_for_display() -> None:
+    """label_cocci dan label_bacilli boleh berbeda, tapi data server tidak."""
+    dicts = _dictionaries()
+
+    assert dicts["en"]["label_cocci"] == "Cocci"
+    assert dicts["id"]["label_cocci"] == "Kokus"
+    assert dicts["en"]["label_bacilli"] == "Bacilli"
+    assert dicts["id"]["label_bacilli"] == "Batang"
+
+    from bacteriacv.config import GRAM_LABELS, SHAPE_LABELS
+
+    assert SHAPE_LABELS == ("cocci", "bacilli")
+    assert GRAM_LABELS == ("positive", "negative")
+
+    js = MAIN_JS_PATH.read_text(encoding="utf-8")
+    assert '`label_${' in js, "klien tidak memetakan label untuk tampilan"
+
+
+def test_every_page_i18n_key_exists_in_the_dictionary() -> None:
+    """Setiap data-i18n di index.html harus ada kuncinya di kedua bahasa.
+
+    Inilah yang membuat ganti bahasa benar-benar mengubah semua teks statis,
+    bukan hanya sebagian.
+    """
+    page = (STATIC_DIR / "index.html").read_text(encoding="utf-8")
+    english, indonesian = _dictionary_keys()
+
+    used = set(re.findall(r'data-i18n(?:-aria-label)?="([^"]+)"', page))
+    assert used, "tidak ada data-i18n di index.html; ganti bahasa tidak mengubah apa pun"
+
+    missing = sorted(k for k in used if k not in english or k not in indonesian)
+    assert not missing, f"data-i18n di halaman tapi tidak ada di kamus: {missing}"
+
+
+def test_language_switcher_preserves_the_locked_markup() -> None:
+    """Empat hal yang dikunci tes lain tidak boleh berubah oleh tombol bahasa."""
+    page = (STATIC_DIR / "index.html").read_text(encoding="utf-8")
+
+    assert 'id="tabs"' in page
+    assert 'id="panel"' in page
+    assert 'id="submit"' in page
+    assert 'rel="icon"' in page
+
+    images = re.findall(r"<img\b[^>]*>", page)
+    panels = [tag for tag in images if 'class="brand-logo"' not in tag]
+    assert len(panels) == 1, f"harus ada tepat satu img panel, ada {len(panels)}"
+    logos = [tag for tag in images if 'class="brand-logo"' in tag]
+    assert len(logos) == 1, f"harus ada tepat satu img logo, ada {len(logos)}"
+
+    assert page.count("<script") == 1, "jumlah tag script harus tetap satu"
+    assert "<style" not in page, "tidak boleh ada blok style inline"
+    assert page.count('name="viewport"') == 1, "meta viewport harus tetap satu"
+
+    # Kamus dimuat sebagai modul dari main.js, bukan dengan tag kedua.
+    assert 'import("/static/i18n.js")' in MAIN_JS_PATH.read_text(encoding="utf-8"), (
+        "i18n.js harus dimuat lewat import dinamis, bukan tag script kedua"
+    )
