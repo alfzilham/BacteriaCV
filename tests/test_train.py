@@ -7,6 +7,7 @@ menjalankan dua head berukuran Linear(2048, 2).
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 import numpy as np
@@ -350,6 +351,80 @@ def test_train_records_history(tmp_path: Path) -> None:
     assert {"epoch", "train_loss", "val_f1_shape", "val_f1_gram"} <= set(
         report.history[0]
     )
+
+
+def test_report_dict_has_no_absolute_paths(tmp_path: Path) -> None:
+    """Laporan pelatihan hanya boleh memuat nama berkas dan nama folder.
+
+    training_report.json ikut ter-deploy karena tercantum di baris negasi
+    .gitignore. Path absolut di dalamnya membocorkan struktur folder mesin
+    pembangun dan melanggar AGENT.md bagian 3 aturan 5. Kedua key ini tidak
+    pernah diuji sebelumnya karena seluruh assertion bekerja pada objek
+    TrainingReport di memori, bukan pada hasil serialisasi.
+
+    tmp_path dipakai sebagai checkpoint_dir supaya tes membuktikan direktori
+    dibuang, bukan kebetulan nama foldernya memang tanpa direktori.
+    """
+    target = tmp_path / "checkpoints"
+    report = train(
+        _separable_store(),
+        TrainConfig(epochs=3, patience=2, seed=0, checkpoint_dir=target),
+    )
+
+    payload = report.to_dict()
+
+    assert payload["checkpoint_path"].endswith("heads.pt")
+    assert payload["config"]["checkpoint_dir"] == "checkpoints"
+
+
+def test_report_dict_paths_have_no_path_syntax(tmp_path: Path) -> None:
+    """Nilai path pada laporan tidak boleh memuat sisa sintaks path.
+
+    Pemeriksaan dipisah agar setiap kelas kesalahan ditangkap oleh assertion
+    sendiri: pemisah POSIX, pemisah Windows, dan huruf drive. Path di bawah
+    sengaja berlapis supaya tes tidak lulus karena kebetulan.
+    """
+    nested = tmp_path / "a" / "b" / "checkpoints"
+    nested.mkdir(parents=True)
+    report = train(
+        _separable_store(),
+        TrainConfig(epochs=3, patience=2, seed=0, checkpoint_dir=nested),
+    )
+
+    payload = report.to_dict()
+    values = [payload["checkpoint_path"], payload["config"]["checkpoint_dir"]]
+
+    for value in values:
+        assert isinstance(value, str), type(value)
+        for separator in ("/", "\\"):
+            assert separator not in value, f"pemisah {separator!r} bocor pada {value!r}"
+        assert ":" not in value, f"huruf drive bocor pada {value!r}"
+        assert value == value.strip(), f"spasi tepi bocor pada {value!r}"
+        assert not value.startswith("."), f"path relatif bocor pada {value!r}"
+
+
+def test_report_dict_is_json_serializable_without_paths(tmp_path: Path) -> None:
+    """Hasil to_dict harus tetap bisa diserialisasi ke JSON seperti biasa.
+
+    to_dict mengganti objek Path menjadi teks karena JSON tidak punya tipe Path.
+    Tes ini memastikan penggantian itu tidak merusak bentuk JSON, sekaligus
+    memeriksa tidak ada path absolut yang ikut terbawa ke teks.
+    """
+    report = train(
+        _separable_store(),
+        TrainConfig(
+            epochs=3,
+            patience=2,
+            seed=0,
+            checkpoint_dir=tmp_path / "checkpoints",
+        ),
+    )
+
+    restored = json.loads(json.dumps(report.to_dict()))
+
+    assert restored["checkpoint_path"] == "heads.pt"
+    assert restored["config"]["checkpoint_dir"] == "checkpoints"
+    assert restored["config"]["seed"] == report.config["seed"]
 
 
 def test_train_rejects_missing_split() -> None:

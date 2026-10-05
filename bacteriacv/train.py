@@ -482,8 +482,11 @@ class TrainingReport:
         """
         payload = asdict(self)
         checkpoint = payload.get("checkpoint_path")
-        if isinstance(checkpoint, Path):
-            payload["checkpoint_path"] = str(checkpoint)
+        if checkpoint is not None:
+            # Hanya nama berkasnya. training_report.json ikut ter-deploy, jadi
+            # path absolut di dalamnya membocorkan struktur folder mesin
+            # pembangun dan melanggar AGENT.md bagian 3 aturan 5.
+            payload["checkpoint_path"] = Path(checkpoint).name
         payload["labels"] = {
             "shape": list(SHAPE_LABELS),
             "gram": list(GRAM_LABELS),
@@ -682,7 +685,9 @@ def train(store: FeatureStore, config: TrainConfig | None = None) -> TrainingRep
             "min_delta": settings.min_delta,
             "batch_size": settings.batch_size,
             "seed": settings.seed,
-            "checkpoint_dir": str(settings.checkpoint_dir),
+            # Nama folder saja, bukan path absolut. Lihat catatan pada
+            # TrainingReport.to_dict.
+            "checkpoint_dir": Path(settings.checkpoint_dir).name,
         },
     )
 
