@@ -44,6 +44,7 @@ notes/
 # Agent
 graphify-out/
 .agent/
+docs/prompts/
 
 # Logs 
 logs/
