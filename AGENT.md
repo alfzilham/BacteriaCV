@@ -35,6 +35,17 @@ An agent must not change a decision recorded in SPEC.md without explicit approva
 8. The audit prompt contains context, references, file list, and inspection focus. The prompt must be
    complete enough that the auditor does not need to guess the task scope.
 9. Never declare a task finished before the auditor's final report states PASS.
+10. Route every question to the document that owns the answer before acting on it.
+
+    | Question about | Authoritative document |
+    |----------------|-------------------------|
+    | Interface, colour, contrast, typography, layout, components, UI behaviour | `docs/DESIGN.md` |
+    | Model architecture, inference path, data contract | `docs/ARCHITECTURE.md` |
+    | Agent rules, finding format, severity vocabulary | `AGENT.md` section 4 |
+    | Data, dataset, provenance | `README.md` and `docs/notes/` |
+
+11. Before reporting a defect, check whether a written decision already exists in one of the documents
+    above, and whether a test already locks it in. If either one exists, it is not a new defect.
 
 ## 4. Rules for Codex CLI (auditor)
 1. The audit must happen before a task is considered finished.
