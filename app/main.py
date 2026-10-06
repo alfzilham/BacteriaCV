@@ -134,7 +134,7 @@ def create_app(checkpoint_path: Path | None = None) -> FastAPI:
         """
         state = getattr(request.app.state, "bacteria", None)
         return {
-            "status": "siap" if state is not None else "belum siap",
+            "status": "ready" if state is not None else "not ready",
             "checkpoint": state.checkpoint_path.name if state else None,
             "max_upload_bytes": MAX_UPLOAD_BYTES,
         }

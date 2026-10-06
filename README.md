@@ -76,7 +76,7 @@ http://127.0.0.1:8000/api/health
 The expected response once the model is loaded:
 
 ```json
-{"status":"siap","checkpoint":"heads.pt","max_upload_bytes":20971520}
+{"status":"ready","checkpoint":"heads.pt","max_upload_bytes":20971520}
 ```
 
 Upload limit is 20 MB. The application accepts files larger than 5 MB, so never write 5 MB anywhere. Accepted formats: `png`, `jpg`, `jpeg`, `tif`, `tiff`.

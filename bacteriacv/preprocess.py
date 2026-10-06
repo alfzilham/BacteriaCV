@@ -183,7 +183,7 @@ def segment_cells(image: np.ndarray) -> tuple[np.ndarray, bool]:
     markers[tuple(peaks.T)] = np.arange(1, len(peaks) + 1)
     labels = watershed(-distance, markers, mask=opened)
 
-    # Filter luas tanpa loop regionprops. Versi loop membandingkan seluruh
+    # Filter area without a regionprops loop. The loop version compares the entire
     # labelled image with one label per region, so it costs
     # O(num_regions x image_size). On a 2048 x 1532 DIBaS image with
     # hundreds of regions that is several seconds per image. Computing through
@@ -205,7 +205,7 @@ def count_objects(mask: np.ndarray | None) -> int:
         mask: The binary mask from segment_cells, or None when segmentation failed.
 
     Returns:
-        Jumlah komponen terhubung berlabel.
+        The number of labelled connected components.
     """
     if mask is None or not mask.any():
         return 0

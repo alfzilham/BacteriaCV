@@ -1,5 +1,5 @@
-"""Antarmuka web BacteriaCV.
+"""The BacteriaCV web interface.
 
-Paket ini membungkus aplikasi FastAPI. Modul main di dalamnya membangun
-aplikasi dan memuat checkpoint satu kali saat aplikasi mulai.
+This package wraps the FastAPI application. Its main module builds the
+application and loads the checkpoint once when the application starts.
 """

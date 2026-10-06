@@ -79,7 +79,7 @@ def test_health_reports_checkpoint(client: TestClient) -> None:
     response = client.get("/api/health")
 
     assert response.status_code == 200
-    assert response.json()["status"] == "siap"
+    assert response.json()["status"] == "ready"
     assert response.json()["checkpoint"] == "heads.pt"
     assert response.json()["max_upload_bytes"] == MAX_UPLOAD_BYTES
 
