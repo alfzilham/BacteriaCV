@@ -1,5 +1,23 @@
 # BacteriaCV Implementation Plan
 
+> [!WARNING]
+> **This file is a historical record, not product documentation.**
+> The plan is superseded by `docs/DESIGN.md` and `docs/ARCHITECTURE.md`.
+>
+> **The code inside this plan no longer matches the code that runs.** The
+> clearest example is `GRAM_LABELS`. It is now `("positive", "negative")`, not
+> `("positif", "negatif")`. The class order has not changed; only the language
+> has. An agent that reads this plan and follows it will write the Indonesian
+> labels back into the code and label the 66 test images in reverse without
+> anyone noticing until a reviewer recomputes the numbers.
+>
+> **Do not execute this plan again.** To understand the current architecture,
+> read `docs/ARCHITECTURE.md`. To understand an interface decision, read
+> `docs/DESIGN.md`. To understand the agent rules, read `AGENT.md`.
+>
+> **The code blocks in this plan are deliberately left as they are.** Editing
+> them would rewrite history without benefit. This note is the only addition.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** A bacterial cell shape and Gram status classification system from DIBaS microscope images, with a five-stage preprocessing pipeline, a frozen pretrained ResNet-50, two classification heads, macro F1-score evaluation, and a FastAPI web interface.
