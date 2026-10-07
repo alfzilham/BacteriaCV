@@ -112,6 +112,69 @@ Task is done when the verdict is PASS
 If the verdict is FAIL, the flow returns to the audit stage. There is no limit on the number of rounds, but
 each round must produce a real change or an explanation of why that finding was closed.
 
+## 5.1 Pull request workflow
+
+Numbered as a subsection of section 5 on purpose. Inserting it as its own
+numbered top-level section would have forced the sections after it to be
+renumbered, and the existing section numbers are referenced elsewhere.
+
+`main` is protected. A direct push to `main` is rejected by the server and is
+forbidden by policy as well. Every change reaches `main` through a pull request
+that the project owner merges.
+
+### The current flow
+```
+Work on a branch, never on main
+      |
+      v
+Commit locally with a message that says what changed
+      |
+      v
+Push the branch
+      |
+      v
+Open a pull request targeting main
+      |
+      v
+Wait for the three CI status checks
+      |
+      v
+Request audit review from BCV-1 Audit
+      |
+      v
+Owner reviews and merges
+```
+
+### Forbidden
+- Pushing to `main`. The server rejects it, and policy forbids it too.
+- Merging your own pull request. The owner merges.
+- Force pushing to any branch.
+- Deleting a branch that is not fully merged.
+
+### Required gates
+A pull request cannot be merged until all three status checks are green:
+
+- `CI / Tes pada Python 3.11`
+- `CI / Tes pada Python 3.12`
+- `CI / Tes pada Python 3.13`
+
+Plus at least one approving review.
+
+### One finding, one branch, one pull request
+Do not bundle unrelated changes. Two problems means two branches and two pull
+requests.
+
+### When the pull request is created
+After the audit verdict is PASS, not before. The auditor gives its verdict on
+the local code. The pull request is created after that verdict, so the review on
+GitHub checks something already verified rather than searching for problems from
+the start.
+
+### Secrets
+A token never appears in a file, a commit, or a pull request comment. To call the
+GitHub API, use the `gh` CLI, which is already logged in. When CI needs a
+credential, use GitHub secrets; never write it into a workflow.
+
 ## 6. General limits
 - No agent uploads DIBaS data to an external service.
 - No agent runs full training without confirmation, because of the consumer GPU load.
