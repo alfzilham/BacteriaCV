@@ -72,7 +72,6 @@ updated and the new version is published at the same URL.
 ## Contact
 
 - Email: alfizilham@gmail.com
-- Phone: +62 852 1389 6460
 
 Use the address above if you have a question about this policy, about the app, or
 about the data it handles. There is no data held, so there is nothing to request
