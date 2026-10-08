@@ -1,12 +1,9 @@
 # Privacy Policy — BacteriaCVMobile
 
-**Effective date: PLACEHOLDER — fill in before publishing.**
+**Effective date: 8 October 2026.**
 
-> **PLACEHOLDER.** Everything in this document that is not marked as a
-> placeholder has been checked against the source code. Everything marked
-> `PLACEHOLDER` must be filled in by the project owner before this policy is
-> published at a public URL. Do not publish this file with a placeholder still
-> in it.
+Every factual claim in this document was checked against the source code of the
+repository this page is served from. There are no placeholders left.
 
 ## Summary
 
@@ -74,9 +71,8 @@ updated and the new version is published at the same URL.
 
 ## Contact
 
-**PLACEHOLDER — add a contact address before publishing.**
+- Email: alfizilham@gmail.com
 
-Use an address you monitor. Do not publish an address you do not read.
-
-- Email: PLACEHOLDER
-- Mailing address: PLACEHOLDER — optional, delete this line if not used
+Use the address above if you have a question about this policy, about the app, or
+about the data it handles. There is no data held, so there is nothing to request
+or delete.
