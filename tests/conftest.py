@@ -8,6 +8,7 @@ so it cannot be used to build fake images.
 
 from __future__ import annotations
 
+import os
 import shutil
 from collections.abc import Iterator
 from pathlib import Path
@@ -16,7 +17,10 @@ import pytest
 
 from bacteriacv.paths import PROJECT_ROOT
 
-TEMP_DIR_NAME = ".pytest_tmp"
+# The pid keeps two concurrent pytest processes in this repo from deleting
+# each other's folder. The name must be stable within a process and unique
+# across processes, so the pid is the only discriminator that works.
+TEMP_DIR_NAME = f".pytest_tmp_{os.getpid()}"
 
 
 @pytest.fixture()
