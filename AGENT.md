@@ -1,5 +1,12 @@
 # AGENT.md: Instructions for Agents in this Repository
 
+> **STATUS 12 Oktober 2026.** Repo ini dianggap **selesai** oleh owner.
+> Fokus pengerjaan pindah ke `BacteriaCVMobile`, yang dikerjakan dengan satu
+> sesi Codex CLI. Lihat `docs/CODEX.md`.
+>
+> Dokumen ini tetap berlaku sebagai rujukan keputusan, dan untuk pekerjaan
+> web di masa depan. Isinya jangan dihapus.
+
 ## 1. Roles
 | Agent | Tool | Role | Authority |
 |------|------|-------|------------|
