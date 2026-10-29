@@ -46,6 +46,7 @@ graphify-out/
 .agent/
 .agents/
 .codex/
+.worktrees/
 docs/prompts/
 
 # Logs 
