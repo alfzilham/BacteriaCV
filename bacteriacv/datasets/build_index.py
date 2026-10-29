@@ -177,7 +177,7 @@ def _relative_posix(path: Path) -> str:
 
     Raises:
         ValueError: When the image lies outside the project root. Writing an
-            absolute path into index.csv breaks AGENT.md section 3 rule 5, so
+            absolute path into index.csv breaks AGENTS.md section 3 rule 5, so
             failing is better than silently leaking a local machine location.
     """
     resolved = path.resolve()

@@ -1,7 +1,7 @@
 """Project folder and file locations.
 
 Every path is kept relative to the project root so no absolute path can
-leak into the code (AGENT.md section 3 rule 5).
+leak into the code (AGENTS.md section 3 rule 5).
 """
 
 from __future__ import annotations

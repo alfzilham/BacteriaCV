@@ -485,7 +485,7 @@ class TrainingReport:
         if checkpoint is not None:
             # The filename only. training_report.json is deployed too, so an
             # absolute path inside it would leak the folder structure of the
-            # build machine and would break AGENT.md section 3 rule 5.
+            # build machine and would break AGENTS.md section 3 rule 5.
             payload["checkpoint_path"] = Path(checkpoint).name
         payload["labels"] = {
             "shape": list(SHAPE_LABELS),

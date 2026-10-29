@@ -145,7 +145,7 @@ BacteriaCV/
 ├── docs/                             # SPEC, ARCHITECTURE, DESIGN, PRD, CONTEXT
 ├── scripts/                          # setup_env.ps1, check_env.ps1
 ├── tests/
-└── AGENT.md
+└── AGENTS.md
 ```
 
 The structure uses a `bacteriacv` package with the `bacteriacv.` entry point. The reason for using a package rather than a flat `src` folder: the dataset modules depend on each other (`species_map` is used by `download`, `extract`, and `build_index`), and relative imports between packages are tidier than piling modules into one folder.
