@@ -358,7 +358,7 @@ def test_report_dict_has_no_absolute_paths(tmp_path: Path) -> None:
 
     training_report.json is deployed because it is listed in a negation line
     in .gitignore. An absolute path inside it leaks the folder structure of the
-    build machine and breaks AGENT.md section 3 rule 5. Neither key was tested
+    build machine and breaks AGENTS.md section 3 rule 5. Neither key was tested
     before, because every assertion worked on the TrainingReport object in
     memory rather than on the serialised result.
 

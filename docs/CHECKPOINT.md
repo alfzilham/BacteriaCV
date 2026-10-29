@@ -31,19 +31,13 @@ sendiri.
 ```
 BacteriaCV         D:\2026\Workspace\PersonalApps\BacteriaCV
 BacteriaCVMobile   D:\2026\Workspace\PersonalApps\.MobileAppProjects\BacteriaCV
-File instruksi    D:\2026\Workspace\PersonalApps\BacteriaCV\docs\prompts\
-Perangkat         R9RYC0839YH, Samsung SM-A075F, Helio G99, SDK 36
+Perangkat          R9RYC0839YH, Samsung SM-A075F, Helio G99, SDK 36
 ```
 
-Prompt untuk agent ada di `docs\prompts\`, satu berkas per agent:
-
-```
-BCV-2_UI_PROMPTS.md
-BCV-3_Docs_PROMPTS.md
-BCV-4_Mobile_PROMPTS.md
-```
-
-Isi di dalam code box. Di luar code box tidak boleh disentuh.
+Folder `docs\prompts\` sudah dihapus. Dulu isinya satu berkas prompt per
+sesi agent, dan tiap berkas hanya boleh diubah di dalam code box. Cara
+kerja itu tidak dipakai lagi sekarang karena hanya ada satu sesi Codex.
+Instruksi task ditulis langsung di chat atau di berkas task di `docs\`.
 
 ---
 

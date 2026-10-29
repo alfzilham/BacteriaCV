@@ -115,7 +115,7 @@ def test_report_checkpoint_contains_only_file_name(tmp_path: Path) -> None:
 
     evaluation.json is deployed and read by anyone through /api/report. An
     absolute path inside it leaks the folder structure of the build machine and
-    breaks AGENT.md section 3 rule 5. This field was once written without a single
+    breaks AGENTS.md section 3 rule 5. This field was once written without a single
     assertion reading it, so the leak passed every earlier audit.
 
     The path below deliberately has a subdirectory so the test proves the

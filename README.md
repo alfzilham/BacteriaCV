@@ -121,7 +121,7 @@ Tests cover species mapping, data locations, downloading, extraction, dataset sp
 - [SPEC](docs/SPEC.md) — source of truth for project requirements.
 - [ARCHITECTURE](docs/ARCHITECTURE.md) — architecture and technical decisions.
 - [DESIGN](docs/DESIGN.md) — interface design and module contracts.
-- [AGENT](AGENT.md) — contribution and audit rules.
+- [AGENT](AGENTS.md) — contribution and audit rules.
 
 ## Running the online version
 
