@@ -188,3 +188,283 @@ The final report contains five sections in a fixed order:
    status: closed, rejected with a reason, or still open.
 4. **Specification conformance** - assessment against SPEC.md and the rules in this AGENTS.md.
 5. **Verdict** - PASS or FAIL, with a brief reason.
+
+---
+
+## Catatan Prioritas
+
+Bagian 9 sampai 24 di bawah diadaptasi dari AGENTS.md proyek DoMark dan
+berlaku menyeluruh di repo ini. Bagian 1 sampai 8 tetap berlaku dan tidak
+diganti.
+
+Kalau dua aturan bertabrakan, yang lebih ketat yang menang. Kalau yang
+bertabrakan bukan soal ketat-longgar melainkan dua keputusan berbeda,
+berhenti dan tanya owner sebelum mengeksekusi.
+
+## 9. Proyek dan Lingkup
+
+BacteriaCV adalah aplikasi web untuk mengklasifikasi bentuk sel dan status
+Gram bakteri dari citra mikroskop. Model berjalan di server, bukan di
+peramban. Repo ini dinyatakan selesai oleh owner pada 12 Oktober 2026.
+
+Lingkup yang masih berlaku:
+
+- perbaikan cacat yang terbukti, disertai bukti reproduksi
+- pekerjaan yang diminta eksplisit oleh owner
+- halaman dokumentasi dan Changelog yang direncanakan owner
+
+Di luar itu jangan menambah fitur, jangan mengubah antarmuka, dan jangan
+mengubah angka model. Kalau ragu apakah sesuatu masih dalam lingkup, tanya
+dulu.
+
+Aplikasi Android ada di repo terpisah, `BacteriaCVMobile`. Jangan
+mengerjakannya dari repo ini.
+
+## 10. Gaya Bahasa
+
+- Jawab hanya dalam Bahasa Indonesia untuk semua keluaran, termasuk
+  komentar kode dan dokumentasi yang ditulis agent.
+- Sebut diri sendiri "Saya", bukan "Aku" atau "Gue".
+- Sebut pengguna "Anda", bukan "Kamu".
+- Nada formal tetapi agak santai, tidak kaku.
+
+## 11. Kebijakan Jaringan dan Server
+
+- Server hanya melayani aplikasi web ini. Tidak ada panggilan ke layanan
+  pihak ketiga, tidak ada telemetri, tidak ada analytics, tidak ada cloud.
+- Data DIBaS tidak pernah diunggah ke layanan eksternal mana pun.
+- Jangan menambah dependency jaringan baru tanpa persetujuan owner.
+- Endpoint publik tidak boleh dipakai untuk mengumpulkan data pengguna.
+  Tidak ada log yang menyimpan citra unggahan.
+
+## 12. Aturan Arsitektur
+
+- Jalur inferensi dijelaskan di `docs/ARCHITECTURE.md`. Jangan mengubahnya
+  tanpa keputusan arsitektur baru yang dicatat di dokumen itu.
+- Lookup table [L] hanya boleh dipakai di tahap training, tidak pernah di
+  jalur inferensi.
+- Bobot kelas hanya boleh dihitung dari data train.
+- Format `checkpoints/heads.pt` tidak boleh berubah tanpa persetujuan. SHA-256
+  checkpoint ini dipakai sebagai bukti provenance.
+- Kontrak data endpoint inferensi tidak boleh berubah tanpa persetujuan,
+  karena aplikasi mobile dan halaman web memakai model yang sama.
+- Jangan menghapus atau menyederhanakan tahap prapemrosesan yang sudah ada
+  hanya karena "terlihat redundan". Setiap tahap punya pasangan di sisi
+  mobile.
+- Jangan mengubah data checkpoint, data kuota, atau data riwayat tanpa
+  persetujuan eksplisit owner.
+
+## 13. Verifikasi dan Bukti
+
+Aturan ini lahir dari kejadian berulang di proyek ini: klaim status yang
+tidak diperiksa ulang ternyata salah, lalu dipakai untuk menulis instruksi
+dan tes yang salah sasaran.
+
+- Setiap klaim "sudah" atau "belum" wajib dicek ke kode, ke perangkat, atau
+  ke endpoint, bukan dipercaya dari dokumentasi, plan lama, atau laporan
+  sesi sebelumnya. Dokumen memberi arah, kode memberi kenyataan.
+- Setiap angka yang dicantumkan dalam laporan atau instruksi harus berasal
+  dari perintah yang benar-benar dijalankan di sesi ini. Kalau belum dicek,
+  tulis eksplisit "belum dicek". Jangan menebak atau mewarisi angka dari
+  sesi lain.
+- Definisi yang dipakai untuk menguji kebenaran sebuah modul harus
+  independen dari definisi yang dipakai modul itu sendiri. Mengimpor ambang
+  atau konstanta dari modul yang sedang diuji hanya menguji konsistensi
+  internal, bukan kebenaran.
+- Ambil contoh literal untuk nilai batas saat menulis tes, jangan
+  menurunkan nilainya dari rumus ambang itu sendiri.
+- Lakukan warm-up sebelum mengukur performa. Biaya pertama kali akan salah
+  terbaca sebagai bagian dari kerja yang diukur.
+- Satu atau dua titik data tidak cukup untuk membangun kesimpulan performa.
+  Butuh kontrol dengan variabel yang sama.
+- Verifikasi dari isi, bukan dari metadata atau tanda tangan. Timestamp file
+  bukan bukti isinya benar.
+- Compile tanpa error bukan bukti kode benar atau lengkap.
+
+## 14. Ambiguitas dan Klarifikasi
+
+- Kalau sebuah instruksi menyebut ikon, aset visual, atau elemen UI tanpa
+  menyebut sumbernya, tanya dulu sebelum mengubah apa pun.
+- Kalau sebuah instruksi bisa ditafsirkan lebih dari satu cara, baik dari
+  segi lingkup, lokasi berkas, maupun pendekatan, ajukan pertanyaan sebelum
+  mengeksekusi.
+- Jangan mengusulkan alternatif "lebih baik", saran desain, atau perbaikan
+  tambahan di luar yang diminta, kecuali owner meminta rekomendasi.
+- Kalau ragu antara bertanya atau melanjutkan, bertanya.
+- Pertanyaan produk adalah keputusan owner, bukan keputusan teknis. Jangan
+  memutuskan sendiri.
+
+## 15. Dokumentasi
+
+- Dokumen sumber ada di `docs/`: `SPEC.md`, `ARCHITECTURE.md`, `DESIGN.md`,
+  `PRD.md`, `CONTEXT.md`, `CHECKPOINT.md`, dan `CODEX.md`.
+- Perbarui dokumen yang relevan ketika fitur, keputusan arsitektur, atau
+  status kerja berubah.
+- `docs/CHECKPOINT.md` adalah catatan serah terima, bukan dokumen sumber
+  kebenaran. Yang berwenang tetap `SPEC.md`, `ARCHITECTURE.md`,
+  `DESIGN.md`, dan `PRD.md`.
+- Saat memperbarui `docs/CHECKPOINT.md`, pisahkan klaim yang sudah
+  diverifikasi ulang di sesi ini dari klaim yang diwarisi dari laporan
+  sebelumnya.
+- Jangan menyebut konstanta, nomor baris, atau nama simbol dari kode yang
+  belum dibaca di sesi berjalan. Tulis "belum dicek" kalau memang belum.
+
+## 16. Pengembangan
+
+- Gunakan konvensi yang sudah ada dan pertahankan perubahan working tree
+  yang tidak terkait.
+- Periksa `git status` sebelum menyunting dan jangan menimpa perubahan
+  owner.
+- Jaga encoding tetap valid. Jangan menghasilkan karakter pengganti atau
+  mojibake.
+- Jangan memakai karakter em-dash (Unicode U+2014) di berkas mana pun,
+  termasuk kode, teks antarmuka, dokumentasi, dan komentar.
+- Sebelum commit, periksa seluruh berkas yang berubah dari encoding rusak
+  dan karakter em-dash.
+- Jangan commit `.env`, kredensial, log, hasil build, artefak perangkat,
+  atau artefak alat lokal.
+- Dua sesi atau dua instance kerja tidak boleh menyentuh working tree
+  bersamaan, terutama saat menjalankan suite tes yang memodifikasi berkas
+  repo lalu memulihkannya.
+- Nama variabel bukan bukti perilaku kode. Baca isi fungsinya untuk
+  memastikan apa yang sebenarnya dilakukan.
+
+## 17. Toolchain dan Efek Samping
+
+- Sebelum menjalankan perintah yang bisa install, generate, atau update
+  dependency, nyatakan berkas tracked mana yang mungkin berubah.
+- Setelah menjalankan perintah seperti itu, jalankan `git status` dan
+  `git diff` untuk memastikan tidak ada berkas tracked yang berubah di luar
+  dugaan.
+- Kalau perintah itu mengubah berkas tracked di luar lingkup task, kembalikan
+  berkas tersebut dan hapus artefak untracked yang dihasilkannya.
+- Saat efek samping dikembalikan, laporkan berkas mana yang tersentuh dan
+  bagaimana dipulihkan.
+
+## 18. Penyerahan
+
+- Jelaskan rencana lingkup sebelum perubahan besar ketika persyaratan masih
+  ambigu.
+- Laporkan berkas yang berubah, hasil validasi, dan risiko yang tersisa.
+- Setiap klaim "selesai" atau "berhasil" dalam laporan ke owner harus
+  disertai cara verifikasinya: perintah yang dijalankan, hash, atau hasil
+  tes. Bukan sekadar pernyataan status.
+- Jangan membuat release atau mengubah versi aplikasi tanpa permintaan
+  eksplisit.
+
+## 19. Perencanaan dan Pelacakan
+
+- Gunakan `docs/CHECKPOINT.md` sebagai catatan serah terima yang bisa
+  berubah, bukan sebagai pengganti spesifikasi atau daftar tugas yang belum
+  disetujui.
+- Setelah rencana kerja disetujui, catat perubahan status di
+  `docs/CHECKPOINT.md` atau dokumen sumber yang sesuai.
+- Jangan mengasumsikan adanya `TODO.md`, `CHANGELOG.md`, `worklog.md`, atau
+  `DEVIATIONS.md`. Kalau perlu, tanyakan dulu.
+- Pertahankan keputusan teknis dan status yang sudah ada. Jangan menimpa
+  bagian dokumentasi yang tidak terkait.
+
+## 20. GitHub Issue dan Pull Request
+
+- Sebelum implementasi, periksa dan laporkan status Git serta perubahan
+  lokal di root dan worktree yang relevan. Jangan menimpa, membuang, atau
+  memasukkan perubahan yang tidak terkait.
+- Sebelum implementasi, tampilkan rencana yang menyebut lingkup,
+  pendekatan, berkas yang diperkirakan berubah, validasi, dan risiko. Tunggu
+  persetujuan eksplisit owner sebelum membuat perubahan implementasi.
+- Setelah rencana disetujui, buat worktree dan branch khusus dari
+  `origin/main` terbaru, lalu buat satu GitHub Issue khusus untuk pekerjaan
+  itu sebelum mulai implementasi.
+- Periksa Issue dan PR terbuka yang relevan sebelum membuat item baru.
+  Hubungkan Issue dengan PR hanya kalau keduanya untuk pekerjaan yang sama.
+- Jangan membuat Issue, Pull Request, komentar, atau rilis GitHub di luar
+  alur yang sudah disetujui owner.
+- Jangan menggabungkan Pull Request. Penggabungan selalu dilakukan owner.
+
+## 21. Branch, Worktree, dan Commit
+
+- Buat branch implementasi hanya di worktree khusus yang dibuat dari
+  `origin/main` terbaru setelah rencana disetujui. Gunakan nama deskriptif
+  seperti `fix/resize-kontrak` atau `docs/halaman-changelog`.
+- Periksa `git status` sebelum membuat worktree, branch, staging, commit,
+  push, atau menghapus worktree. Pertahankan perubahan lokal dan berkas
+  untracked yang bukan bagian tugas.
+- Setiap commit hanya boleh berisi perubahan pada satu berkas. Kalau satu
+  tugas mengubah beberapa berkas, buat commit terpisah untuk setiap berkas.
+- Gunakan pesan Conventional Commit dengan awalan tipe seperti `feat:`,
+  `fix:`, `test:`, `docs:`, atau `chore:`, dan jelaskan perubahannya secara
+  spesifik.
+- Jangan masukkan kredensial, `.env`, log, artefak build, artefak perangkat,
+  atau perubahan format yang tidak terkait ke dalam commit.
+- Sebelum push, jalankan `git diff --check` dan validasi yang relevan sesuai
+  rencana. Laporkan validasi yang tidak dijalankan.
+- Jangan memakai perintah destruktif seperti `git reset --hard` atau
+  `git checkout --` tanpa persetujuan eksplisit owner.
+- Catatan penting: repo ini memakai squash merge. Aturan satu berkas per
+  commit terlihat di branch, tetapi setelah merge riwayat di `main` menjadi
+  satu commit. Jangan memakai kenyataan itu sebagai alasan untuk mencampur
+  perubahan yang tidak terkait.
+
+## 22. Aturan Pull Request
+
+- Buat satu PR dari branch implementasi ke `main` untuk Issue dan worktree
+  yang sama.
+- Judul PR berawalan tipe yang jelas. Body PR berupa Markdown multiline
+  nyata dengan bagian: `Ringkasan`, `Perubahan`, `Validasi`, dan
+  `Dampak Data` atau `Deployment Checklist` bila relevan.
+- Tautkan Issue terkait dengan `Closes #<nomor>` atau `Fixes #<nomor>`
+  kalau PR menyelesaikan Issue itu.
+- Nyatakan apakah diperlukan migrasi data, perubahan variabel lingkungan,
+  perubahan penyimpanan, atau tindakan deployment manual.
+- Buat PR sebagai draft sampai laporan review konsolidasi tersedia dan
+  pemeriksaan relevan ditinjau.
+- Setelah PR dibuat, siapkan satu laporan Code Review berbahasa Indonesia di
+  `docs/review/CODE_REVIEW.md` di dalam worktree tersebut. Baca berkas itu
+  dulu kalau sudah ada, agar isinya tidak tertimpa tanpa sengaja.
+- Tinjau status CI sebelum menandai PR siap. Kalau tidak ada check yang
+  dikonfigurasi, laporkan secara eksplisit. Jangan menyebutnya lulus.
+- Laporkan URL Issue dan PR, nama branch, hash commit, serta hasil validasi
+  kepada owner.
+- Agent tidak boleh menggabungkan PR, sekalipun semua pemeriksaan lulus.
+
+## 23. Penyelesaian Worktree
+
+- Setiap `.worktrees/<nama>` adalah checkout branch tersendiri. Jangan merge
+  atau cherry-pick branch worktree langsung ke branch root.
+- Satu worktree menangani satu Issue dan satu PR. Jangan gabungkan beberapa
+  worktree atau Issue ke satu PR.
+- Setelah owner menyatakan PR sudah di-merge, verifikasi status merged lewat
+  GitHub, fetch `origin/main`, dan pastikan working tree worktree bersih
+  sebelum menghapusnya dengan `git worktree remove`.
+- Jangan menghapus folder worktree secara manual atau saat PR masih terbuka.
+  Jangan menghapus branch remote kecuali owner meminta.
+- Kalau owner meminta menerapkan perubahan worktree ke root, artikan sebagai
+  membuat atau memverifikasi PR, bukan menyalin berkas langsung ke branch
+  root.
+
+## 24. Release dan Changelog
+
+- Hitung hanya PR yang benar-benar berstatus merged sejak GitHub Release
+  sebelumnya. PR terbuka, ditutup tanpa merge, atau digabung hanya secara
+  lokal tidak dihitung.
+- Kalau belum ada Release sebelumnya, hitung PR merged sejak awal riwayat
+  repository.
+- Saat hitungan mencapai lima PR merged, periksa changelog yang ada, seluruh
+  perubahan sejak release sebelumnya, status validasi, serta tag dan Release
+  terakhir sebelum menyiapkan release.
+- Kalau changelog belum ada atau tidak mencakup perubahan yang akan dirilis,
+  jangan mengarang riwayat. Susun ringkasan dari PR merged dan minta
+  keputusan owner.
+- Gunakan konvensi tag yang sudah ada. Repo ini memakai `vX.Y.Z` dengan
+  contoh `v1.0.0`. Buat annotated tag dan GitHub Release setelah validasi
+  relevan diperiksa.
+- Jangan mengubah versi aplikasi secara otomatis.
+- Pembuatan release setelah ambang lima PR ini adalah persetujuan tetap dari
+  owner. Jangan membuat release sebelum ambang terpenuhi.
+- Jangan menggabungkan PR untuk mencapai ambang release. Setelah release,
+  hitung ulang dari PR merged berikutnya.
+- Body Release memakai tiga heading tetap, berurutan: `Ringkasan`,
+  `Perubahan`, dan `Validasi`. Nama heading tidak boleh diganti, karena
+  halaman Changelog di situs dokumentasi menarik isi Release lewat webhook
+  dan bergantung pada bentuk ini. Ringkasan ditulis untuk pembaca, bukan
+  untuk agent.
