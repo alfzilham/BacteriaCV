@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePrefs } from "@/controllers/prefs";
 import { Footer, Header } from "./Chrome";
+import { Splash } from "./Splash";
 
 const SAMPLE = "/samples/contoh-1-bacilli-positif.png";
 const Arrow = () => (
@@ -14,6 +15,7 @@ export function Landing() {
   const stages = ["st1", "st2", "st3", "st4", "st5"] as const;
   return (
     <div className="wrap">
+      <Splash />
       <Header current="home" />
       <section style={{ display: "flex", flexWrap: "wrap", gap: 20, padding: "0 24px" }}>
         <div style={{ flex: "1 1 520px", minWidth: 0, display: "flex", flexDirection: "column", justifyContent: "space-between", gap: 28, padding: "24px 12px 8px" }}>

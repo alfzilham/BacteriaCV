@@ -1,21 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState, type ReactNode } from "react";
-import { usePrefs, type ThemePref } from "@/controllers/prefs";
-
-const Icon = ({ d }: { d: ReactNode }) => (
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--ink)" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{d}</svg>
-);
-const ICONS: Record<ThemePref, ReactNode> = {
-  light: <Icon d={<><circle cx="12" cy="12" r="4" /><path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6l1.4 1.4M17 17l1.4 1.4M5.6 18.4L7 17M17 7l1.4-1.4" /></>} />,
-  dark: <Icon d={<path d="M20 14.5A8 8 0 019.5 4 8 8 0 1020 14.5z" />} />,
-  system: <Icon d={<><rect x="3" y="4" width="18" height="12" rx="2" /><path d="M8 20h8M12 16v4" /></>} />,
-};
+import { useEffect, useState } from "react";
+import { usePrefs } from "@/controllers/prefs";
+import { ThemeToggle } from "./ThemeToggle";
 
 export function Controls() {
-  const { theme, setTheme, lang, setLang, t } = usePrefs();
-  const themes: [ThemePref, "th_l" | "th_d" | "th_s"][] = [["light", "th_l"], ["dark", "th_d"], ["system", "th_s"]];
+  const { lang, setLang, t } = usePrefs();
   return (
     <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
       <div className="seg" role="group" aria-label={t("lang")}>
@@ -23,11 +14,7 @@ export function Controls() {
           <button key={l} type="button" className="segb" aria-pressed={lang === l} onClick={() => setLang(l)}>{l.toUpperCase()}</button>
         ))}
       </div>
-      <div className="seg" role="group" aria-label={t("th")}>
-        {themes.map(([k, label]) => (
-          <button key={k} type="button" className="segb" style={{ width: 44, padding: 0 }} aria-label={t(label)} aria-pressed={theme === k} onClick={() => setTheme(k)}>{ICONS[k]}</button>
-        ))}
-      </div>
+      <ThemeToggle />
     </div>
   );
 }
