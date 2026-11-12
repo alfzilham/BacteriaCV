@@ -1,0 +1,57 @@
+# Aturan line ending dan tipe file.
+#
+# Kenapa file ini perlu ada: `core.autocrlf` di mesin Windows bernilai true,
+# yang membuat git mengubah line ending sendiri-sendiri. Untuk repo yang
+# meng-commit gradle wrapper jar, .so OpenCV atau ONNX Runtime, dan font,
+# itu satu sumber masalah yang tidak terlihat sampai Geosnya rusak.
+# Jadi ditulis eksplisit di sini, bukan diserahkan ke deteksi otomatis.
+
+# Default: teks dengan LF, apa pun platformnya.
+* text=auto eol=lf
+
+# Skrip Windows butuh CRLF - tanpa ini gradlew.bat rusak di Windows.
+*.bat text eol=crlf
+*.cmd text eol=crlf
+*.ps1 text eol=crlf
+
+# Skrip shell: harus LF, kalau tidak gagal di Linux/macOS/WSL.
+gradlew text eol=lf
+*.sh text eol=lf
+
+# Biner. Ditandai eksplisit karena kalau salah deteksi, byte-nya bisa
+# berubah dan build offline gagal dengan error yang membingungkan.
+*.whl binary
+*.jar binary
+*.aar binary
+*.so  binary
+*.dll binary
+*.dylib binary
+*.ttf binary
+*.otf binary
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.webp binary
+*.ico binary
+*.zip binary
+*.pdf binary
+*.tif binary
+*.tiff binary
+
+# Model on-device. Semuanya artefak turunan dan TIDAK boleh masuk git,
+# tapi ditandai binary supaya kalau sampai bocor ke staging, git tidak
+# mencoba menormalkan line ending di dalamnya dan merusaknya.
+*.onnx binary
+*.tflite binary
+*.pt2 binary
+*.pth binary
+*.aab binary
+*.apk binary
+
+# Folder spike: skrip dan dokumen di-commit, artefak hasil generate
+# tidak pernah.
+spike/artifacts/** binary
+
+# Hasil generate Flutter: tidak pernah di-commit.
+*.g.dart linguist-generated=true
