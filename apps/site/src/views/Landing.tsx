@@ -1,11 +1,28 @@
 "use client";
 
 import Link from "next/link";
+import { useState } from "react";
 import { usePrefs } from "@/controllers/prefs";
+import { DEMO_SAMPLES, demoPanelUrl } from "@/models/demo";
 import { Footer, Header } from "./Chrome";
+import { Contact } from "./Contact";
+import { Faq } from "./Faq";
+import { Marquee } from "./Marquee";
+import { Reveal } from "./Reveal";
 import { Splash } from "./Splash";
 
 const SAMPLE = "/samples/contoh-1-bacilli-positif.png";
+const STACK = ["ResNet-50", "PyTorch", "FastAPI", "Next.js", "Flutter", "ONNX", "DIBaS", "MIT License"] as const;
+
+/** Gambar tahap landing. Tahap 2 sampai 5 memakai hasil demo bila sudah ada, jika tidak kembali ke contoh. */
+function StageImg({ index }: { index: number }) {
+  const [failed, setFailed] = useState(false);
+  const src = index === 0 || failed ? SAMPLE : demoPanelUrl(DEMO_SAMPLES[0].id, index);
+  return (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img src={src} alt="" onError={() => setFailed(true)} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+  );
+}
 const Arrow = () => (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--paper)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M7 17L17 7M8 7h9v9" /></svg>
 );
@@ -41,43 +58,54 @@ export function Landing() {
         </div>
       </section>
 
+      <section className="sect" style={{ paddingTop: 40 }}>
+        <Reveal>
+          <p className="cap" style={{ margin: "0 0 14px" }}>{t("mq_h")}</p>
+          <Marquee items={STACK} label={t("mq_h")} />
+        </Reveal>
+      </section>
+
       <section id="features" className="sect">
+        <Reveal>
         <h2 className="h2">{t("f_h")}</h2>
         <div className="cards">
           {([["f1_t", "f1_d", true], ["f2_t", "f2_d", false], ["f3_t", "f3_d", false]] as const).map(([a, b, dark]) => (
-            <div key={a} style={{ borderRadius: 28, background: dark ? "var(--ink)" : "var(--tile)", color: dark ? "var(--paper)" : "var(--ink)", padding: 28, minHeight: 240, display: "flex", flexDirection: "column", justifyContent: "space-between", gap: 24 }}>
+            <div key={a} className="hv" style={{ borderRadius: 28, background: dark ? "var(--ink)" : "var(--tile)", color: dark ? "var(--paper)" : "var(--ink)", padding: 28, minHeight: 240, display: "flex", flexDirection: "column", justifyContent: "space-between", gap: 24 }}>
               <div style={{ fontSize: 36, letterSpacing: "-.04em", lineHeight: 1 }}>{t(a)}</div>
               <div style={{ fontSize: 15, lineHeight: 1.55, color: dark ? "var(--ink2)" : "var(--t2)" }}>{t(b)}</div>
             </div>
           ))}
         </div>
+      </Reveal>
       </section>
 
       <section id="how" className="sect">
+        <Reveal>
         <h2 className="h2" style={{ marginBottom: 12 }}>{t("h_h")}</h2>
         <p style={{ margin: "0 0 24px", fontSize: 16, lineHeight: 1.6, color: "var(--t2)", maxWidth: 560 }}>{t("h_d")}</p>
         <div className="steps">
           {stages.map((k, i) => (
             <div key={k} style={{ minWidth: 0, display: "flex", flexDirection: "column", gap: 12 }}>
-              <div style={{ borderRadius: 24, overflow: "hidden", background: "var(--tile)", aspectRatio: "4/3" }}>
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={SAMPLE} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+              <div className="hv" style={{ borderRadius: 24, overflow: "hidden", background: "var(--tile)", aspectRatio: "4/3" }}>
+                <StageImg index={i} />
               </div>
               <div style={{ padding: "0 6px" }}><div className="cap">{i + 1} / 5</div><div style={{ fontSize: 18, letterSpacing: "-.02em", marginTop: 2 }}>{t(k)}</div></div>
             </div>
           ))}
         </div>
+      </Reveal>
       </section>
 
       <section id="platforms" className="sect">
+        <Reveal>
         <h2 className="h2">{t("pl_h")}</h2>
         <div className="cards">
-          <div className="tile" style={{ display: "flex", flexDirection: "column", gap: 14, minHeight: 260 }}>
+          <div className="tile hv" style={{ display: "flex", flexDirection: "column", gap: 14, minHeight: 260 }}>
             <div style={{ fontSize: 36, letterSpacing: "-.04em", lineHeight: 1 }}>{t("pw_t")}</div>
             <div style={{ fontSize: 15, lineHeight: 1.55, color: "var(--t2)", maxWidth: 420 }}>{t("pw_d")}</div>
             <div style={{ marginTop: "auto" }}><Link className="pill o" href="/app">{t("cta1")}</Link></div>
           </div>
-          <div className="tile" style={{ display: "flex", flexDirection: "column", gap: 14, minHeight: 260 }}>
+          <div className="tile hv" style={{ display: "flex", flexDirection: "column", gap: 14, minHeight: 260 }}>
             <div style={{ fontSize: 36, letterSpacing: "-.04em", lineHeight: 1 }}>{t("pa_t")}</div>
             <div style={{ fontSize: 15, lineHeight: 1.55, color: "var(--t2)", maxWidth: 420 }}>{t("pa_d")}</div>
             <div style={{ marginTop: "auto" }}>
@@ -87,18 +115,37 @@ export function Landing() {
             </div>
           </div>
         </div>
+      </Reveal>
       </section>
 
       <section id="limits" className="sect">
+        <Reveal>
         <h2 className="h2">{t("l_h")}</h2>
         <div className="cards">
           <div className="warn"><strong style={{ fontWeight: 600 }}>{t("disc")}</strong></div>
           <div className="warn">{t("lim_seg")}</div>
           <div className="warn">{t("l_test")}</div>
         </div>
+      </Reveal>
+      </section>
+
+      <section id="faq" className="sect">
+        <Reveal>
+          <h2 className="h2">{t("faq_h")}</h2>
+          <Faq />
+        </Reveal>
+      </section>
+
+      <section id="contact" className="sect">
+        <Reveal>
+          <h2 className="h2" style={{ marginBottom: 12 }}>{t("ct_h")}</h2>
+          <p style={{ margin: "0 0 24px", fontSize: 16, lineHeight: 1.6, color: "var(--t2)", maxWidth: 560 }}>{t("ct_d")}</p>
+          <Contact />
+        </Reveal>
       </section>
 
       <section id="open" className="sect">
+        <Reveal>
         <div className="tile" style={{ display: "flex", flexWrap: "wrap", gap: 24, alignItems: "center", justifyContent: "space-between" }}>
           <div style={{ flex: "1 1 300px", minWidth: 0 }}>
             <div style={{ fontSize: 40, letterSpacing: "-.04em", lineHeight: 1.05 }}>{t("o_h")}</div>
@@ -106,6 +153,7 @@ export function Landing() {
           </div>
           <a className="pill k" href="https://github.com/alfzilham/BacteriaCV">{t("o_gh")}</a>
         </div>
+      </Reveal>
       </section>
       <Footer />
     </div>
