@@ -131,10 +131,15 @@ cd apps/api
 python -m venv .venv
 # Windows: .venv\Scripts\activate    Linux: source .venv/bin/activate
 python -m pip install -r requirements.txt
+# Let the website call the API from the browser. The API reads this from the shell, not from a .env file.
+# Windows (PowerShell): $env:CORS_ORIGINS = "http://localhost:3000"
+# Linux or macOS: export CORS_ORIGINS=http://localhost:3000
 uvicorn app.main:app --port 8000
 ```
 
 Open `http://localhost:8000/api/health`. When the model is loaded it answers with `"status": "ready"`. The first start downloads the ResNet-50 backbone weights.
+
+Without `CORS_ORIGINS` the browser blocks the calls from the website, and the web app falls back to demo mode even though the API is running.
 
 ### 2. Run the website
 
@@ -161,14 +166,14 @@ The ONNX model is not committed. Export it from `apps/api/checkpoints/heads.pt` 
 
 | App | Variable | Purpose |
 |-----|----------|---------|
-| API | `CORS_ORIGINS` | Comma-separated list of site origins allowed to call the API. Empty disables CORS. |
+| API | `CORS_ORIGINS` | Comma-separated list of site origins allowed to call the API. Empty disables CORS. Read from the shell environment, not from a `.env` file. |
 | API | `PORT` | Port to listen on. Set by Railway, defaults to `8000`. |
 | Site | `NEXT_PUBLIC_API_URL` | Public URL of the API, used by the web app at `/app`. |
 | Site | `GITHUB_REPO` | Repository whose releases feed the changelog, for example `alfzilham/BacteriaCV`. |
 | Site | `GITHUB_WEBHOOK_SECRET` | Secret that verifies release webhooks from GitHub. |
 | Site | `GITHUB_TOKEN` | Optional read token for a higher GitHub API rate limit. |
 
-Examples live in `apps/api/.env.example` and `apps/site/.env.example`.
+Examples live in `apps/api/.env.example` and `apps/site/.env.example`. The site reads `.env.local` on its own. The API does not read any `.env` file, so set its variables in the shell or in the Railway dashboard.
 
 ## Self-hosting
 
