@@ -1,0 +1,888 @@
+[
+    {
+        "coverage_id":  ".githooks%2Fpre-commit%23hook::tools%2Fcheck_text_encoding.py%23repository-audit::developer-tooling::ATTACK-CLASSES.md%23Chained%20vulnerabilities%20and%20trust%20boundaries",
+        "canonical_refs":  {
+                               "surface":  ".githooks/pre-commit#hook",
+                               "boundary":  "tools/check_text_encoding.py#repository-audit",
+                               "subsystem":  "developer-tooling",
+                               "attack_class":  "ATTACK-CLASSES.md#Chained vulnerabilities and trust boundaries"
+                           },
+        "surface":  "Tracked pre-commit hook and encoding-audit tool",
+        "boundary":  "Repository-controlled hook contents to developer shell during commit",
+        "subsystem":  "Local developer tooling",
+        "attack_class":  "Chained vulnerabilities and trust boundaries",
+        "starting_paths":  [
+                               ".githooks/pre-commit",
+                               "tools/check_text_encoding.py",
+                               "tools/tests/test_text_encoding_audit.py",
+                               "tools/tests/test_text_encoding_audit_sabotage.py"
+                           ],
+        "ordinary_attack_class_block":  "ATTACK-CLASSES.md#Chained vulnerabilities and trust boundaries",
+        "selected_companion_blocks":  [
+
+                                      ],
+        "excluded_blocks":  [
+                                {
+                                    "block":  "SUPPLY-CHAIN-AND-RELEASE.md#CI and automation attack classes",
+                                    "reason":  "The inspected CI workflow does not invoke the local pre-commit hook."
+                                }
+                            ],
+        "prior_status":  "none",
+        "attempts":  [
+
+                     ],
+        "wave":  3,
+        "status":  "covered",
+        "agent_id":  "hunter_dev_hook",
+        "reviewed_paths":  [
+                               ".githooks/pre-commit",
+                               "tools/check_text_encoding.py",
+                               "tools/tests/test_text_encoding_audit.py",
+                               "tools/tests/test_text_encoding_audit_sabotage.py",
+                               ".githooks/README.md"
+                           ],
+        "local_checks":  [
+                             {
+                                 "agent_id":  "hunter_dev_hook",
+                                 "reviewed_paths":  [
+                                                        ".githooks/pre-commit",
+                                                        "tools/check_text_encoding.py",
+                                                        "tools/tests/test_text_encoding_audit.py",
+                                                        "tools/tests/test_text_encoding_audit_sabotage.py",
+                                                        ".githooks/README.md"
+                                                    ],
+                                 "invariant":  "A lower-trust local principal must not redirect a developer tool\u0027s write into a protected resource.",
+                                 "method":  "source",
+                                 "result":  "The manual sabotage test opens a fixed tempfile.gettempdir()/audit_backup.py path with wb and later restores/removes it. A pre-existing symlink could redirect the write, but source does not establish that a lower-trust local principal shares/writes the temp directory or that the test runs with authority over a protected target.",
+                                 "artifact":  null
+                             }
+                         ],
+        "result_fingerprints":  [
+
+                                ],
+        "unresolved":  [
+
+                       ],
+        "hardening":  [
+                          "The manual sabotage test uses a predictable temporary backup path opened with truncating write; use exclusive creation and reject symlinks to avoid local file-corruption risk."
+                      ]
+    },
+    {
+        "coverage_id":  ".github%2Fworkflows%2Fci.yml%23flutter-cache::.github%2Fworkflows%2Fci.yml%23cache-boundary::.github%2Fworkflows::SUPPLY-CHAIN-AND-RELEASE.md%23Cache%2C%20artifact%2C%20and%20workspace%20trust%20mixing",
+        "canonical_refs":  {
+                               "surface":  ".github/workflows/ci.yml#flutter-cache",
+                               "boundary":  ".github/workflows/ci.yml#cache-boundary",
+                               "subsystem":  ".github/workflows",
+                               "attack_class":  "SUPPLY-CHAIN-AND-RELEASE.md#Cache, artifact, and workspace trust mixing"
+                           },
+        "surface":  "GitHub Actions Flutter SDK/cache steps",
+        "boundary":  "Pull-request-generated cache input to trusted branch workflow jobs",
+        "subsystem":  "GitHub Actions CI",
+        "attack_class":  "Cache and workspace trust mixing",
+        "starting_paths":  [
+                               ".github/workflows/ci.yml",
+                               "pubspec.lock"
+                           ],
+        "ordinary_attack_class_block":  null,
+        "selected_companion_blocks":  [
+                                          "SUPPLY-CHAIN-AND-RELEASE.md#Core discipline",
+                                          "SUPPLY-CHAIN-AND-RELEASE.md#Cache, artifact, and workspace trust mixing",
+                                          "SUPPLY-CHAIN-AND-RELEASE.md#Universal moves",
+                                          "SUPPLY-CHAIN-AND-RELEASE.md#Validation rules"
+                                      ],
+        "excluded_blocks":  [
+                                {
+                                    "block":  "SUPPLY-CHAIN-AND-RELEASE.md#Untrusted code in a privileged workflow",
+                                    "reason":  "The event-to-runner credential boundary has a separate coverage unit."
+                                }
+                            ],
+        "prior_status":  "none",
+        "attempts":  [
+
+                     ],
+        "wave":  4,
+        "status":  "candidate",
+        "agent_id":  "hunter_ci_cache",
+        "reviewed_paths":  [
+                               ".github/workflows/ci.yml",
+                               "pubspec.lock"
+                           ],
+        "local_checks":  [
+                             {
+                                 "agent_id":  "hunter_ci_cache",
+                                 "reviewed_paths":  [
+                                                        ".github/workflows/ci.yml",
+                                                        "pubspec.lock"
+                                                    ],
+                                 "invariant":  "Untrusted PR workflow runs must not populate mutable cached toolchain state later restored and executed by a trusted branch workflow.",
+                                 "method":  "source",
+                                 "result":  "All three jobs enable Flutter action caching for pull_request and push runs. The workflow does not define cache paths, keys, restore/save behavior, or event isolation. The resolved action and GitHub cache service determine whether any cross-event cache is possible; source alone does not establish it.",
+                                 "artifact":  null
+                             }
+                         ],
+        "result_fingerprints":  [
+                                    "pr-ci-cache-poisoning"
+                                ],
+        "unresolved":  [
+                           "Determine resolved action cache paths and save/restore lifecycle.",
+                           "Determine whether PR cache writes can be consumed by a trusted push-to-master run."
+                       ]
+    },
+    {
+        "coverage_id":  ".github%2Fworkflows%2Fci.yml%23pull_request::.github%2Fworkflows%2Fci.yml%23runner_authority::.github%2Fworkflows::SUPPLY-CHAIN-AND-RELEASE.md%23Untrusted%20code%20in%20a%20privileged%20workflow",
+        "canonical_refs":  {
+                               "surface":  ".github/workflows/ci.yml#pull_request",
+                               "boundary":  ".github/workflows/ci.yml#runner_authority",
+                               "subsystem":  ".github/workflows",
+                               "attack_class":  "SUPPLY-CHAIN-AND-RELEASE.md#Untrusted code in a privileged workflow"
+                           },
+        "surface":  "Pull request CI workflow",
+        "boundary":  "Contributor-controlled pull-request code to CI runner identity and permissions",
+        "subsystem":  "GitHub Actions CI",
+        "attack_class":  "Untrusted code in a privileged workflow",
+        "starting_paths":  [
+                               ".github/workflows/ci.yml"
+                           ],
+        "ordinary_attack_class_block":  null,
+        "selected_companion_blocks":  [
+                                          "SUPPLY-CHAIN-AND-RELEASE.md#Core discipline",
+                                          "SUPPLY-CHAIN-AND-RELEASE.md#Untrusted code in a privileged workflow",
+                                          "SUPPLY-CHAIN-AND-RELEASE.md#Universal moves",
+                                          "SUPPLY-CHAIN-AND-RELEASE.md#Validation rules"
+                                      ],
+        "excluded_blocks":  [
+                                {
+                                    "block":  "CLOUD-AND-DEPLOYMENT.md#Core discipline",
+                                    "reason":  "This unit reviews source-visible CI event identity and runner authority, not cloud workload configuration."
+                                }
+                            ],
+        "prior_status":  "none",
+        "attempts":  [
+                         {
+                             "wave":  2,
+                             "status":  "candidate",
+                             "agent_id":  "hunter_pr_runner",
+                             "reviewed_paths":  [
+                                                    ".github/workflows/ci.yml"
+                                                ],
+                             "local_checks":  [
+                                                  {
+                                                      "agent_id":  "hunter_pr_runner",
+                                                      "reviewed_paths":  [
+                                                                             ".github/workflows/ci.yml"
+                                                                         ],
+                                                      "invariant":  "Pull-request code must not receive repository write, secret, or release authority beyond the CI task.",
+                                                      "method":  "source",
+                                                      "result":  "The pull_request workflow checks out and executes PR source without an explicit permissions stanza. Effective token permissions, fork restrictions, branch protection, and secret availability are outside source; unauthorized effect is not confirmed.",
+                                                      "artifact":  null
+                                                  }
+                                              ],
+                             "result_fingerprints":  [
+                                                         "pull-request-ci-token-authority"
+                                                     ],
+                             "unresolved":  [
+                                                "Determine effective repository Actions token permissions and secret exposure for untrusted pull requests."
+                                            ],
+                             "reassignment_reason":  "Final-clean critic found additional PR-controlled test and Android build jobs outside the prior review\u0027s analyzed command path."
+                         }
+                     ],
+        "wave":  3,
+        "status":  "candidate",
+        "agent_id":  "hunter_ci_all_jobs",
+        "reviewed_paths":  [
+                               ".github/workflows/ci.yml"
+                           ],
+        "local_checks":  [
+                             {
+                                 "agent_id":  "hunter_ci_all_jobs",
+                                 "reviewed_paths":  [
+                                                        ".github/workflows/ci.yml"
+                                                    ],
+                                 "invariant":  "Pull-request-controlled code must not obtain protected secrets, write-capable repository credentials, or release authority through CI.",
+                                 "method":  "source",
+                                 "result":  "All three pull_request jobs separately check out and run PR-controlled commands. Workflow has no permissions declaration, secret reference, upload or deploy step. Checkout credential persistence and effective token permissions are external/implementation facts, so no unauthorized result is confirmed.",
+                                 "artifact":  null
+                             }
+                         ],
+        "result_fingerprints":  [
+                                    "pull-request-ci-token-authority"
+                                ],
+        "unresolved":  [
+                           "Determine effective GITHUB_TOKEN permissions and fork-pull-request secret policy for all jobs.",
+                           "Determine whether resolved checkout v4 behavior makes credentials available to later PR-controlled commands."
+                       ]
+    },
+    {
+        "coverage_id":  "android%2Fapp%2Fbuild.gradle.kts%23release_signing::android%2Fapp%2Fbuild.gradle.kts%23artifact_identity::android%2Frelease::SUPPLY-CHAIN-AND-RELEASE.md%23Release%20authorization%20and%20signing-policy%20gaps",
+        "canonical_refs":  {
+                               "surface":  "android/app/build.gradle.kts#release_signing",
+                               "boundary":  "android/app/build.gradle.kts#artifact_identity",
+                               "subsystem":  "android/release",
+                               "attack_class":  "SUPPLY-CHAIN-AND-RELEASE.md#Release authorization and signing-policy gaps"
+                           },
+        "surface":  "Android release signing configuration",
+        "boundary":  "Repository build configuration to release artifact identity and signing authority",
+        "subsystem":  "Android release build",
+        "attack_class":  "Release authorization and signing-policy gaps",
+        "starting_paths":  [
+                               "android/app/build.gradle.kts",
+                               ".github/workflows/ci.yml",
+                               "README.md"
+                           ],
+        "ordinary_attack_class_block":  null,
+        "selected_companion_blocks":  [
+                                          "SUPPLY-CHAIN-AND-RELEASE.md#Core discipline",
+                                          "SUPPLY-CHAIN-AND-RELEASE.md#Release and update attack classes",
+                                          "SUPPLY-CHAIN-AND-RELEASE.md#Release authorization and signing-policy gaps",
+                                          "SUPPLY-CHAIN-AND-RELEASE.md#Universal moves",
+                                          "SUPPLY-CHAIN-AND-RELEASE.md#Validation rules"
+                                      ],
+        "excluded_blocks":  [
+                                {
+                                    "block":  "SUPPLY-CHAIN-AND-RELEASE.md#Update metadata and rollback confusion",
+                                    "reason":  "No runtime updater or downloaded application update path was found."
+                                }
+                            ],
+        "prior_status":  "none",
+        "attempts":  [
+
+                     ],
+        "wave":  2,
+        "status":  "covered",
+        "agent_id":  "hunter_release_signing",
+        "reviewed_paths":  [
+                               "android/app/build.gradle.kts",
+                               ".github/workflows/ci.yml",
+                               "README.md",
+                               ".gitignore"
+                           ],
+        "local_checks":  [
+                             {
+                                 "agent_id":  "hunter_release_signing",
+                                 "reviewed_paths":  [
+                                                        "android/app/build.gradle.kts",
+                                                        ".github/workflows/ci.yml",
+                                                        "README.md",
+                                                        ".gitignore"
+                                                    ],
+                                 "invariant":  "Release signing must bind artifact identity to an authorized signing identity and prevent lower-trust builds from publishing artifacts.",
+                                 "method":  "source",
+                                 "result":  "Release Gradle selects debug signing config; CI builds but does not upload or publish artifacts. Source does not establish a lower-trust path to the signing key, shipped artifact, or Play promotion.",
+                                 "artifact":  null
+                             }
+                         ],
+        "result_fingerprints":  [
+
+                                ],
+        "unresolved":  [
+
+                       ],
+        "hardening":  [
+                          "Confirm intended release signing identity and restrict signing key to trusted release operations before publishing."
+                      ]
+    },
+    {
+        "coverage_id":  "android%2Fapp%2Fsrc%2Fmain%2FAndroidManifest.xml%23application::android%2Fapp%2Fsrc%2Fmain%2FAndroidManifest.xml%23exported-components::android::DESKTOP-MOBILE-AND-LOCAL-IPC.md%23Exported%20service%2C%20activity%2C%20receiver%2C%20or%20provider%20overreach",
+        "canonical_refs":  {
+                               "surface":  "android/app/src/main/AndroidManifest.xml#application",
+                               "boundary":  "android/app/src/main/AndroidManifest.xml#exported-components",
+                               "subsystem":  "android",
+                               "attack_class":  "DESKTOP-MOBILE-AND-LOCAL-IPC.md#Exported service, activity, receiver, or provider overreach"
+                           },
+        "surface":  "Android components and permissions",
+        "boundary":  "Other local apps to exported components and media access",
+        "subsystem":  "Android platform integration",
+        "attack_class":  "Exported component overreach",
+        "starting_paths":  [
+                               "android/app/src/main/AndroidManifest.xml",
+                               "android/app/src/debug/AndroidManifest.xml",
+                               "android/app/src/profile/AndroidManifest.xml",
+                               "android/app/src/main/kotlin/alfzilham/ilham/bacteriacv_mobile/MainActivity.kt"
+                           ],
+        "ordinary_attack_class_block":  "ATTACK-CLASSES.md#Access control",
+        "selected_companion_blocks":  [
+                                          "DESKTOP-MOBILE-AND-LOCAL-IPC.md#Core discipline",
+                                          "DESKTOP-MOBILE-AND-LOCAL-IPC.md#Exported service, activity, receiver, or provider overreach",
+                                          "DESKTOP-MOBILE-AND-LOCAL-IPC.md#Universal moves",
+                                          "DESKTOP-MOBILE-AND-LOCAL-IPC.md#Validation rules"
+                                      ],
+        "excluded_blocks":  [
+                                {
+                                    "block":  "DESKTOP-MOBILE-AND-LOCAL-IPC.md#IPC peer-authentication gaps",
+                                    "reason":  "No custom IPC channel or service found in source."
+                                },
+                                {
+                                    "block":  "DESKTOP-MOBILE-AND-LOCAL-IPC.md#Navigation-origin to bridge confusion",
+                                    "reason":  "No WebView bridge found in source."
+                                }
+                            ],
+        "prior_status":  "none",
+        "attempts":  [
+
+                     ],
+        "wave":  1,
+        "status":  "covered",
+        "agent_id":  "hunter_android_surface",
+        "reviewed_paths":  [
+                               "android/app/src/main/AndroidManifest.xml",
+                               "android/app/src/debug/AndroidManifest.xml",
+                               "android/app/src/profile/AndroidManifest.xml",
+                               "android/app/src/main/kotlin/alfzilham/ilham/bacteriacv_mobile/MainActivity.kt"
+                           ],
+        "local_checks":  [
+                             {
+                                 "agent_id":  "hunter_android_surface",
+                                 "reviewed_paths":  [
+                                                        "android/app/src/main/AndroidManifest.xml",
+                                                        "android/app/src/debug/AndroidManifest.xml",
+                                                        "android/app/src/profile/AndroidManifest.xml",
+                                                        "android/app/src/main/kotlin/alfzilham/ilham/bacteriacv_mobile/MainActivity.kt"
+                                                    ],
+                                 "invariant":  "Exported Android components must not expose privileged actions or consume attacker-controlled payloads without control.",
+                                 "method":  "source",
+                                 "result":  "The only main exported component is MainActivity with MAIN/LAUNCHER and no custom intent handler. PROCESS_TEXT is a queries entry. No other-app abuse path or concrete unauthorized effect is demonstrated; merged release manifest is unobserved.",
+                                 "artifact":  null
+                             }
+                         ],
+        "result_fingerprints":  [
+
+                                ],
+        "unresolved":  [
+
+                       ],
+        "hardening":  [
+                          "Media read permissions may exceed the observed single-file picker flow; plugin and final merged manifest behavior were not verified.",
+                          "Debug/profile INTERNET declarations do not establish merged release permissions."
+                      ]
+    },
+    {
+        "coverage_id":  "lib%2Fmain.dart%23main::lib%2Fapp.dart%23runtime-policy::lib::ATTACK-CLASSES.md%23Cryptography%20and%20secrets",
+        "canonical_refs":  {
+                               "surface":  "lib/main.dart#main",
+                               "boundary":  "lib/app.dart#runtime-policy",
+                               "subsystem":  "lib",
+                               "attack_class":  "ATTACK-CLASSES.md#Cryptography and secrets"
+                           },
+        "surface":  "Runtime configuration and network/secret handling",
+        "boundary":  "App runtime to external services or secret stores",
+        "subsystem":  "Flutter runtime",
+        "attack_class":  "Cryptography and secrets",
+        "starting_paths":  [
+                               "lib/main.dart",
+                               "lib/app.dart",
+                               "lib/pipeline/classifier.dart",
+                               "pubspec.yaml",
+                               "android/app/src/main/AndroidManifest.xml"
+                           ],
+        "ordinary_attack_class_block":  "ATTACK-CLASSES.md#Cryptography and secrets",
+        "selected_companion_blocks":  [
+                                          "ATTACK-CLASSES.md#Obvious things",
+                                          "ATTACK-CLASSES.md#Cryptography and secrets"
+                                      ],
+        "excluded_blocks":  [
+                                {
+                                    "block":  "WEB-PROTOCOL-AND-AUTH.md#Core discipline",
+                                    "reason":  "No HTTP, account, or authentication runtime surface found."
+                                },
+                                {
+                                    "block":  "CLOUD-AND-DEPLOYMENT.md#Core discipline",
+                                    "reason":  "No cloud workload or backend deployment source found."
+                                }
+                            ],
+        "prior_status":  "none",
+        "attempts":  [
+
+                     ],
+        "wave":  1,
+        "status":  "covered",
+        "agent_id":  "hunter_runtime_exposure",
+        "reviewed_paths":  [
+                               "lib/main.dart",
+                               "lib/app.dart",
+                               "lib/pipeline/classifier.dart",
+                               "android/app/src/main/AndroidManifest.xml",
+                               "android/app/src/debug/AndroidManifest.xml",
+                               "android/app/src/profile/AndroidManifest.xml",
+                               "android/app/build.gradle.kts",
+                               "pubspec.yaml"
+                           ],
+        "local_checks":  [
+                             {
+                                 "agent_id":  "hunter_runtime_exposure",
+                                 "reviewed_paths":  [
+                                                        "lib/main.dart",
+                                                        "lib/app.dart",
+                                                        "lib/pipeline/classifier.dart",
+                                                        "android/app/src/main/AndroidManifest.xml",
+                                                        "android/app/src/debug/AndroidManifest.xml",
+                                                        "android/app/src/profile/AndroidManifest.xml",
+                                                        "android/app/build.gradle.kts",
+                                                        "pubspec.yaml"
+                                                    ],
+                                 "invariant":  "Runtime must not expose credentials or send user data to unintended external services.",
+                                 "method":  "source",
+                                 "result":  "Runtime launches the app and loads a bundled model into ONNX Runtime. No credential, network client, or logging path was found in inspected runtime. Main manifest lacks INTERNET; debug/profile declare it. No secret exposure or unauthorized transfer is demonstrated.",
+                                 "artifact":  null
+                             }
+                         ],
+        "result_fingerprints":  [
+
+                                ],
+        "unresolved":  [
+
+                       ],
+        "hardening":  [
+                          "Debug/profile INTERNET declarations are not proof of merged release permissions."
+                      ]
+    },
+    {
+        "coverage_id":  "lib%2Fpipeline%2Fclassifier.dart%23classify::lib%2Fpipeline%2Fclassifier.dart%23decode-and-inference::lib%2Fpipeline::RESOURCE-EXHAUSTION-AND-AVAILABILITY.md%23Decompression%20and%20representation%20amplification",
+        "canonical_refs":  {
+                               "surface":  "lib/pipeline/classifier.dart#classify",
+                               "boundary":  "lib/pipeline/classifier.dart#decode-and-inference",
+                               "subsystem":  "lib/pipeline",
+                               "attack_class":  "RESOURCE-EXHAUSTION-AND-AVAILABILITY.md#Decompression and representation amplification"
+                           },
+        "surface":  "Classifier image input",
+        "boundary":  "Image bytes to decoded pixels and inference",
+        "subsystem":  "Classifier pipeline",
+        "attack_class":  "Decompression and representation amplification",
+        "starting_paths":  [
+                               "lib/pipeline/classifier.dart",
+                               "lib/spike/area_resize.dart"
+                           ],
+        "ordinary_attack_class_block":  "ATTACK-CLASSES.md#Resource and file handling",
+        "selected_companion_blocks":  [
+                                          "RESOURCE-EXHAUSTION-AND-AVAILABILITY.md#Core discipline",
+                                          "RESOURCE-EXHAUSTION-AND-AVAILABILITY.md#Decompression and representation amplification",
+                                          "RESOURCE-EXHAUSTION-AND-AVAILABILITY.md#Computational amplification attack classes",
+                                          "RESOURCE-EXHAUSTION-AND-AVAILABILITY.md#Universal moves",
+                                          "RESOURCE-EXHAUSTION-AND-AVAILABILITY.md#Validation rules",
+                                          "DESKTOP-MOBILE-AND-LOCAL-IPC.md#Core discipline",
+                                          "DESKTOP-MOBILE-AND-LOCAL-IPC.md#Local file ownership and TOCTOU",
+                                          "DESKTOP-MOBILE-AND-LOCAL-IPC.md#Universal moves",
+                                          "DESKTOP-MOBILE-AND-LOCAL-IPC.md#Validation rules"
+                                      ],
+        "excluded_blocks":  [
+                                {
+                                    "block":  "RESOURCE-EXHAUSTION-AND-AVAILABILITY.md#Quota and scheduling attack classes",
+                                    "reason":  "No shared service, worker pool, or quota surface exists in runtime source."
+                                }
+                            ],
+        "prior_status":  "none",
+        "attempts":  [
+                         {
+                             "wave":  1,
+                             "status":  "candidate",
+                             "agent_id":  "hunter_image_pipeline",
+                             "reviewed_paths":  [
+                                                    "lib/ui/upload_screen.dart",
+                                                    "lib/pipeline/classifier.dart",
+                                                    "pubspec.yaml"
+                                                ],
+                             "local_checks":  [
+                                                  {
+                                                      "agent_id":  "hunter_image_pipeline",
+                                                      "reviewed_paths":  [
+                                                                             "lib/ui/upload_screen.dart",
+                                                                             "lib/pipeline/classifier.dart",
+                                                                             "pubspec.yaml"
+                                                                         ],
+                                                      "invariant":  "Bound resource use for untrusted image content after decoding, not only encoded file size.",
+                                                      "method":  "source",
+                                                      "result":  "Classifier rejects encoded files over 20 MiB, then reads and fully decodes accepted bytes before resize. No decoded-pixel cap is visible in this path. Decoder allocation behavior and impact beyond the app process are not established.",
+                                                      "artifact":  null
+                                                  }
+                                              ],
+                             "result_fingerprints":  [
+                                                         "image-decoder-dimensions-unbounded"
+                                                     ],
+                             "unresolved":  [
+                                                "Determine whether supported decoder input within 20 MiB can cause disproportionate allocation and a security-relevant boundary effect; same-app self-impact alone is insufficient."
+                                            ],
+                             "reassignment_reason":  "Final-clean critic found the ledger misidentified a companion class as the ordinary attack-class block and omitted the exact companion block."
+                         }
+                     ],
+        "wave":  3,
+        "status":  "covered",
+        "agent_id":  "hunter_image_recheck",
+        "reviewed_paths":  [
+                               "lib/ui/upload_screen.dart",
+                               "lib/pipeline/classifier.dart",
+                               "pubspec.yaml",
+                               "lib/spike/area_resize.dart"
+                           ],
+        "local_checks":  [
+                             {
+                                 "agent_id":  "hunter_image_recheck",
+                                 "reviewed_paths":  [
+                                                        "lib/ui/upload_screen.dart",
+                                                        "lib/pipeline/classifier.dart",
+                                                        "pubspec.yaml",
+                                                        "lib/spike/area_resize.dart"
+                                                    ],
+                                 "invariant":  "Limit memory and processing for untrusted image content and demonstrate impact across a security boundary before reporting availability vulnerabilities.",
+                                 "method":  "source",
+                                 "result":  "Encoded files over 20 MiB are rejected, but accepted bytes are fully decoded before resize without a visible decoded-pixel limit. Only the local user and same-app processing impact are established; no shared service or effect on another principal is shown. Decoder allocation behavior remains unverified.",
+                                 "artifact":  null
+                             }
+                         ],
+        "result_fingerprints":  [
+
+                                ],
+        "unresolved":  [
+
+                       ],
+        "hardening":  [
+                          "A decoded-pixel cap could improve resilience; no cross-boundary security impact is established by source review."
+                      ]
+    },
+    {
+        "coverage_id":  "lib%2Fui%2Fresult_screen.dart%23result::lib%2Fui%2Fupload_screen.dart%23retention::lib%2Fui::DATA-ISOLATION-AND-LIFECYCLE.md%23Analytics%2C%20logs%2C%20traces%2C%20and%20diagnostics%20as%20alternate%20readers",
+        "canonical_refs":  {
+                               "surface":  "lib/ui/result_screen.dart#result",
+                               "boundary":  "lib/ui/upload_screen.dart#retention",
+                               "subsystem":  "lib/ui",
+                               "attack_class":  "DATA-ISOLATION-AND-LIFECYCLE.md#Analytics, logs, traces, and diagnostics as alternate readers"
+                           },
+        "surface":  "Preview and classification result state",
+        "boundary":  "In-memory data to persistent or alternate readers",
+        "subsystem":  "Flutter UI and application state",
+        "attack_class":  "Derived-data disclosure",
+        "starting_paths":  [
+                               "lib/ui/upload_screen.dart",
+                               "lib/ui/result_screen.dart",
+                               "lib/pipeline/classifier.dart"
+                           ],
+        "ordinary_attack_class_block":  "ATTACK-CLASSES.md#Feature abuse and data leakage",
+        "selected_companion_blocks":  [
+                                          "DATA-ISOLATION-AND-LIFECYCLE.md#Core discipline",
+                                          "DATA-ISOLATION-AND-LIFECYCLE.md#Analytics, logs, traces, and diagnostics as alternate readers",
+                                          "DATA-ISOLATION-AND-LIFECYCLE.md#Retention and queued-work overrun",
+                                          "DATA-ISOLATION-AND-LIFECYCLE.md#Universal moves",
+                                          "DATA-ISOLATION-AND-LIFECYCLE.md#Validation rules"
+                                      ],
+        "excluded_blocks":  [
+                                {
+                                    "block":  "DATA-ISOLATION-AND-LIFECYCLE.md#Tenant and object-isolation attack classes",
+                                    "reason":  "No tenant or multi-account data model exists in source."
+                                },
+                                {
+                                    "block":  "DATA-ISOLATION-AND-LIFECYCLE.md#Export, backup, restore, and migration attack classes",
+                                    "reason":  "No export, backup, import, or migration path found in runtime source."
+                                }
+                            ],
+        "prior_status":  "none",
+        "attempts":  [
+
+                     ],
+        "wave":  1,
+        "status":  "covered",
+        "agent_id":  "hunter_data_lifecycle",
+        "reviewed_paths":  [
+                               "lib/ui/upload_screen.dart",
+                               "lib/ui/result_screen.dart",
+                               "lib/pipeline/classifier.dart",
+                               "lib/app.dart",
+                               "lib/main.dart",
+                               "pubspec.yaml"
+                           ],
+        "local_checks":  [
+                             {
+                                 "agent_id":  "hunter_data_lifecycle",
+                                 "reviewed_paths":  [
+                                                        "lib/ui/upload_screen.dart",
+                                                        "lib/ui/result_screen.dart",
+                                                        "lib/pipeline/classifier.dart",
+                                                        "lib/app.dart",
+                                                        "lib/main.dart",
+                                                        "pubspec.yaml"
+                                                    ],
+                                 "invariant":  "Image bytes and results must not be persisted or exposed to an unintended alternate reader.",
+                                 "method":  "source",
+                                 "result":  "Preview bytes and results remain in widget/app memory; inspected runtime paths contain no database, history, export, logs, analytics, telemetry, or network sink. No alternate-reader or persistent disclosure path was found.",
+                                 "artifact":  null
+                             }
+                         ],
+        "result_fingerprints":  [
+
+                                ],
+        "unresolved":  [
+
+                       ],
+        "hardening":  [
+                          "The upload route retains preview bytes while the result route is pushed; no cross-principal exposure is demonstrated."
+                      ]
+    },
+    {
+        "coverage_id":  "lib%2Fui%2Fupload_screen.dart%23pickFiles::lib%2Fui%2Fupload_screen.dart%23preview-read::lib%2Fui::ATTACK-CLASSES.md%23Resource%20and%20file%20handling",
+        "canonical_refs":  {
+                               "surface":  "lib/ui/upload_screen.dart#pickFiles",
+                               "boundary":  "lib/ui/upload_screen.dart#preview-read",
+                               "subsystem":  "lib/ui",
+                               "attack_class":  "ATTACK-CLASSES.md#Resource and file handling"
+                           },
+        "surface":  "File picker selection and preview",
+        "boundary":  "Untrusted selected file to app memory",
+        "subsystem":  "Flutter UI",
+        "attack_class":  "Resource and file handling",
+        "starting_paths":  [
+                               "lib/ui/upload_screen.dart"
+                           ],
+        "ordinary_attack_class_block":  "ATTACK-CLASSES.md#Resource and file handling",
+        "selected_companion_blocks":  [
+                                          "DESKTOP-MOBILE-AND-LOCAL-IPC.md#Core discipline",
+                                          "DESKTOP-MOBILE-AND-LOCAL-IPC.md#File-open and intent authority",
+                                          "DESKTOP-MOBILE-AND-LOCAL-IPC.md#Local file ownership and TOCTOU",
+                                          "DESKTOP-MOBILE-AND-LOCAL-IPC.md#Universal moves",
+                                          "DESKTOP-MOBILE-AND-LOCAL-IPC.md#Validation rules",
+                                          "RESOURCE-EXHAUSTION-AND-AVAILABILITY.md#Core discipline",
+                                          "RESOURCE-EXHAUSTION-AND-AVAILABILITY.md#Decompression and representation amplification",
+                                          "RESOURCE-EXHAUSTION-AND-AVAILABILITY.md#Universal moves",
+                                          "RESOURCE-EXHAUSTION-AND-AVAILABILITY.md#Validation rules"
+                                      ],
+        "excluded_blocks":  [
+                                {
+                                    "block":  "DESKTOP-MOBILE-AND-LOCAL-IPC.md#Custom-scheme and deep-link ambiguity",
+                                    "reason":  "No deep-link filter in the main manifest."
+                                },
+                                {
+                                    "block":  "DESKTOP-MOBILE-AND-LOCAL-IPC.md#Webview and native-bridge attack classes",
+                                    "reason":  "No WebView or native bridge in runtime source."
+                                }
+                            ],
+        "prior_status":  "none",
+        "attempts":  [
+
+                     ],
+        "wave":  1,
+        "status":  "covered",
+        "agent_id":  "hunter_mobile_file",
+        "reviewed_paths":  [
+                               "lib/ui/upload_screen.dart",
+                               "lib/pipeline/classifier.dart"
+                           ],
+        "local_checks":  [
+                             {
+                                 "agent_id":  "hunter_mobile_file",
+                                 "reviewed_paths":  [
+                                                        "lib/ui/upload_screen.dart",
+                                                        "lib/pipeline/classifier.dart"
+                                                    ],
+                                 "invariant":  "Bound selected files before memory-intensive preview and classification; prevent cross-principal path replacement.",
+                                 "method":  "source",
+                                 "result":  "The UI checks picker-reported length before preview, then reads and decodes the path. Classifier checks current file length before its separate read/decode. Source does not establish usable null-size picker behavior or cross-principal mutation; only same-app resource impact is apparent.",
+                                 "artifact":  null
+                             }
+                         ],
+        "result_fingerprints":  [
+
+                                ],
+        "unresolved":  [
+
+                       ],
+        "hardening":  [
+                          "Confirm the resolved file_picker contract before relying on reported size as a preview memory bound."
+                      ]
+    },
+    {
+        "coverage_id":  "pubspec.yaml%23dependencies::android%2Fapp%2Fbuild.gradle.kts%23release-build::build-and-release::SUPPLY-CHAIN-AND-RELEASE.md%23Mutable%20and%20unbound%20build%20inputs",
+        "canonical_refs":  {
+                               "surface":  "pubspec.yaml#dependencies",
+                               "boundary":  "android/app/build.gradle.kts#release-build",
+                               "subsystem":  "build-and-release",
+                               "attack_class":  "SUPPLY-CHAIN-AND-RELEASE.md#Mutable and unbound build inputs"
+                           },
+        "surface":  "Dependency and CI build inputs",
+        "boundary":  "Repository/build worker to release artifact",
+        "subsystem":  "Build and release",
+        "attack_class":  "Mutable and unbound build inputs",
+        "starting_paths":  [
+                               "pubspec.yaml",
+                               ".github/workflows/ci.yml",
+                               "android/app/build.gradle.kts",
+                               "android/app/src/main/AndroidManifest.xml",
+                               ".gitignore"
+                           ],
+        "ordinary_attack_class_block":  "ATTACK-CLASSES.md#Obvious things",
+        "selected_companion_blocks":  [
+                                          "SUPPLY-CHAIN-AND-RELEASE.md#Core discipline",
+                                          "SUPPLY-CHAIN-AND-RELEASE.md#Dependency and build-input attack classes",
+                                          "SUPPLY-CHAIN-AND-RELEASE.md#Mutable and unbound build inputs",
+                                          "SUPPLY-CHAIN-AND-RELEASE.md#CI and automation attack classes",
+                                          "SUPPLY-CHAIN-AND-RELEASE.md#Release and update attack classes",
+                                          "SUPPLY-CHAIN-AND-RELEASE.md#Universal moves",
+                                          "SUPPLY-CHAIN-AND-RELEASE.md#Validation rules"
+                                      ],
+        "excluded_blocks":  [
+                                {
+                                    "block":  "SUPPLY-CHAIN-AND-RELEASE.md#Update metadata and rollback confusion",
+                                    "reason":  "Application has no updater or downloaded runtime code path in source."
+                                }
+                            ],
+        "prior_status":  "none",
+        "attempts":  [
+                         {
+                             "wave":  1,
+                             "status":  "covered",
+                             "agent_id":  "hunter_supply_chain",
+                             "reviewed_paths":  [
+                                                    ".github/workflows/ci.yml",
+                                                    "pubspec.yaml",
+                                                    "pubspec.lock",
+                                                    "android/app/build.gradle.kts",
+                                                    "android/app/src/main/AndroidManifest.xml",
+                                                    ".gitignore",
+                                                    "README.md"
+                                                ],
+                             "local_checks":  [
+                                                  {
+                                                      "agent_id":  "hunter_supply_chain",
+                                                      "reviewed_paths":  [
+                                                                             ".github/workflows/ci.yml",
+                                                                             "pubspec.yaml",
+                                                                             "pubspec.lock",
+                                                                             "android/app/build.gradle.kts",
+                                                                             "android/app/src/main/AndroidManifest.xml",
+                                                                             ".gitignore",
+                                                                             "README.md"
+                                                                         ],
+                                                      "invariant":  "Lower-trust build inputs must not gain protected secrets, release authority, or shipped artifacts without authorization.",
+                                                      "method":  "source",
+                                                      "result":  "CI runs checks and builds but has no visible secrets, artifact upload, deployment, or release step. Actions use mutable major tags and Gradle release signing references debug config; no attacker-controlled promotion path, actual artifact identity, or signing ownership is established.",
+                                                      "artifact":  null
+                                                  }
+                                              ],
+                             "result_fingerprints":  [
+
+                                                     ],
+                             "unresolved":  [
+
+                                            ],
+                             "reassignment_reason":  "Final-clean critic required the exact companion attack class Mutable and unbound build inputs in the assignment map."
+                         }
+                     ],
+        "wave":  3,
+        "status":  "covered",
+        "agent_id":  "hunter_supply_recheck",
+        "reviewed_paths":  [
+                               ".github/workflows/ci.yml",
+                               "pubspec.yaml",
+                               "pubspec.lock",
+                               "android/app/build.gradle.kts",
+                               "android/app/src/main/AndroidManifest.xml",
+                               ".gitignore",
+                               "README.md"
+                           ],
+        "local_checks":  [
+                             {
+                                 "agent_id":  "hunter_supply_recheck",
+                                 "reviewed_paths":  [
+                                                        ".github/workflows/ci.yml",
+                                                        "pubspec.yaml",
+                                                        "pubspec.lock",
+                                                        "android/app/build.gradle.kts",
+                                                        "android/app/src/main/AndroidManifest.xml",
+                                                        ".gitignore",
+                                                        "README.md"
+                                                    ],
+                                 "invariant":  "Lower-trust build inputs must not gain protected secrets, release authority, or shipped artifacts without authorization.",
+                                 "method":  "source",
+                                 "result":  "Workflow runs analysis, tests, and release APK build for push and pull_request; no source-visible secrets, artifact upload, deployment, or release step. Mutable action tags are hardening only without a lower-trust actor or impact. Lockfile records resolved versions and hashes; release key ownership remains external.",
+                                 "artifact":  null
+                             }
+                         ],
+        "result_fingerprints":  [
+
+                                ],
+        "unresolved":  [
+
+                       ],
+        "hardening":  [
+                          "Pin workflow actions to immutable revisions; confirm release signing identity and promotion controls before publishing."
+                      ]
+    },
+    {
+        "coverage_id":  "spike%2Fscripts%2Fspike_config.py%23path-config::spike%2Fscripts%2Fexport_test_reference.py%23input-output-paths::spike%2Fscripts::ATTACK-CLASSES.md%23Resource%20and%20file%20handling",
+        "canonical_refs":  {
+                               "surface":  "spike/scripts/spike_config.py#path-config",
+                               "boundary":  "spike/scripts/export_test_reference.py#input-output-paths",
+                               "subsystem":  "spike/scripts",
+                               "attack_class":  "ATTACK-CLASSES.md#Resource and file handling"
+                           },
+        "surface":  "Spike CLI scripts and local environment/data inputs",
+        "boundary":  "Local dataset/config paths to workstation file reads and generated writes",
+        "subsystem":  "Python spike tooling",
+        "attack_class":  "Resource and file handling",
+        "starting_paths":  [
+                               "spike/scripts/spike_config.py",
+                               "spike/scripts/export_test_reference.py",
+                               "spike/scripts/export_pytorch_reference.py",
+                               "spike/scripts/build_onnx_model.py",
+                               "spike/scripts/quantize_int8.py"
+                           ],
+        "ordinary_attack_class_block":  "ATTACK-CLASSES.md#Resource and file handling",
+        "selected_companion_blocks":  [
+
+                                      ],
+        "excluded_blocks":  [
+                                {
+                                    "block":  "SUPPLY-CHAIN-AND-RELEASE.md#CI and automation attack classes",
+                                    "reason":  "The reviewed CI workflow does not invoke these local spike scripts."
+                                }
+                            ],
+        "prior_status":  "none",
+        "attempts":  [
+
+                     ],
+        "wave":  3,
+        "status":  "covered",
+        "agent_id":  "hunter_spike_scripts",
+        "reviewed_paths":  [
+                               "spike/scripts/spike_config.py",
+                               "spike/scripts/export_test_reference.py",
+                               "spike/scripts/export_pytorch_reference.py",
+                               "spike/scripts/bacteriacv_model.py",
+                               "spike/scripts/preprocess_ref.py",
+                               "spike/scripts/quantize_int8.py",
+                               "spike/scripts/analyze_sweep.py",
+                               "spike/scripts/build_head_variants.py",
+                               "spike/scripts/build_onnx_model.py",
+                               "spike/scripts/build_fp32_nchw_model.py",
+                               "spike/scripts/compare_pytorch_fp16.py",
+                               "README.md"
+                           ],
+        "local_checks":  [
+                             {
+                                 "agent_id":  "hunter_spike_scripts",
+                                 "reviewed_paths":  [
+                                                        "spike/scripts/spike_config.py",
+                                                        "spike/scripts/export_test_reference.py",
+                                                        "spike/scripts/export_pytorch_reference.py",
+                                                        "spike/scripts/bacteriacv_model.py",
+                                                        "spike/scripts/preprocess_ref.py",
+                                                        "spike/scripts/quantize_int8.py",
+                                                        "spike/scripts/analyze_sweep.py",
+                                                        "spike/scripts/build_head_variants.py",
+                                                        "spike/scripts/build_onnx_model.py",
+                                                        "spike/scripts/build_fp32_nchw_model.py",
+                                                        "spike/scripts/compare_pytorch_fp16.py",
+                                                        "README.md"
+                                                    ],
+                                 "invariant":  "Local environment and dataset paths must not let a lower-trust actor read or write outside intended resources.",
+                                 "method":  "source",
+                                 "result":  "Spike tools use developer-selected environment/data paths and write local artifacts. CSV row paths are joined to a local root without visible containment enforcement, but source does not establish an untrusted provider or cross-principal read/write impact; no network sink was found.",
+                                 "artifact":  null
+                             }
+                         ],
+        "result_fingerprints":  [
+
+                                ],
+        "unresolved":  [
+
+                       ],
+        "hardening":  [
+                          "If index.csv can be supplied by an untrusted source, canonicalize each row path and enforce containment under the intended data root before reading."
+                      ]
+    }
+]
