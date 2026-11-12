@@ -10,7 +10,7 @@ class Tokens {
   static const Color tile = Color(0xFFF1F2F4);
   static const Color line = Color(0xFFE3E5E8);
   static const Color text2 = Color(0xFF565B62);
-  static const Color edge = Color(0xFF8A9098);
+  static const Color edge = Color(0xFF858B93);
   static const Color violet = Color(0xFF4A3AA8);
   static const Color error = Color(0xFFB3261E);
 
