@@ -25,11 +25,12 @@ from bacteriacv.paths import (
 )
 
 
-def test_project_root_is_repository_folder() -> None:
-    """The project root must be the folder holding bacteriacv and data."""
-    assert PROJECT_ROOT.name == "BacteriaCV"
+def test_project_root_is_api_folder() -> None:
+    """The project root must be apps/api, the folder holding bacteriacv and data."""
+    assert PROJECT_ROOT.parts[-2:] == ("apps", "api")
     assert (PROJECT_ROOT / "bacteriacv").is_dir()
-    assert (PROJECT_ROOT / "docs").is_dir()
+    assert (PROJECT_ROOT / "data").is_dir()
+    assert (PROJECT_ROOT.parents[1] / "docs").is_dir()
 
 
 def test_paths_stay_inside_project_root() -> None:
