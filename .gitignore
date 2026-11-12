@@ -1,0 +1,34 @@
+# Arsip isi lama (v1). Tidak pernah ikut commit.
+_v1-archive/
+
+# Node / Next.js
+node_modules/
+.next/
+out/
+.vercel/
+*.tsbuildinfo
+next-env.d.ts
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+
+# Flutter / Dart
+.dart_tool/
+build/
+.flutter-plugins
+.flutter-plugins-dependencies
+
+# Rahasia dan lingkungan lokal
+.env
+.env.*
+!.env.example
+
+# Editor dan sistem
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+desktop.ini
