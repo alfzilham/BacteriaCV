@@ -1,0 +1,30 @@
+name: Feature request
+description: Suggest an idea or an improvement
+labels: [enhancement]
+body:
+  - type: dropdown
+    id: area
+    attributes:
+      label: Which part is it about?
+      options:
+        - Website
+        - API
+        - Android app
+        - Documentation
+    validations:
+      required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem would it solve?
+    validations:
+      required: true
+  - type: textarea
+    id: idea
+    attributes:
+      label: What do you have in mind?
+  - type: textarea
+    id: notes
+    attributes:
+      label: Anything else?
+      description: A change to the API contract, the checkpoint format, or the preprocessing stages needs discussion here first.
