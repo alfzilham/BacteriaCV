@@ -61,3 +61,19 @@ table{border-collapse:collapse;width:100%;font-size:14px}th,td{text-align:left;p
 .sgc img{width:100%;height:auto;aspect-ratio:4/3;object-fit:cover;border-radius:16px;display:block}
 .sgc:hover:not(:disabled){background:var(--tile)}.sgc:active:not(:disabled){transform:scale(.98)}.sgc:disabled{opacity:.5;cursor:default}
 @media (prefers-reduced-motion:reduce){.sgc{transition:none}}
+@media (hover:hover) and (pointer:fine){.hv{transition:transform 200ms var(--ease),box-shadow 200ms}.hv:hover{transform:translateY(-4px);box-shadow:0 12px 32px rgba(14,15,17,.14)}}
+.ct{display:flex;flex-direction:column;gap:6px;min-height:170px;text-decoration:none;color:var(--ink)}
+.mq{overflow:hidden;-webkit-mask-image:linear-gradient(90deg,transparent,#000 8%,#000 92%,transparent);mask-image:linear-gradient(90deg,transparent,#000 8%,#000 92%,transparent)}
+.mq-track{display:flex;width:max-content;animation:mq 32s linear infinite}
+.mq:hover .mq-track{animation-play-state:paused}
+.mq-set{display:flex;gap:12px;padding:0 12px 0 0;margin:0;list-style:none}
+@keyframes mq{to{transform:translateX(-50%)}}
+@media (prefers-reduced-motion:reduce){.mq-track{animation:none;width:auto;flex-wrap:wrap}.mq-set[aria-hidden="true"]{display:none}.mq-set{flex-wrap:wrap}.mq{-webkit-mask-image:none;mask-image:none}}
+.faq{display:flex;flex-direction:column;max-width:820px}
+.faq-i{border-bottom:1px solid var(--line)}
+.faq-q{width:100%;min-height:64px;display:flex;align-items:center;justify-content:space-between;gap:16px;padding:0 4px;border:0;background:transparent;color:var(--ink);font-size:18px;letter-spacing:-.02em;text-align:left}
+.faq-q:hover{background:var(--tile)}
+.faq-ic{flex:none;width:28px;height:28px;border-radius:50%;background:var(--tile);display:inline-flex;align-items:center;justify-content:center;font-size:18px;transition:transform 200ms var(--ease)}
+.faq-ic[data-open="true"]{transform:rotate(45deg)}
+.faq-a{margin:0;padding:0 4px 20px;font-size:15px;line-height:1.6;color:var(--t2)}
+@media (prefers-reduced-motion:reduce){.hv,.faq-ic{transition:none}}
