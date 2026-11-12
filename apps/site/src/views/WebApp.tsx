@@ -2,12 +2,20 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useAnalyze } from "@/controllers/analyze";
+import { useApiHealth } from "@/controllers/health";
+import { useHistory } from "@/controllers/history";
 import { usePrefs } from "@/controllers/prefs";
 import { dotsOf, levelOf } from "@/models/confidence";
+import type { CopyKey } from "@/models/copy";
+import { demoPanelUrl } from "@/models/demo";
 import type { PredictResponse } from "@/models/prediction";
-import { Controls, Footer } from "./Chrome";
+import { ApiBanner } from "./ApiBanner";
+import { Controls } from "./Chrome";
+import { InfoPanels } from "./InfoPanels";
+import { SampleGallery } from "./SampleGallery";
 
 const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
+const STAGE_TEXT = ["sd1", "sd2", "sd3", "sd4", "sd5"] as const satisfies readonly CopyKey[];
 
 function Dots({ level }: { level: "High" | "Medium" | "Low" }) {
   const n = dotsOf(level);
@@ -19,7 +27,7 @@ function Dots({ level }: { level: "High" | "Medium" | "Low" }) {
   );
 }
 
-function Result({ data, onReset }: { data: PredictResponse; onReset: () => void }) {
+function Result({ data, onReset, panelSrc, demo }: { data: PredictResponse; onReset: () => void; panelSrc: (stage: number) => string; demo: boolean }) {
   const { t } = usePrefs();
   const [stage, setStage] = useState(0);
   const p = data.prediction;
@@ -55,6 +63,7 @@ function Result({ data, onReset }: { data: PredictResponse; onReset: () => void 
             <strong style={{ color: "var(--ink)", fontWeight: 600 }}>{t("disc")}</strong> {low ? t("a_low") : ""}
           </p>
           <div style={{ marginTop: 16 }}><button type="button" className="pill k" onClick={onReset}>{t("a_another")}</button></div>
+          {demo && <p className="cap" style={{ margin: "12px 0 0" }}>{t("a_demo_tag")}</p>}
         </div>
         <div role="toolbar" aria-label="Visualisation stage" style={{ marginTop: "auto", display: "flex", flexWrap: "wrap", gap: 10 }}>
           {stageNames.map((n, i) => <button key={n} type="button" className="chip" aria-pressed={stage === i} onClick={() => setStage(i)}>{i + 1} {n}</button>)}
@@ -62,10 +71,11 @@ function Result({ data, onReset }: { data: PredictResponse; onReset: () => void 
       </section>
       <section aria-label="Segmentation visualisation" style={{ flex: "1 1 460px", minWidth: 0, position: "relative", borderRadius: 32, overflow: "hidden", background: "var(--tile)", minHeight: 560 }}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={`data:image/png;base64,${data.panels[stage]}`} alt={stageNames[stage]} style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }} />
+        <img src={panelSrc(stage)} alt={stageNames[stage]} style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }} />
         <div style={{ position: "absolute", left: 20, right: 20, bottom: 20, borderRadius: 28, background: "var(--frost)", backdropFilter: "blur(14px)", padding: "20px 24px" }}>
           <div className="cap">{t("a_stage")} {stage + 1} {t("a_of")}</div>
           <div style={{ fontSize: 28, letterSpacing: "-.03em", lineHeight: 1.1, marginTop: 4 }}>{stageNames[stage]}</div>
+          <div style={{ fontSize: 14, lineHeight: 1.5, color: "var(--t2)", marginTop: 6 }}>{t(STAGE_TEXT[stage] ?? "sd1")}</div>
           <div style={{ fontSize: 13, lineHeight: 1.5, color: "var(--t2)", marginTop: 10, paddingTop: 10, borderTop: "1px solid var(--line)" }}>
             <strong style={{ color: "var(--ink)", fontWeight: 600 }}>{t("a_lim")}</strong> {t("lim_seg")}
           </div>
@@ -77,11 +87,21 @@ function Result({ data, onReset }: { data: PredictResponse; onReset: () => void 
 
 export function WebApp() {
   const { t } = usePrefs();
-  const { state, run, reset } = useAnalyze();
+  const { state, run, runDemo, reset } = useAnalyze();
+  const health = useApiHealth();
+  const history = useHistory();
   const [file, setFile] = useState<File | null>(null);
   const input = useRef<HTMLInputElement>(null);
+  const recorded = useRef<unknown>(null);
   useEffect(() => { if ("serviceWorker" in navigator) navigator.serviceWorker.register("/sw.js").catch(() => undefined); }, []);
-  const errText = state.status === "error" ? (state.reason === "network" ? t("a_net") : t("a_err")) + (state.detail ? ` (${state.detail})` : "") : "";
+  useEffect(() => {
+    if (state.status !== "done" || recorded.current === state) return;
+    recorded.current = state;
+    history.add({ at: Date.now(), shape: state.data.prediction.shape_label, gram: state.data.prediction.gram_label, demoId: state.demoId });
+  }, [state, history]);
+  const busy = state.status === "busy";
+  const errText = state.status === "error" ? (state.reason === "demo" ? t("a_demo_err") : state.reason === "network" ? t("a_net") : t("a_err")) + (state.detail ? ` (${state.detail})` : "") : "";
+  const openDemo = (id: string) => { setFile(null); void runDemo(id); };
   return (
     <div className="wrap" style={{ minHeight: "100vh", display: "flex", flexDirection: "column" }}>
       <header className="hdr" style={{ paddingBottom: 20 }}>
@@ -89,10 +109,16 @@ export function WebApp() {
         <div style={{ fontSize: 12, color: "var(--t3)", maxWidth: 190, lineHeight: 1.35 }}>{t("a_tag")}</div>
         <div style={{ marginLeft: "auto" }}><Controls /></div>
       </header>
+      {health === "offline" && <div style={{ padding: "0 24px 20px" }}><ApiBanner /></div>}
       {state.status === "done" ? (
-        <Result data={state.data} onReset={() => { reset(); setFile(null); }} />
+        <Result
+          data={state.data}
+          demo={Boolean(state.demoId)}
+          panelSrc={(i) => (state.demoId ? demoPanelUrl(state.demoId, i) : `data:image/png;base64,${state.data.panels[i]}`)}
+          onReset={() => { reset(); setFile(null); }}
+        />
       ) : (
-        <main style={{ padding: "0 24px", flex: 1, display: "flex", flexDirection: "column", gap: 20, maxWidth: 720 }}>
+        <main style={{ padding: "0 24px", display: "flex", flexDirection: "column", gap: 20, maxWidth: 1100 }}>
           <h1 style={{ margin: 0, fontSize: "clamp(40px,6vw,72px)", fontWeight: 400, letterSpacing: "-.045em", lineHeight: 1 }}>{t("a_pick")}</h1>
           <p className="cap" style={{ margin: 0 }}>{t("a_drop")}</p>
           <input ref={input} type="file" accept=".png,.jpg,.jpeg,.tif,.tiff,image/png,image/jpeg,image/tiff" hidden onChange={(e) => { setFile(e.target.files?.[0] ?? null); reset(); }} />
@@ -100,15 +126,16 @@ export function WebApp() {
             <button type="button" className="pill o" onClick={() => input.current?.click()}>{t("a_pick")}</button>
             {file && <span className="cap">{file.name} ({Math.round(file.size / 1024)} KB)</span>}
           </div>
-          <div><button type="button" className="pill k" disabled={!file || state.status === "busy"} onClick={() => file && run(file)} style={{ minHeight: 48, opacity: !file || state.status === "busy" ? 0.5 : 1 }}>{state.status === "busy" ? t("a_busy") : t("a_analyze")}</button></div>
+          <div><button type="button" className="pill k" disabled={!file || busy} onClick={() => file && run(file)} style={{ minHeight: 48, opacity: !file || busy ? 0.5 : 1 }}>{busy ? t("a_busy") : t("a_analyze")}</button></div>
           {errText && <div role="alert" style={{ borderRadius: 20, background: "var(--errbg)", color: "var(--errfg)", padding: "16px 20px", fontSize: 14 }}>{errText}</div>}
           <div className="warn"><strong style={{ fontWeight: 600 }}>{t("disc")}</strong></div>
+          <SampleGallery onPick={openDemo} disabled={busy} />
         </main>
       )}
-      <div style={{ padding: "18px 32px", fontSize: 12, color: "var(--t3)", display: "flex", gap: "6px 24px", flexWrap: "wrap" }}>
+      <div style={{ padding: "32px 0 0" }}><InfoPanels history={history.items} onOpenDemo={openDemo} busy={busy} /></div>
+      <div style={{ padding: "18px 32px", fontSize: 12, color: "var(--t3)", display: "flex", gap: "6px 24px", flexWrap: "wrap", marginTop: "auto" }}>
         <span>{t("a_foot")}</span><span>20 MB</span><span>ResNet-50 (heads.pt)</span><span>DIBaS (32 Species)</span><span style={{ color: "var(--ink)", fontWeight: 500 }}>{t("disc")}</span>
       </div>
-      <Footer />
     </div>
   );
 }
