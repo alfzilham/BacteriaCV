@@ -60,6 +60,6 @@ test("skrip ekspor ada dan menulis ke public/demo", () => {
 
 test("tidak ada em-dash di berkas baru atau yang diubah", () => {
   for (const f of ["models/demo.ts", "controllers/health.ts", "controllers/history.ts", "controllers/analyze.ts", "views/SampleGallery.tsx", "views/ApiBanner.tsx", "views/InfoPanels.tsx", "views/WebApp.tsx", "models/copy.ts"]) {
-    assert.ok(!src(f).includes("—"), f);
+    assert.ok(!src(f).includes("\u2014"), f);
   }
 });
