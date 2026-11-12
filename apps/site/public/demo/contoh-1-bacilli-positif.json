@@ -1,0 +1,80 @@
+{
+    "prediction":  {
+                       "shape_label":  "bacilli",
+                       "shape_confidence":  1.0,
+                       "gram_label":  "positive",
+                       "gram_confidence":  0.9999779190602567,
+                       "shape_index":  1,
+                       "gram_index":  0,
+                       "shape_level":  "high",
+                       "gram_level":  "high",
+                       "object_count":  26,
+                       "segmentation_ok":  true,
+                       "segmentation_validated":  false,
+                       "stages_ok":  {
+                                         "load":  true,
+                                         "resize":  true,
+                                         "normalize":  true,
+                                         "segment":  true,
+                                         "watershed":  true
+                                     },
+                       "notes":  [
+                                     "Cell shape is not yet validated from segmentation: median elongation 1.30-1.43 for cocci and 1.64-1.76 for bacilli, but the intraspecies range 1.03-4.19 exceeds the between-group difference of 0.068.",
+                                     "This result is an aid, not a diagnosis."
+                                 ],
+                       "note_keys":  [
+                                         "shape_not_validated",
+                                         "low_confidence_warning"
+                                     ],
+                       "notes_text":  [
+                                          "Cell shape is not yet validated from segmentation: median elongation 1.30-1.43 for cocci and 1.64-1.76 for bacilli, but the intraspecies range 1.03-4.19 exceeds the between-group difference of 0.068.",
+                                          "This result is an aid, not a diagnosis."
+                                      ]
+                   },
+    "stage_index":  0,
+    "stage_name":  "original",
+    "stage_key":  "stage_original",
+    "stage_title":  "Original image",
+    "stage_names":  [
+                        "original",
+                        "resized",
+                        "normalized",
+                        "segment",
+                        "watershed"
+                    ],
+    "stage_keys":  [
+                       "stage_original",
+                       "stage_resized",
+                       "stage_normalized",
+                       "stage_segment",
+                       "stage_watershed"
+                   ],
+    "stage_texts":  [
+                        "Original image",
+                        "Resize 224 x 224",
+                        "ImageNet normalization",
+                        "Segmentation mask",
+                        "Object boundary"
+                    ],
+    "panel":  "",
+    "panels":  [
+
+               ],
+    "note_keys":  [
+                      "shape_not_validated",
+                      "low_confidence_warning"
+                  ],
+    "notes_text":  [
+                       "This result is an aid, not a diagnosis.",
+                       "Cell shape is not yet validated from segmentation: median elongation 1.30-1.43 for cocci and 1.64-1.76 for bacilli, but the intraspecies range 1.03-4.19 exceeds the between-group difference of 0.068."
+                   ],
+    "notes":  [
+                  "This result is an aid, not a diagnosis.",
+                  "Cell shape is not yet validated from segmentation: median elongation 1.30-1.43 for cocci and 1.64-1.76 for bacilli, but the intraspecies range 1.03-4.19 exceeds the between-group difference of 0.068."
+              ],
+    "disclaimer":  "This result is an aid, not a diagnosis.",
+    "disclaimer_key":  "low_confidence_warning",
+    "failed_stages":  [
+
+                      ]
+}
