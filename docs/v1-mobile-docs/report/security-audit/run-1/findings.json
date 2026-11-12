@@ -1,0 +1,98 @@
+[
+  {
+    "verdict":"rejected",
+    "fingerprint":"image-decoder-dimensions-unbounded",
+    "title":"Image decoding lacks a visible decoded-pixel cap",
+    "description":"The picker and classifier check encoded file size, then decode the selected image without a visible decoded-pixel limit. This is a possible resource-use concern, but the reviewed source establishes no affected principal or shared resource beyond the local user's own app process.",
+    "claimed_root_cause":"The encoded-size limit does not bound decoded dimensions or memory use before image decoding.",
+    "trace":[
+      {"kind":"entrypoint","file":"lib/ui/upload_screen.dart","line":32,"scope":"Local file picker","description":"The local user opens the picker and selects an image."},
+      {"kind":"propagation","file":"lib/ui/upload_screen.dart","line":72,"scope":"Preview decode","description":"The selected bytes are read into memory and decoded for preview."},
+      {"kind":"sink","file":"lib/pipeline/classifier.dart","line":187,"scope":"Classifier decode","description":"Accepted encoded bytes are decoded without a visible pixel-dimension cap."}
+    ],
+    "evidence":[
+      {"file":"lib/ui/upload_screen.dart","line":58,"description":"The preview path checks the picker-reported size before reading the file."},
+      {"file":"lib/pipeline/classifier.dart","line":55,"description":"The configured encoded file-size cap is 20 MiB."},
+      {"file":"lib/pipeline/classifier.dart","line":180,"description":"The classifier checks encoded file length before reading."},
+      {"file":"lib/pipeline/classifier.dart","line":187,"description":"The classifier decodes accepted bytes before resizing, without a visible decoded-pixel cap."},
+      {"file":"pubspec.yaml","line":27,"description":"The application declares the image decoder dependency."}
+    ],
+    "reason":"Independent source review found only a local user-selected input and possible effects confined to that user's app process. No remote input, other affected user, shared service, or operator-owned resource is established. The resource-exhaustion criteria exclude same-principal self-impact as a security finding."
+  },
+  {
+    "verdict":"needs_validation",
+    "fingerprint":"pr-ci-cache-poisoning",
+    "title":"Pull request jobs enable Flutter action caching",
+    "description":"The CI workflow runs for pull requests targeting master and enables caching in the Flutter setup action in all three jobs. The repository does not establish that pull-request-controlled content can alter cached toolchain state later restored by a trusted master build.",
+    "claimed_root_cause":"The pull-request workflow enables Flutter action caching without source-visible cache paths, keys, or cross-event isolation controls.",
+    "trace":[
+      {"kind":"entrypoint","file":".github/workflows/ci.yml","line":6,"scope":"Pull request trigger","description":"The workflow runs for pull_request events targeting master."},
+      {"kind":"propagation","file":".github/workflows/ci.yml","line":20,"scope":"Flutter setup action","description":"The analyze job invokes the Flutter setup action before processing checked-out source."},
+      {"kind":"sink","file":".github/workflows/ci.yml","line":24,"scope":"Cache configuration","description":"The job requests cache behavior with cache: true; actual paths and cross-run cache effects are not defined in this file."}
+    ],
+    "evidence":[
+      {"file":".github/workflows/ci.yml","line":4,"description":"The workflow also runs on pushes to master."},
+      {"file":".github/workflows/ci.yml","line":6,"description":"The workflow handles pull_request events targeting master."},
+      {"file":".github/workflows/ci.yml","line":24,"description":"The analyze job enables the Flutter action cache."},
+      {"file":".github/workflows/ci.yml","line":42,"description":"The test job enables the Flutter action cache."},
+      {"file":".github/workflows/ci.yml","line":65,"description":"The Android build job enables the Flutter action cache."}
+    ],
+    "blockers":[
+      "The resolved subosito/flutter-action implementation and version-specific cache paths, keys, restore behavior, and save behavior are not present in this repository.",
+      "GitHub Actions cache access and namespace rules for pull_request and push-to-master runs are external to repository source; cross-event cache consumption is not established."
+    ],
+    "validation_plan":{
+      "local":"Inspect the resolved action source for the referenced version to document cache paths, keys, restore, and save behavior. Do not execute the workflow.",
+      "deployment":"Using read-only owner access, inspect existing workflow-run metadata and Actions cache scope/access policy to determine whether a pull-request run can influence cache state later restored by a trusted master run. Do not create a test PR or modify a cache."
+    }
+  },
+  {
+    "verdict":"needs_validation",
+    "fingerprint":"pull-request-ci-token-authority",
+    "title":"Pull request jobs may expose repository write authority to contributor-controlled code",
+    "description":"All three CI jobs check out pull-request source and run Flutter commands. The workflow does not declare permissions. If effective policy grants a write-capable token and checkout makes its credentials available to later commands, contributor-controlled code could use repository authority; neither condition is established by repository source.",
+    "claimed_root_cause":"The pull_request workflow executes contributor-controlled code without an explicit least-privilege permissions declaration, leaving effective credential authority to external policy and checkout behavior.",
+    "trace":[
+      {"kind":"entrypoint","file":".github/workflows/ci.yml","line":6,"scope":"Pull request trigger","description":"Pull requests targeting master start the workflow."},
+      {"kind":"propagation","file":".github/workflows/ci.yml","line":36,"scope":"Test job checkout","description":"The test job checks out the pull-request source before running Flutter commands."},
+      {"kind":"sink","file":".github/workflows/ci.yml","line":48,"scope":"Test execution","description":"The workflow runs tests after checkout; effective token permissions and credential persistence are not declared here."}
+    ],
+    "evidence":[
+      {"file":".github/workflows/ci.yml","line":13,"description":"The workflow defines analyze, test, and Android build jobs without a visible permissions block."},
+      {"file":".github/workflows/ci.yml","line":18,"description":"The analyze job checks out source before commands run."},
+      {"file":".github/workflows/ci.yml","line":27,"description":"The analyze job resolves dependencies after checkout."},
+      {"file":".github/workflows/ci.yml","line":36,"description":"The test job checks out source before commands run."},
+      {"file":".github/workflows/ci.yml","line":48,"description":"The test job executes tests after checkout."},
+      {"file":".github/workflows/ci.yml","line":54,"description":"The Android build job checks out source before commands run."},
+      {"file":".github/workflows/ci.yml","line":73,"description":"The Android build job builds a release APK after checkout."}
+    ],
+    "blockers":[
+      "Effective GITHUB_TOKEN permissions and any repository or organization policy overrides are not visible in this repository.",
+      "Fork pull-request secret/approval policy and branch protections are not visible in this repository.",
+      "The credential persistence behavior of the resolved actions/checkout v4 implementation is not established by this repository."
+    ],
+    "validation_plan":{
+      "deployment":"Using read-only owner access, inspect repository and organization Actions permission settings, fork pull-request policy, branch protections, and existing pull_request run summaries for effective permissions and checkout credential persistence. Do not create a test PR, run a probe, or attempt a write."
+    }
+  },
+  {
+    "verdict":"rejected",
+    "fingerprint":"sabotage-test-temp-symlink-overwrite",
+    "title":"Manual sabotage test writes its backup through a predictable temporary path",
+    "description":"The documented manual sabotage test opens a fixed audit_backup.py path under the system temporary directory for truncating write. A preplaced symlink could redirect that write, but repository source does not establish a lower-trust principal, protected target, or privilege boundary.",
+    "claimed_root_cause":"The test uses a predictable temporary filename and ordinary file opening without exclusive creation or symlink rejection.",
+    "trace":[
+      {"kind":"entrypoint","file":"tools/tests/test_text_encoding_audit_sabotage.py","line":154,"scope":"Script entry point","description":"Direct execution invokes the manual sabotage test's main function."},
+      {"kind":"propagation","file":"tools/tests/test_text_encoding_audit_sabotage.py","line":129,"scope":"Sabotage invocation","description":"The main function calls the sabotage helper for an audit-tool mutation."},
+      {"kind":"sink","file":"tools/tests/test_text_encoding_audit_sabotage.py","line":77,"scope":"Temporary backup write","description":"The helper opens the fixed temporary backup path with truncating write mode, which may follow a preexisting symlink."}
+    ],
+    "evidence":[
+      {"file":".githooks/README.md","line":35,"description":"The sabotage test is documented for manual execution when the audit tool or scope changes."},
+      {"file":"tools/tests/test_text_encoding_audit_sabotage.py","line":76,"description":"The backup path is a fixed audit_backup.py name under tempfile.gettempdir()."},
+      {"file":"tools/tests/test_text_encoding_audit_sabotage.py","line":77,"description":"The backup path is opened in wb mode without exclusive creation or symlink rejection."},
+      {"file":"tools/tests/test_text_encoding_audit_sabotage.py","line":84,"description":"The helper later restores the repository tool by copying from the backup path."},
+      {"file":"tools/tests/test_text_encoding_audit_sabotage.py","line":86,"description":"The helper removes the backup path during cleanup."}
+    ],
+    "reason":"Independent source review confirms predictable temporary-path handling but found no lower-trust local principal, protected target, or meaningful privilege boundary. The manual test affects the invoking repository user's own files; the evidence supports a local hardening concern only, not a security finding."
+  }
+]
