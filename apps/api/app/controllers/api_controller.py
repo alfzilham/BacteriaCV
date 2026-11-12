@@ -21,6 +21,7 @@ LOGGER = logging.getLogger("bacteriacv.app")
 
 STAGE_INDEX_FIELD = "stage"
 EVALUATION_NAME = "evaluation.json"
+PREDICTION_FAILED_DETAIL = "Prediction failed"
 
 router = APIRouter(prefix="/api")
 
@@ -75,9 +76,11 @@ async def predict(request: Request, file: UploadFile) -> JSONResponse:
 
     try:
         result = state.predictor.predict(image)
-    except Exception as error:  # noqa: BLE001 - report it, do not leak it
+    except Exception as error:  # noqa: BLE001 - log the detail, send a generic message
         LOGGER.exception("Prediction failed")
-        raise HTTPException(status_code=500, detail=str(error)) from error
+        raise HTTPException(
+            status_code=500, detail=PREDICTION_FAILED_DETAIL
+        ) from error
 
     try:
         body = service.build_payload(result, stage_index)

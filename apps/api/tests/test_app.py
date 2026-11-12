@@ -161,6 +161,27 @@ def test_predict_keeps_result_when_segmentation_fails(client: TestClient) -> Non
     assert payload["prediction"]["segmentation_ok"] is False
 
 
+def test_predict_does_not_leak_error_detail_on_500(
+    client: TestClient, monkeypatch
+) -> None:
+    """An unexpected failure must return a generic message, not the exception text."""
+    secret = "rahasia-internal /srv/bacteriacv/heads.pt"
+
+    def broken_predict(image):
+        raise RuntimeError(secret)
+
+    monkeypatch.setattr(client.app.state.bacteria.predictor, "predict", broken_predict)
+
+    response = client.post(
+        "/api/predict",
+        files={"file": (GOOD_IMAGE, _png_bytes(), "image/png")},
+    )
+
+    assert response.status_code == 500
+    assert response.json() == {"detail": "Prediction failed"}
+    assert secret not in response.text
+
+
 def test_predict_rejects_non_image_suffix(client: TestClient) -> None:
     """A non image file must be rejected with code 415."""
     response = client.post(
