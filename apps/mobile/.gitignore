@@ -1,0 +1,130 @@
+# ---------------------------------------------------------------------------
+# BacteriaCVMobile - .gitignore
+#
+# PENTING: yang TIDAK boleh di-ignore ada di bagian "Yang SENGAJA di-commit"
+# di bawah. Menambahkannya di sini supaya saat someone menambah rule baru
+# tidak ikut meng-exclude-nya.
+#
+# Aturan nomor satu repo ini: TIDAK ADA FILE MODEL YANG MASUK GIT. Bobot dan
+# artefak turunan hanya boleh hidup di spike/artifacts/ yang sudah di-ignore.
+# Lihat AGENTS.md bagian "Batas keras".
+# ---------------------------------------------------------------------------
+
+# --- Dart / Flutter build output -------------------------------------------
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+.pub-cache/
+.pub/
+build/
+doc/api/
+coverage/
+*.dart.js
+*.info.json
+.dart_tool/
+
+# Lockfile TIDAK di-ignore: ini aplikasi, bukan package. Build harus
+# reproducible untuk semua orang karena versi plugin native terikat ke
+# versi lockfile.
+
+# --- IDE -------------------------------------------------------------------
+.idea/
+.vscode/
+*.iml
+*.ipr
+*.iws
+*.code-workspace
+.history/
+*.swp
+*.swo
+*~
+
+# --- Android ----------------------------------------------------------------
+android/.gradle/
+android/captures/
+android/local.properties
+android/**/build/
+android/app/debug/
+android/app/profile/
+android/app/release/
+*.apk
+*.aab
+*.dex
+captures/
+*.keystore
+!debug.keystore
+*.jks
+key.properties
+
+# --- Model on-device: TIDAK BOLEH masuk git ---------------------------------
+# Artefak turunan dari torch.onnx.export dan skrip spike.
+spike/artifacts/
+
+# Salinan sementara yang dipakai spike agar `flutter run` bisa memuat
+# model. Folder ini ada di pubspec.yaml sebagai assets, tapi isinya -
+# model 45 MB dan citra uji - tidak pernah masuk git.
+assets/spike/*
+!assets/spike/.gitkeep
+*.onnx
+*.tflite
+*.pt2
+*.pth
+*.h5
+*.npz
+*.npy
+
+# --- Python (venv spike dan skrip konversi) --------------------------------
+spike/.venv*/
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+
+# --- OS / editor noise ------------------------------------------------------
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# --- Log & crash ------------------------------------------------------------
+*.log
+pids/
+*.pid
+crashlytics-build.properties
+
+# --- Agents -----------------------------------------------------------------
+graphify-out/
+.codex/
+.agents/
+.claude/
+.worktrees/
+
+# --- Documentation ----------------------------------------------------------
+docs/report/
+
+# ===========================================================================
+# YANG SENGAJA DI-COMMIT (penegasan, bukan aturan baru)
+#
+# Folder-folder berikut TIDAK boleh masuk daftar ignore di atas.
+#
+#   spike/scripts/       Skrip konversi model dan perbandingan numerik.
+#                        Justru karena skrip ini ada, artefak turunan di
+#                        spike/artifacts/ boleh dihapus kapan saja dan
+#                        dibangun ulang tanpa bergantung berkas di luar repo.
+#
+#   spike/docs/          Tulisan riset P4 (kelayakan segmentasi on-device).
+#
+#   docs/                Dokumen sumber kebenaran project, termasuk
+#                        SPIKE-REPORT.md.
+#
+#   tools/               Audit karakter teks beserta self-test dan kontrol
+#                        sabotase. Hook commit bergantung pada isi folder ini.
+#
+#   .githooks/           Gatewa commit, dilacak di dalam repo.
+#
+#   assets/              Hanya kalau nanti ada font atau aset yang memang
+#                        harus di-bundle. Model TIDAK termasuk di sini.
+# ===========================================================================

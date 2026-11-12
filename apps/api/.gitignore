@@ -1,0 +1,56 @@
+# Data mentah DIBaS tidak di-commit. Unduh ulang lewat:
+#   python -m bacteriacv.datasets.download
+#   python -m bacteriacv.datasets.extract
+data/raw/zips/
+data/raw/images/
+
+# index.csv, zips_manifest.csv, dan unreadable.csv ikut di-commit sebagai bukti
+# keputusan data. Ukurannya kecil dan berguna untuk auditor.
+
+# Feature cache adalah artefak turunan. Bisa dibangun ulang dengan
+#   python -m bacteriacv.train
+# Matriksnya sekitar 16 MB dan tidak ada gunanya direvisi.
+data/features/
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+.pytest_tmp/
+*.egg-info/
+
+# Model
+*.pt
+*.pth
+
+# Berkas yang wajib ikut ter-deploy ke server
+!checkpoints/heads.pt
+!checkpoints/evaluation.json
+!checkpoints/training_report.json
+
+# Editor dan sistem
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+desktop.ini
+*.swp
+*~
+
+# Notes
+notes/
+
+# Agent
+graphify-out/
+.claude/
+.agents/
+.codex/
+.worktrees/
+
+# Documentation
+docs/report/
+
+# Logs 
+logs/
+*.log

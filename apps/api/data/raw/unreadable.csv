@@ -1,0 +1,4 @@
+path,species_id,bytes,reason
+data/raw/images/listeria_monocytogenes/Listeria.monocytogenes_0023.tif,listeria_monocytogenes,0,"berkas 0 byte, tidak ada data gambar"
+data/raw/images/micrococcus_spp/Micrococcus.spp_0021.tif,micrococcus_spp,9471378,struktur TIFF rusak atau kompresi tidak didukung
+data/raw/images/micrococcus_spp/Micrococcus.spp_0023.tif,micrococcus_spp,9471378,struktur TIFF rusak atau kompresi tidak didukung

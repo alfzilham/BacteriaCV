@@ -1,0 +1,16 @@
+# Normalisasi baris akhir agar konsisten di semua platform.
+#
+# Tanpa aturan ini, core.autocrlf=true di Windows mengubah berkas menjadi CRLF
+# saat checkout. Data provenance seperti data/index.csv diuji sebagai LF tanpa
+# BOM, sehingga hasil checkout tidak boleh bergantung setelan mesin lokal.
+* text=auto eol=lf
+
+# Data provenance: LF tanpa BOM, sesuai kontrak di tests/test_build_index.py.
+*.csv text eol=lf
+
+# Skrip PowerShell juga LF; PowerShell 5.1 dan 7+ keduanya membacanya.
+*.ps1 text eol=lf
+
+# Citra dan arsip adalah biner dan tidak boleh dinormalisasi.
+*.tif binary
+*.zip binary
