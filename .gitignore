@@ -1,5 +1,5 @@
 # Arsip isi lama (v1). Tidak pernah ikut commit.
-_v1-archive/
+.archive/
 
 # Node / Next.js
 node_modules/
@@ -32,3 +32,11 @@ build/
 .DS_Store
 Thumbs.db
 desktop.ini
+
+# Agents
+graphify-out/
+.claude/
+.python-version
+main.py
+pyproject.toml
+uv.lock
