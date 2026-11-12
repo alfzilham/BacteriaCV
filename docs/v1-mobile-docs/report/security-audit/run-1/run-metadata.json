@@ -1,0 +1,47 @@
+{
+    "run_id":  "security-audit-20261029-01",
+    "repo":  "BacteriaCVMobile",
+    "target":  ".",
+    "target_path_note":  "Relative root retained to comply with AGENTS.md prohibition on absolute paths in repository documents.",
+    "source_ref":  "c110ae5b283e035007da8f5689211051a225ea71; dirty worktree; current tracked/untracked state included by source inspection only",
+    "profile":  "standard",
+    "scope_paths":  [
+                        "."
+                    ],
+    "budget":  null,
+    "execution_policy":  "sandboxed-source-and-local-only",
+    "selected_companion_files":  [
+                                     "CLIENT-SIDE.md",
+                                     "DESKTOP-MOBILE-AND-LOCAL-IPC.md",
+                                     "DATA-ISOLATION-AND-LIFECYCLE.md",
+                                     "RESOURCE-EXHAUSTION-AND-AVAILABILITY.md",
+                                     "SUPPLY-CHAIN-AND-RELEASE.md"
+                                 ],
+    "prior_run_paths":  [
+
+                        ],
+    "shared_file_owners":  {
+                               "agents":  "unique agents/\u003cid\u003e/scratch and agents/\u003cid\u003e/artifacts roots",
+                               "parent":  [
+                                              "run-metadata.json",
+                                              "architecture.md",
+                                              "coverage-ledger.json",
+                                              "findings.json",
+                                              "REPORT.md",
+                                              "FINDINGS-DETAIL.md",
+                                              "NEEDS-VALIDATION.md"
+                                          ]
+                           },
+    "run_status":  "incomplete",
+    "execution_note":  "No target-controlled code, builds, tests, or scripts will be run; source-only evidence.",
+    "incomplete_reason":  "audit_schema_validators_not_run_due_to_no_code_execution_constraint",
+    "agent_invocations":  34,
+    "agent_invocation_breakdown":  {
+                                       "coverage_critics":  8,
+                                       "hunters":  14,
+                                       "final_record_verifiers":  4,
+                                       "candidate_verifiers":  4,
+                                       "reconnaissance":  4
+                                   },
+    "budget_gate_note":  "No strict agent budget was set. Standard profile reservations were satisfied; added waves followed critic reassignment findings."
+}
