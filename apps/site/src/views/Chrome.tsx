@@ -33,6 +33,7 @@ export function Header({ current }: { current: Section }) {
       <nav id="mainnav" className="nav" data-open={open} aria-label="Main">
         <Link href="/#features" onClick={() => setOpen(false)}>{t("nav_feat")}</Link>
         <Link href="/#how" onClick={() => setOpen(false)}>{t("nav_how")}</Link>
+        <Link href="/#contact" onClick={() => setOpen(false)}>{t("nav_ct")}</Link>
         <Link href="/docs" {...cur("docs")}>{t("nav_docs")}</Link>
         <Link href="/docs/changelog" {...cur("changelog")}>{t("nav_cl")}</Link>
       </nav>
