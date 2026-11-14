@@ -166,6 +166,8 @@ The ONNX model is not committed. Export it from `apps/api/checkpoints/heads.pt` 
 
 | App | Variable | Purpose |
 |-----|----------|---------|
+| API | `RATE_LIMIT_PER_MINUTE` | Accepted `POST /api/predict` calls per client per minute. Default 20, `0` turns the limit off. Over the limit the API answers `429` with `Retry-After`. The counter lives in memory, per process. |
+| API | `RATE_LIMIT_TRUST_FORWARDED` | Set to `1` only behind a reverse proxy that appends the real client address to `X-Forwarded-For`. Otherwise every caller behind the proxy shares one counter. Not verified on Railway. |
 | API | `CORS_ORIGINS` | Comma-separated list of site origins allowed to call the API. Empty disables CORS. Read from the shell environment, not from a `.env` file. |
 | API | `PORT` | Port to listen on. Set by Railway, defaults to `8000`. |
 | Site | `NEXT_PUBLIC_API_URL` | Public URL of the API, used by the web app at `/app`. |
