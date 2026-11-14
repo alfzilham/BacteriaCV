@@ -17,9 +17,11 @@ const WEB_CMD = `cd apps/site
 npm install
 npm run dev`;
 
-const ENV_ROWS: [string, string, "sh_e1" | "sh_e2" | "sh_e3" | "sh_e4" | "sh_e5" | "sh_e6"][] = [
+const ENV_ROWS: [string, string, "sh_e1" | "sh_e2" | "sh_e3" | "sh_e4" | "sh_e5" | "sh_e6" | "sh_e7" | "sh_e8"][] = [
   ["API", "CORS_ORIGINS", "sh_e1"],
   ["API", "PORT", "sh_e2"],
+  ["API", "RATE_LIMIT_PER_MINUTE", "sh_e7"],
+  ["API", "RATE_LIMIT_TRUST_FORWARDED", "sh_e8"],
   ["Site", "NEXT_PUBLIC_API_URL", "sh_e3"],
   ["Site", "GITHUB_REPO", "sh_e4"],
   ["Site", "GITHUB_WEBHOOK_SECRET", "sh_e5"],

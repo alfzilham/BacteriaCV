@@ -26,19 +26,40 @@ from fastapi.staticfiles import StaticFiles
 
 from app.controllers import api_controller, page_controller
 from app.core.lifespan import build_lifespan
+from app.core.ratelimit import (
+    SlidingWindowLimiter,
+    limit_from_env,
+    trust_forwarded_from_env,
+)
+from app.core.ratelimit_middleware import RateLimitMiddleware
 from bacteriacv.config import STATIC_DIR
 
 
-def create_app(checkpoint_path: Path | None = None) -> FastAPI:
+def create_app(
+    checkpoint_path: Path | None = None,
+    rate_limit_per_minute: int | None = None,
+) -> FastAPI:
     """Build the FastAPI application.
 
     Args:
         checkpoint_path: The checkpoint location. Defaults to DEFAULT_CHECKPOINT.
+        rate_limit_per_minute: Accepted POST /api/predict calls per client per
+            minute. 0 turns the limit off. Defaults to RATE_LIMIT_PER_MINUTE
+            from the environment, or 20 when it is unset.
 
     Returns:
         An application ready to run under uvicorn.
     """
     app = FastAPI(title="BacteriaCV", lifespan=build_lifespan(checkpoint_path))
+
+    # Pembatas laju didaftarkan sebelum CORS supaya CORS membungkusnya dan
+    # respons 429 tetap terbaca oleh peramban.
+    limit = limit_from_env(os.environ) if rate_limit_per_minute is None else rate_limit_per_minute
+    app.add_middleware(
+        RateLimitMiddleware,
+        limiter=SlidingWindowLimiter(limit),
+        trust_forwarded=trust_forwarded_from_env(os.environ),
+    )
 
     # Situs web (Vercel) memanggil API ini dari origin lain. Daftar origin
     # diambil dari CORS_ORIGINS (dipisah koma). Kosong berarti CORS mati.

@@ -29,7 +29,7 @@ test("setiap kunci teks yang dipakai halaman baru ada di kamus bahasa", () => {
 
 test("panduan jalankan sendiri memuat perintah dan variabel yang benar", () => {
   const v = src("views/SelfHost.tsx");
-  for (const s of ["python -m venv .venv", "python -m pip install -r requirements.txt", "uvicorn app.main:app --port 8000", "npm install", "npm run dev", "CORS_ORIGINS", "PORT", "NEXT_PUBLIC_API_URL", "GITHUB_REPO", "GITHUB_WEBHOOK_SECRET", "GITHUB_TOKEN"]) {
+  for (const s of ["python -m venv .venv", "python -m pip install -r requirements.txt", "uvicorn app.main:app --port 8000", "npm install", "npm run dev", "CORS_ORIGINS", "PORT", "RATE_LIMIT_PER_MINUTE", "RATE_LIMIT_TRUST_FORWARDED", "NEXT_PUBLIC_API_URL", "GITHUB_REPO", "GITHUB_WEBHOOK_SECRET", "GITHUB_TOKEN"]) {
     assert.ok(v.includes(s), s);
   }
   const copy = src("models/copy.ts");
@@ -46,7 +46,7 @@ test("halaman API mendaftar semua kode galat dan tiga contoh pemanggilan", () =>
   const line = copy.split("\n").find((l) => l.includes("d_err_d:"));
   assert.ok(line, "baris d_err_d");
   // Dua bahasa pada satu baris, jadi tiap kode harus muncul tepat dua kali.
-  for (const code of ["400", "413", "415", "500", "503"]) assert.equal(line.split(`${code} `).length - 1, 2, code);
+  for (const code of ["400", "413", "415", "429", "500", "503"]) assert.equal(line.split(`${code} `).length - 1, 2, code);
   const a = src("views/ApiDocs.tsx");
   for (const s of ["curl -X POST", "requests.post", "FormData", "/api/predict?stage=3", "failed_stages", "notes_text", "panels"]) assert.ok(a.includes(s), s);
 });
