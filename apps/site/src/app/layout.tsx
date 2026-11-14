@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import localFont from "next/font/local";
 import type { ReactNode } from "react";
 import { PrefsProvider } from "@/controllers/prefs";
 import { ThemeProvider } from "@/controllers/ThemeProvider";
@@ -11,16 +12,19 @@ export const metadata: Metadata = {
   manifest: "/manifest.webmanifest",
   icons: { icon: [{ url: "/favicon.svg", type: "image/svg+xml" }, { url: "/favicon.ico" }] },
 };
+const hanken = localFont({
+  src: "./fonts/hanken-grotesk-latin-wght-normal.woff2",
+  weight: "100 900",
+  style: "normal",
+  display: "swap",
+  variable: "--font-hanken",
+});
+
 export const viewport: Viewport = { themeColor: "#4A3AA8" };
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="en" suppressHydrationWarning>
-      <head>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
-        <link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@300;400;500;600&display=swap" rel="stylesheet" />
-      </head>
+    <html lang="en" className={hanken.variable} suppressHydrationWarning>
       <body>
         <ThemeProvider>
           <PrefsProvider>
