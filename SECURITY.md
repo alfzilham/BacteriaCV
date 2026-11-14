@@ -18,7 +18,7 @@ Only the latest release and the current `main` branch receive fixes.
 
 ## Scope and notes for people who deploy it
 
-- The API accepts image uploads of up to 20 MB and runs the model on the CPU. It has no built-in rate limiting. If you expose your own copy to the public, put a rate limit in front of it (for example at your proxy or hosting platform).
+- The API accepts image uploads of up to 20 MB and runs the model on the CPU. It limits `POST /api/predict` to 20 calls per client per minute by default (`RATE_LIMIT_PER_MINUTE`, `0` turns it off). The counter is kept in memory per process, so it does not replace a limit at your proxy or hosting platform if you run several replicas or expect abuse.
 - Set `CORS_ORIGINS` to your website address only. An empty value turns CORS off.
 - Keep `GITHUB_WEBHOOK_SECRET` and `GITHUB_TOKEN` out of the repository. Set them in your hosting dashboard. The webhook rejects any request whose signature does not match the secret.
 - The API does not store uploaded images.
