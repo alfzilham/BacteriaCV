@@ -19,7 +19,7 @@ dependencies:
   # TIFF tidak muncul di galeri Android, jadi galeri tidak bisa dipakai.
   # image_picker sengaja tidak dipakai: spike P1 mengukurnya dan galeri
   # memang tidak memuat TIFF.
-  file_picker: ^13.1.0
+  file_picker: ^13.3.3
 
   # Decoder TIFF pure Dart. Platform codec Android tidak punya decoder
   # TIFF dan menolak dengan "Invalid image data", jadi paket image yang
