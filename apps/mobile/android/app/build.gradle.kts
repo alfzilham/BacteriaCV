@@ -1,3 +1,14 @@
+import java.util.Properties
+
+// Kunci rilis dibaca dari android/key.properties. Berkas itu dan keystore
+// (*.jks) di-ignore git dan TIDAK PERNAH boleh masuk repo.
+val keystorePropertiesFile = rootProject.file("key.properties")
+val hasReleaseKey = keystorePropertiesFile.exists()
+val keystoreProperties = Properties()
+if (hasReleaseKey) {
+    keystorePropertiesFile.inputStream().use { keystoreProperties.load(it) }
+}
+
 plugins {
     id("com.android.application")
     // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
@@ -29,12 +40,37 @@ android {
         versionName = flutter.versionName
     }
 
+    signingConfigs {
+        if (hasReleaseKey) {
+            create("release") {
+                keyAlias = keystoreProperties.getProperty("keyAlias")
+                keyPassword = keystoreProperties.getProperty("keyPassword")
+                storeFile = file(keystoreProperties.getProperty("storeFile"))
+                storePassword = keystoreProperties.getProperty("storePassword")
+            }
+        }
+    }
+
     buildTypes {
         release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
-            signingConfig = signingConfigs.getByName("debug")
+            // Build release TIDAK PERNAH memakai kunci debug. Tanpa
+            // key.properties, build release dihentikan di bawah.
+            if (hasReleaseKey) {
+                signingConfig = signingConfigs.getByName("release")
+            }
         }
+    }
+}
+
+// Hentikan build release bila kunci rilis tidak ada, supaya tidak ada APK
+// rilis yang diam-diam tidak bertanda tangan atau bertanda tangan debug.
+gradle.taskGraph.whenReady {
+    val releaseBuild = allTasks.any { it.name == "assembleRelease" || it.name == "bundleRelease" }
+    if (releaseBuild && !hasReleaseKey) {
+        throw GradleException(
+            "android/key.properties tidak ditemukan. Build release membutuhkan kunci rilis. " +
+                "Buat key.properties (jangan di-commit) berisi keyAlias, keyPassword, storeFile, storePassword.",
+        )
     }
 }
 
