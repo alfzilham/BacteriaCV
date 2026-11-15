@@ -160,7 +160,7 @@ flutter test
 flutter run
 ```
 
-The ONNX model is not committed. Export it from `apps/api/checkpoints/heads.pt` and place it at `apps/mobile/assets/spike/model_int8.onnx`.
+The ONNX model is not committed, and the script that produced it is not in this repository. Provide `model_int8.onnx` yourself and place it at `apps/mobile/assets/spike/model_int8.onnx`. See `apps/mobile/README.md` for the model contract and what has been measured about it.
 
 ### Environment variables
 
