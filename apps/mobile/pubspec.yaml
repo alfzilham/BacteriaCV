@@ -2,7 +2,7 @@ name: bacteriacv_mobile
 description: "BacteriaCV - on-device bacterial cell classification for Android."
 publish_to: 'none'
 
-# Package id aplikasi dikunci. Lihat AGENTS.md bagian Batas keras.
+# Package id aplikasi dikunci.
 # applicationId di android/app/build.gradle.kts harus tetap
 # alfzilham.ilham.bacteriacv_mobile - tidak bisa diubah setelah rilis
 # pertama di Play Store.
@@ -31,7 +31,7 @@ dependencies:
   # onnxruntime_flutter, TIDAK ADA di pub.dev (HTTP 404 per 2026-10-05).
   # Yang dipakai gantinya adalah flutter_onnxruntime, fork yang aktif
   # dikelola dan mendukung konfigurasi execution provider.
-  # Lihat docs/SPIKE-REPORT.md bagian P3.
+  # Lihat docs/v1-mobile-docs/report/SPIKE-REPORT.md.
   flutter_onnxruntime: ^1.8.5
 
   cupertino_icons: ^1.0.8
@@ -45,7 +45,7 @@ flutter:
   uses-material-design: true
 
   # Model on-device dimuat sebagai asset saat runtime.
-  # Berkas .onnx TIDAK di-commit (lihat .gitignore dan AGENTS.md), tapi
+  # Berkas .onnx TIDAK di-commit (lihat .gitignore), tapi
   # path-nya dideklarasikan di sini supaya `flutter build` menyalinnya ke
   # paket aplikasi. Spike menyalin model ke assets/ hanya sementara, dan
   # folder itu ikut di-ignore.
