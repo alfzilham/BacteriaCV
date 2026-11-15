@@ -49,7 +49,7 @@ starlette==1.7.0
 sympy==1.14.0
 threadpoolctl==3.7.0
 tifffile==2026.3.3
-torch==2.14.1+cpu
+torch==2.15.0+cpu
 torchvision==0.29.1+cpu
 typing_extensions==4.16.0
 typing-inspection==0.4.4
