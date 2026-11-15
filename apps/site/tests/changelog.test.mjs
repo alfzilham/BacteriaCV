@@ -32,3 +32,17 @@ test("keadaan kosong punya teks dua bahasa dan tautan ke GitHub Releases", () =>
   assert.ok(view.includes('href="https://github.com/alfzilham/BacteriaCV/releases"'));
   assert.ok(view.includes('rel="noreferrer"'));
 });
+
+test("tag v<angka> dikenali sebagai rilis gabungan, web-v dan mobile-v tetap", () => {
+  const m = src("models/changelog.ts");
+  assert.ok(m.includes('"web" | "android" | "all"'));
+  assert.ok(m.includes('tag.startsWith("web-v") ? "web"'));
+  assert.ok(m.includes('tag.startsWith("mobile-v") ? "android"'));
+  assert.ok(m.includes(String.raw`/^v\d/.test(tag) ? "all" : null`));
+});
+
+test("rilis gabungan tampil di setiap filter dan berlabel All", () => {
+  const view = src("views/ChangelogView.tsx");
+  assert.ok(view.includes('r.platform === f || r.platform === "all"'));
+  assert.ok(view.includes('r.platform === "android" ? t("f_and") : t("f_all")'));
+});
