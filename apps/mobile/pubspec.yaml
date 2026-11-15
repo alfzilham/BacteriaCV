@@ -32,7 +32,7 @@ dependencies:
   # Yang dipakai gantinya adalah flutter_onnxruntime, fork yang aktif
   # dikelola dan mendukung konfigurasi execution provider.
   # Lihat docs/v1-mobile-docs/report/SPIKE-REPORT.md.
-  flutter_onnxruntime: ^1.8.5
+  flutter_onnxruntime: ^1.9.0
 
   cupertino_icons: ^1.0.8
 
