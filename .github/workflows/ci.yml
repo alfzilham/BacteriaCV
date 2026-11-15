@@ -23,7 +23,7 @@ jobs:
         working-directory: apps/api
     steps:
       - name: Ambil kode
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Siapkan Python ${{ matrix.python-version }}
         uses: actions/setup-python@v5
@@ -51,7 +51,7 @@ jobs:
       run:
         working-directory: apps/site
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -71,7 +71,7 @@ jobs:
       run:
         working-directory: apps/site
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -89,7 +89,7 @@ jobs:
       run:
         working-directory: apps/mobile
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: subosito/flutter-action@v2
         with:
           channel: stable
@@ -103,6 +103,6 @@ jobs:
     name: Kebijakan repo
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Tanpa em-dash dan tanpa karakter pengganti
         run: bash tools/check-policy.sh
