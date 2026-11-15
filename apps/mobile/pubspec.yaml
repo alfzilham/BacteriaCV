@@ -34,7 +34,7 @@ dependencies:
   # Lihat docs/v1-mobile-docs/report/SPIKE-REPORT.md.
   flutter_onnxruntime: ^1.8.5
 
-  cupertino_icons: ^1.0.8
+  cupertino_icons: ^2.0.0
 
 dev_dependencies:
   flutter_test:
