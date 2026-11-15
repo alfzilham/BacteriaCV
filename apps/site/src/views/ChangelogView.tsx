@@ -8,7 +8,7 @@ import { DocsShell } from "./DocsShell";
 export function ChangelogView({ releases }: { releases: Release[] }) {
   const { t } = usePrefs();
   const [f, setF] = useState<"all" | Platform>("all");
-  const shown = releases.filter((r) => f === "all" || r.platform === f);
+  const shown = releases.filter((r) => f === "all" || r.platform === f || r.platform === "all");
   const filters: ["all" | Platform, "f_all" | "f_web" | "f_and"][] = [["all", "f_all"], ["web", "f_web"], ["android", "f_and"]];
   return (
     <DocsShell page="changelog">
@@ -25,7 +25,7 @@ export function ChangelogView({ releases }: { releases: Release[] }) {
       )}
       {shown.map((r) => (
         <article key={r.tag} className="tile">
-          <div className="cap"><code className="ic">{r.tag}</code> · {r.platform === "web" ? t("f_web") : t("f_and")} · {r.date}</div>
+          <div className="cap"><code className="ic">{r.tag}</code> · {r.platform === "web" ? t("f_web") : r.platform === "android" ? t("f_and") : t("f_all")} · {r.date}</div>
           <div style={{ fontSize: 22, letterSpacing: "-.02em", margin: "8px 0" }}>{r.title}</div>
           <div style={{ whiteSpace: "pre-wrap", color: "var(--t2)", fontSize: 15 }}>{r.notes}</div>
         </article>
