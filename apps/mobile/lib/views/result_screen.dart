@@ -8,10 +8,11 @@ import 'disclaimer.dart';
 /// Yang ditampilkan: bentuk sel, status Gram beserta levelnya, dan waktu
 /// proses dalam milidetik.
 ///
-/// Yang SENGAJA tidak ditampilkan: confidence sebagai persen. Model int8
-/// meleset sampai 0,542656 terhadap acuan float32 meskipun F1 tetap 1,000000,
-/// jadi angkanya tidak terkalibrasi. Level high, medium, atau low adalah
-/// yang ditampilkan, sama seperti aplikasi web.
+/// Yang SENGAJA tidak ditampilkan: confidence sebagai persen. Keyakinan
+/// model int8 berbeda dari acuan float32 sampai 0,28 pada pengukuran 696
+/// citra, jadi angkanya tidak terkalibrasi. Level high, medium, atau low
+/// yang ditampilkan, dengan ambang yang sama seperti aplikasi web. Level
+/// bisa berbeda dari web untuk citra yang keyakinannya dekat ambang.
 class ResultScreen extends StatelessWidget {
   const ResultScreen({super.key, required this.result});
 

@@ -11,8 +11,14 @@ import 'area_resize.dart';
 ///
 /// AMBANG INI WAJIB IDENTIK dengan aplikasi web dan dengan test di sana.
 /// Nilainya 0,8 dan 0,6. Mengubahnya berarti aplikasi ini dan aplikasi
-/// web memberi keputusan berbeda untuk model yang sama, jadi ambangnya
-/// dikunci di sini dan diuji oleh `test/confidence_level_test.dart`.
+/// web memakai batas level yang berbeda, jadi ambangnya dikunci di sini
+/// dan diuji oleh `test/confidence_level_test.dart`.
+///
+/// Ambang yang sama belum menjamin level yang sama. Model di aplikasi ini
+/// int8, sedangkan web memakai float32, dan keyakinan keduanya tidak
+/// identik. Pada pengukuran 696 citra (ONNX Runtime CPU, bukan XNNPACK di
+/// perangkat), label bentuk dan Gram sama pada semua citra, tetapi level
+/// berbeda pada 16 citra untuk bentuk dan 6 citra untuk Gram.
 enum ConfidenceLevel {
   /// confidence >= 0,8
   high('high'),
@@ -95,9 +101,11 @@ class Classification {
 
   /// Confidence bentuk sel dari softmax head A.
   ///
-  /// TIDAK ditampilkan di UI. Model int8 meleset sampai 0,542656
-  /// terhadap acuan float32 meskipun F1 tetap 1,000000, jadi angkanya tidak
-  /// terkalibrasi dan memamerkannya sebagai persen akan menipu.
+  /// TIDAK ditampilkan di UI. Pada pengukuran 696 citra, keyakinan model
+  /// int8 berbeda dari acuan float32 sampai 0,28 (rata-rata 0,007),
+  /// sehingga angkanya tidak terkalibrasi dan memamerkannya sebagai persen
+  /// akan menipu. Angka ini hanya membandingkan int8 dengan float32, bukan
+  /// dengan label sebenarnya.
   final double shapeConfidence;
 
   /// Confidence status Gram dari sigmoid head B indeks 1.
