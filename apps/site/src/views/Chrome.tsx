@@ -72,7 +72,7 @@ export function Footer() {
           ))}
         </div>
       </div>
-      <div style={{ marginTop: 56, paddingTop: 20, borderTop: "1px solid #23262B", display: "flex", flexWrap: "wrap", gap: "8px 24px", justifyContent: "space-between", fontSize: 13, color: "var(--edge)" }}>
+      <div style={{ marginTop: 56, paddingTop: 20, borderTop: "1px solid #23262B", display: "flex", flexWrap: "wrap", gap: "8px 24px", justifyContent: "space-between", fontSize: 13, color: "#8A9098" }}>
         <span>{t("ft_copy")}</span><span>{t("ft_cred")}</span>
         <span style={{ color: "#B4B9C0", flex: "1 1 100%", maxWidth: 640 }}>{t("disc")} {t("lim_seg")}</span>
       </div>
