@@ -17,7 +17,12 @@ export function ChangelogView({ releases }: { releases: Release[] }) {
       <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }} role="group" aria-label={t("d_cl_h")}>
         {filters.map(([k, label]) => <button key={k} type="button" className="chip" aria-pressed={f === k} onClick={() => setF(k)}>{t(label)}</button>)}
       </div>
-      {shown.length === 0 && <p>{t("cl_empty")}</p>}
+      {shown.length === 0 && (
+        <p>
+          {t("cl_empty")}{" "}
+          <a href="https://github.com/alfzilham/BacteriaCV/releases" target="_blank" rel="noreferrer">{t("cl_all")}</a>
+        </p>
+      )}
       {shown.map((r) => (
         <article key={r.tag} className="tile">
           <div className="cap"><code className="ic">{r.tag}</code> · {r.platform === "web" ? t("f_web") : t("f_and")} · {r.date}</div>

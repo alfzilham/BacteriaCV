@@ -56,7 +56,8 @@ export const COPY = {
   d_cl_h: ["Changelog", "Changelog"],
   d_cl_d: ["Entries are synced from GitHub Releases. Web releases use tags web-v, Android releases use mobile-v.", "Entri disinkronkan dari GitHub Releases. Rilis web memakai tag web-v, rilis Android memakai mobile-v."],
   f_all: ["All", "Semua"], f_web: ["Web", "Web"], f_and: ["Android", "Android"],
-  cl_empty: ["No releases yet.", "Belum ada rilis."],
+  cl_empty: ["No web-v or mobile-v releases to show.", "Belum ada rilis web-v atau mobile-v yang bisa ditampilkan."],
+  cl_all: ["See all releases on GitHub", "Lihat semua rilis di GitHub"],
   // WebApp
   a_tag: ["Cell shape and Gram status from microscope images", "Bentuk sel dan status Gram dari citra mikroskop"],
   a_pick: ["Choose an image", "Pilih gambar"], a_analyze: ["Analyze Image", "Analyze Image"], a_another: ["Analyze another", "Analisis gambar lain"],
