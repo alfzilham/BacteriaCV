@@ -1,102 +1,112 @@
-# BacteriaCVMobile
+# BacteriaCV Mobile
 
-Aplikasi Android untuk klasifikasi bentuk sel dan status Gram bakteri,
-**sepenuhnya on-device**. Tidak ada backend.
+Aplikasi Android untuk klasifikasi bentuk sel (cocci atau bacilli) dan status
+Gram (positif atau negatif) dari satu citra mikroskop. Inferensi berjalan
+**sepenuhnya di perangkat**. Tidak ada backend dan tidak ada permintaan jaringan.
 
-Status repo: **fase spike teknis**. Yang ada di sini bukan aplikasi,
-melainkan pengukuran untuk menjawab empat pertanyaan sebelum satu baris
-kode aplikasi ditulis. Jawaban dan semua angkanya ada di
-[`docs/SPIKE-REPORT.md`](docs/SPIKE-REPORT.md).
+Status: versi `0.1.0+1`, belum dirilis. Package id `alfzilham.ilham.bacteriacv_mobile`
+dikunci dan tidak boleh diubah. Tombol unduh di situs web tetap berlabel demo
+sampai ada APK bertanda tangan.
 
----
+Hasil aplikasi ini adalah alat bantu, bukan diagnosis.
 
-## Yang sudah diketahui
+## Yang ada di aplikasi
 
-- Model: ResNet50 ImageNet V2 yang dibekukan, dua head `Linear(2048, 2)`
-- Kuantisasi: bobot float16, komputasi float32
-- Target hanya Google Play, package id `alfzilham.ilham.bacteriacv_mobile`
-- Preprocessing `cv2.INTER_AREA` tidak punya padanan di ONNX maupun
-  TFLite, jadi diimplementasikan di Dart dan diuji terhadap cv2
-
-## Yang belum diketahui
-
-Lihat `docs/SPIKE-REPORT.md`. Empat pertanyaan yang diuji:
-
-| | Pertanyaan |
-|---|---|
-| P1 | Apakah TIFF 2048 x 1532 bisa dibaca di Android, dan berapa lama |
-| P2 | Apakah model bisa dikonversi ke ONNX dengan angka yang sama |
-| P3 | Berapa lama inferensi di perangkat nyata, dan seberapa besar modelnya |
-| P4 | Apakah segmentasi OpenCV bisa jalan on-device |
-
----
+- Memilih berkas citra (TIFF, PNG, atau JPG) lewat pemilih berkas sistem. TIFF
+  tidak muncul di galeri Android, jadi galeri tidak dipakai.
+- Batas ukuran berkas 20 MB, ditegakkan sebelum berkas didecode.
+- Layar hasil: bentuk sel, status Gram beserta level keyakinan (high, medium,
+  low), dan waktu proses. Persentase keyakinan sengaja tidak ditampilkan.
+- Ambang level 0,8 dan 0,6, sama dengan situs web.
+- Tema terang dan gelap, serta disclaimer "bukan diagnosis".
 
 ## Struktur
 
 ```
-.githooks/    gatewa commit (audit karakter teks, dilacak di repo)
-tools/        audit karakter + self-test + kontrol sabotase
-docs/         sumber kebenaran, termasuk SPIKE-REPORT.md
-lib/          kode Dart
-  main.dart     entry point sementara, hanya pembuka layar spike
-  spike/        layar spike, DIHAPUS setelah fase ini selesai
-spike/        alat spike di luar paket aplikasi
-  scripts/      konversi model dan perbandingan numerik
-  artifacts/    hasil generate, di-ignore, boleh dihapus
-android/      hasil flutter create --platforms android
+lib/
+  main.dart, app.dart   titik masuk dan konfigurasi aplikasi
+  controllers/          pengendali tema
+  models/               classifier.dart (inferensi), area_resize.dart (INTER_AREA di Dart)
+  theme/                token warna
+  views/                layar upload, layar hasil, disclaimer, tombol tema
+test/                   uji Dart (ambang level, resize, layar hasil, aksesibilitas, tema)
+android/                proyek Android (Gradle Kotlin DSL)
+assets/spike/           tempat model ONNX, isinya di-ignore git
 ```
 
-## Batas keras
+## Model ONNX: disediakan terpisah
 
-1. Tidak ada backend. Inferensi on-device.
-2. Tidak ada file model yang masuk git. Bobot tinggal di project
-   BacteriaCV dan dibaca read-only.
-3. Arsitektur model dikunci: ResNet50, dua head Linear(2048, 2), fp16.
-4. Tidak ada path absolut di kode atau dokumen.
-5. Package id dikunci, tidak bisa diubah setelah rilis pertama.
-6. Target hanya Android.
+Berkas model **tidak ada di repo**. `*.onnx` di-ignore git, dan skrip yang
+menghasilkan model juga tidak ada di repo ini. Aplikasi mengharapkan berkas ini:
 
-Detail lengkap ada di [`AGENTS.md`](AGENTS.md).
-
-## Gatewa commit
-
-```sh
-git config core.hooksPath .githooks
+```
+apps/mobile/assets/spike/model_int8.onnx
 ```
 
-Setiap commit menjalankan audit karakter non-Latin untuk seluruh repo
-plus self-test yang membuktikan audit itu masih bisa gagal.
+Kontrak model yang dipakai kode:
 
-Perintah yang dijalankan spike ini:
+| | Nama | Bentuk | Tipe |
+|---|---|---|---|
+| Masukan | `image_u8` | `[1, 224, 224, 3]` (NHWC) | uint8 |
+| Keluaran | `head_a_logits` | `[1, 2]` | float32 |
+| Keluaran | `head_b_logits` | `[1, 2]` | float32 |
+
+Normalisasi ImageNet ada di dalam graf model. Resize INTER_AREA tidak punya
+padanan di ONNX, jadi dilakukan di Dart (`area_resize.dart`).
+
+### Asal-usul dan validasi model int8
+
+Pernyataan ini sengaja jujur tentang apa yang belum diketahui:
+
+- Asal-usul `model_int8.onnx` **tidak tercatat di repo**. Skrip kuantisasinya
+  (`spike/scripts/quantize_int8.py`) hanya disebut namanya di arsip audit, dan
+  skripnya sendiri tidak ada di monorepo ini.
+- Laporan [SPIKE-REPORT.md](../../docs/v1-mobile-docs/report/SPIKE-REPORT.md)
+  hanya memvalidasi model **fp16** terhadap PyTorch. Laporan itu tidak
+  memvalidasi int8.
+- Pengukuran terpisah (15 November 2026) membandingkan keluaran
+  `model_int8.onnx` dengan pipeline API float32 pada 696 citra (692 TIFF DIBaS
+  dan 4 contoh situs), memakai ONNX Runtime di CPU dengan masukan uint8 yang
+  sama:
+
+  | Ukuran | Bentuk sel | Status Gram |
+  |---|---|---|
+  | Label sama dengan float32 | 696 dari 696 | 696 dari 696 |
+  | Selisih keyakinan maksimum | 0,28 | 0,24 |
+  | Selisih keyakinan rata-rata | 0,007 | 0,009 |
+  | Level keyakinan sama dengan float32 | 680 dari 696 | 690 dari 696 |
+
+- Batas pengukuran itu: bukan XNNPACK di perangkat, tidak dibandingkan dengan
+  label sebenarnya, dan hanya berlaku untuk berkas model yang diukur. Dua
+  berkas DIBaS tidak terbaca dan dilewati.
+- Karena keyakinan int8 tidak identik dengan float32, level high, medium, dan
+  low bisa berbeda dari situs web untuk citra yang keyakinannya dekat ambang,
+  walaupun ambangnya sama.
+
+## Menjalankan
+
+Prasyarat: Flutter 3.47 (CI memakai `3.47.x`) dan Android SDK.
 
 ```sh
-python tools/check_text_encoding.py
-python tools/tests/test_text_encoding_audit.py
-```
-
-## Menjalankan spike
-
-```sh
+cd apps/mobile
 flutter pub get
-flutter run                     # pilih perangkat R9RYC0839YH
-flutter test                    # uji INTER_AREA Dart terhadap acuan cv2
+flutter analyze --fatal-infos
+flutter test
+flutter run
 ```
 
-Model ONNX tidak ada di repo. Untuk menjalankan bagian P2 dan P3,
-model harus dibangun lebih dulu:
+`flutter test` tidak membutuhkan model ONNX. `flutter run` membutuhkan model
+di `assets/spike/model_int8.onnx` seperti dijelaskan di atas.
 
-```sh
-python -m venv spike/.venv-tflite
-spike/.venv-tflite/Scripts/pip install --index-url https://download.pytorch.org/whl/cpu torch==2.14.1 torchvision==0.29.1
-spike/.venv-tflite/Scripts/pip install onnx onnxruntime onnxscript onnxconverter_common opencv-python-headless
+## Build rilis
 
-spike/.venv-tflite/Scripts/python spike/scripts/build_onnx_model.py
-spike/.venv-tflite/Scripts/python spike/scripts/compare_pytorch_fp16.py
-```
+Build rilis membutuhkan kunci rilis milik Anda sendiri. Keystore dan
+`android/key.properties` **tidak boleh** masuk repo (sudah di-ignore).
 
-`compare_pytorch_fp16.py` juga menulis berkas acuan yang dipakai
-`flutter test` untuk membandingkan `INTER_AREA` Dart terhadap cv2.
+## Batas yang dijaga
 
-Salinan model perlu ditaruh ke `assets/spike/model.onnx` sebelum
-`flutter run` bisa memuatnya. Folder itu di-ignore, dan isinya tidak
-pernah masuk git.
+1. Tidak ada backend. Inferensi di perangkat.
+2. Tidak ada berkas model di git.
+3. Package id tidak berubah.
+4. Ambang level dan jalur inferensi tidak diubah tanpa membahasnya di issue,
+   karena situs web, API, dan aplikasi ini memakai model yang sama.
