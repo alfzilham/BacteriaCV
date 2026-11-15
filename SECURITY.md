@@ -16,6 +16,16 @@ Use GitHub's private vulnerability reporting instead if it is enabled on the rep
 
 Only the latest release and the current `main` branch receive fixes.
 
+## Known issues
+
+Checked on 15 November 2026 with `npm audit --omit=dev` in `apps/site`.
+
+- **PostCSS 8.5.22 and earlier, bundled by Next.js** (`next` 15.5.29 is installed). `npm audit` reports 2 findings, 1 high and 1 moderate. They cover XSS through an unescaped `</style>` in PostCSS stringify output, and reading `.map` files through an attacker-controlled `sourceMappingURL` comment in CSS (GHSA-qx2v-qp2m-jg93, GHSA-6g55-p6wh-862q, GHSA-fxqj-rqcc-2cmp, GHSA-r28c-9q8g-f849).
+- **Fix:** npm offers `next@16.4.6`, which is a breaking change. The upgrade has not been done and will be handled in its own pull request.
+- **Assessment:** both problems need attacker-controlled CSS to reach PostCSS. The website only processes its own stylesheets at build time and does not accept CSS from visitors, so the practical impact is considered low. This has not been tested as an exploit, so treat it as an assessment, not a guarantee.
+- **If you build the site from untrusted CSS**, do not do so until Next.js is upgraded.
+- **Check again** with `cd apps/site && npm install && npm audit --omit=dev`.
+
 ## Scope and notes for people who deploy it
 
 - The API accepts image uploads of up to 20 MB and runs the model on the CPU. It limits `POST /api/predict` to 20 calls per client per minute by default (`RATE_LIMIT_PER_MINUTE`, `0` turns it off). The counter is kept in memory per process, so it does not replace a limit at your proxy or hosting platform if you run several replicas or expect abuse.
