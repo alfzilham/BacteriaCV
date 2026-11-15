@@ -1,9 +1,9 @@
-export type Platform = "web" | "android";
+export type Platform = "web" | "android" | "all";
 export type Release = { tag: string; platform: Platform; date: string; title: string; notes: string };
 
-/** Pemetaan tag rilis ke platform. web-v... untuk web, mobile-v... untuk Android. */
+/** Pemetaan tag rilis ke platform. web-v... untuk web, mobile-v... untuk Android, v<angka>... untuk rilis gabungan. */
 export const platformOfTag = (tag: string): Platform | null =>
-  tag.startsWith("web-v") ? "web" : tag.startsWith("mobile-v") ? "android" : null;
+  tag.startsWith("web-v") ? "web" : tag.startsWith("mobile-v") ? "android" : /^v\d/.test(tag) ? "all" : null;
 
 type GhRelease = { tag_name: string; name: string | null; body: string | null; published_at: string | null; draft: boolean };
 
