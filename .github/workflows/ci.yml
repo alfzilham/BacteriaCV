@@ -64,6 +64,24 @@ jobs:
       - name: Build
         run: npm run build
 
+  audit:
+    name: Audit dependensi situs
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/site
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Pasang dependensi
+        run: npm install --no-audit --no-fund
+      # Gagal hanya pada tingkat critical. Temuan high yang sudah diketahui
+      # (postcss lewat next) dicatat di SECURITY.md sampai Next 16 dipasang.
+      - name: Audit paket produksi
+        run: npm audit --omit=dev --audit-level=critical
+
   mobile:
     name: Analyze dan tes Flutter
     runs-on: ubuntu-latest
